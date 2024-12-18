@@ -1,3 +1,5 @@
 fastapi
 isort
 black
+pytest
+pytest-cov

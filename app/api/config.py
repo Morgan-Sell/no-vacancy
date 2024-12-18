@@ -1,5 +1,5 @@
 import logging
-from logging.handlers import TimeRotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 import os
 import sys
 from os.path import dirname, abspath, join
@@ -11,7 +11,7 @@ FORMATTER = logging.Formatter(
     "%(funcName)s:%(lineno)d - %(message)s"
 )
 LOG_DIR = join(PACKAGE_ROOT, "logs")
-os.makedirs(LOG_DIR, exists_ok=True)
+os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = join(LOG_DIR, "no_vacancy_api.log")
 
 
@@ -22,7 +22,7 @@ def get_console_handler():
 
 
 def get_file_handler():
-    file_handler = TimeRotatingFileHandler(
+    file_handler = TimedRotatingFileHandler(
         LOG_FILE, when="midnight"
     )
     file_handler.setFormatter(FORMATTER)

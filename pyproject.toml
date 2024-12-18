@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "no-vacancy"
+version = "0.0.0"
+description = "A machine learning model to predict the likelihood of a guest cancelling their hotel reservation."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE.txt" }
+keywords = ["machine_learning", "python", "docker", "web_server"]
+authors = [
+    { name = "Morgan Sell", email = "morganpsell@gmail.com"}
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--cov=app", "--cov-report=term-missing"]
+env = { PYTHONPATH = "." }
+
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = ["app/main.py"]
+
+
+[tool.ruff]
+line-length = 88 # match black's line length
+fix = false # black handles it
+exclude = ["tests/"]
+
+
+[tool.ruff.lint]
+# E: Enforces pycodestyle error codes (like PEP 8).
+# F: Runs pyflakes for identifying unused imports and variables.
+# B: Runs flake8-bugbear for finding potential bugs.
+# W: Warnings for pycodestyle
+select = ["E", "F", "W", "B"] 
+# E501: ignore line length (handled by black)
+ignore = ["E501"] 
+
+
+[tool.black]
+line-length = 88 # Standard PEP8 line length
+target-version = ["py311"]
+skip-string-normalization = false # If true, black won't normalize quotes
