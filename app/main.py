@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 
 from app.config import get_logger
-from app.controller import app
 from app.routers import health, predict, version
 
 _logger = get_logger(logger_name=__name__)

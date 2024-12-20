@@ -11,7 +11,7 @@ router = APIRouter(
 _logger = get_logger(logger_name=__name__)
 
 
-@router.post("/", response_class=dict)
+@router.get("/", response_model=dict)
 async def health():
     """
     Health check endpoint

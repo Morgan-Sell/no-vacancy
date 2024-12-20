@@ -13,7 +13,12 @@ LOG_DIR = join(PACKAGE_ROOT, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = join(LOG_DIR, "no_vacancy_api.log")
 
+# Versioning
+__api_version__ = "0.0.0"
+__model_version__ = "0.0.3"
 
+
+# Create a custom logger
 def get_console_handler():
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(FORMATTER)
@@ -34,3 +39,4 @@ def get_logger(*, logger_name):
     logger.addHandler(get_console_handler())
     logger.addHandler(get_file_handler())
     logger.propagate = False
+    return logger
