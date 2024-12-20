@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from app.config import get_logger, __model_version__
+from app.config import __model_version__, get_logger
 
 # Initalize logger
 _logger = get_logger(logger_name=__name__)
