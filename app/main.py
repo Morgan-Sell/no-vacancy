@@ -1,15 +1,19 @@
 from fastapi import FastAPI
-from app.api.routes import healthcheck, predictions
-from app.core.logger import setup_logger
 
-# Initialize the logger
-setup_logger()
+from app.config import get_logger
+from app.controller import app
+from app.routers import health, predict, version
 
-# Create the FastAPI app
-app = FastAPI(
-    title="Hotel Reservation Prediction API",
-    description="An API to predict the likelihood of someone cancelling their hotel reservation",
-    version="0.0.0"
-)
+_logger = get_logger(logger_name=__name__)
 
-# 
+app = FastAPI()
+
+
+@app.get("/")
+async def root():
+    pass
+
+
+app.include_router(health.router)
+app.include_router(version.router)
+app.include_router(predict.router)

@@ -1,16 +1,20 @@
-from logging.handlers import TimedRotatingFileHandler
-from app.api.config import FORMATTER, get_console_handler, get_file_handler, LOG_FILE
 import logging
-import sys
 import os
-
+import sys
+from logging.handlers import TimedRotatingFileHandler
 from unittest.mock import Mock, patch
+
+from app.api.config import (FORMATTER, LOG_FILE, get_console_handler,
+                            get_file_handler)
+
 
 def test_get_console_handler():
     handler = get_console_handler()
 
     # Check if the handler is a StreamHandler
-    assert isinstance(handler, logging.StreamHandler), "Handler should be an instance of StreamHandler"
+    assert isinstance(
+        handler, logging.StreamHandler
+    ), "Handler should be an instance of StreamHandler"
 
     # Check if the handler uses sys.stdout
     assert handler.stream == sys.stdout, "Handler stream should be sys.stdout"
@@ -26,10 +30,14 @@ def test_get_file_handler(tmpdir):
         handler = get_file_handler()
 
         # Check if the handler is a TimedRotatingFileHandler
-        assert isinstance(handler, TimedRotatingFileHandler), "Handler should be a TimedRotatingFileHandler"
+        assert isinstance(
+            handler, TimedRotatingFileHandler
+        ), "Handler should be a TimedRotatingFileHandler"
 
         # Check if the log level is set to WARNING
-        assert handler.level == logging.WARNING, "Handler level should be set to WARNING"
+        assert (
+            handler.level == logging.WARNING
+        ), "Handler level should be set to WARNING"
 
         # Check if the formatter is correctly set
         assert handler.formatter == FORMATTER, "Handler formatter is not set correctly"
