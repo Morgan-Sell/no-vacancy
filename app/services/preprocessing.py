@@ -36,15 +36,14 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
         variable_rename: Dict[str, str],
         month_abbreviation: Dict[int, str],
         vars_to_drop: List[str],
+        booking_map: Dict[str, int],
     ):
         super().__init__()
 
         self.variable_rename = variable_rename
         self.month_abbreviation = month_abbreviation
         self.vars_to_drop = vars_to_drop
-
-    def fit(self, X: pd.DataFrame, y: pd.Series = None) -> pd.DataFrame:
-        return self
+        self.booking_map = booking_map
 
     def fit(self, X: pd.DataFrame, y: pd.Series = None) -> pd.DataFrame:
         return self
@@ -53,6 +52,7 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
         self, X: pd.DataFrame, y: pd.Series = None
     ) -> Tuple[pd.DataFrame, pd.Series]:
         X_tr = X.copy()
+        y_tr = y.copy() if y is not None else None
 
         # Standardize column name text
         X_tr = self._convert_columns_to_snake_case(X_tr)
@@ -65,17 +65,21 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
             X_tr["date_of_reservation"], errors="coerce"
         ).dt.month
         X_tr["month_of_reservation"] = X_tr["month_of_reservation"].map(
-            MONTH_ABBREVIATION_MAP
+            self.month_abbreviation
         )
         X_tr["day_of_week"] = pd.to_datetime(X_tr["date_of_reservation"]).dt.day_name()
 
         # Remove selected features
         X_tr.drop(self.vars_to_drop, axis=1, inplace=True)
 
-        # make select column names more intuitive
-        X_tr = X_tr.rename(columns=VARIABLE_RENAME_MAP)
+        # Make select column names more intuitive
+        X_tr.rename(columns=self.variable_rename, inplace=True)
 
-        return X_tr
+        # Transform the target variable
+        if y_tr is not None and self.booking_map is not None:
+            y_tr = y_tr.map(self.booking_map)
+
+        return X_tr, y_tr
 
     def _to_snake_case(self, name: str) -> str:
         # Replace hyphens (-) with underscores (_)

@@ -37,4 +37,18 @@ def test_pipeline_structure(sample_pipeline):
     assert "model" in pipeline.estimator.named_steps
 
 
-    
+@patch("sklearn.model_selection.RandomizedSearchCV.fit")
+def test_pipeline_fit(mock_fit, sample_pipeline, booking_data):
+    # Arrange
+    search_space = {
+        "model__n_estimators": [100, 200],
+        "model__max_depth": [3, 5]
+    }
+    pipeline = sample_pipeline.pipeline(search_space)
+
+    # Action
+    pipeline.fit(booking_data, None)
+
+    # Assert
+    # Verify that fit() method of RandomizedSearchCV was only called once
+    mock_fit.assert_called_once_with(booking_data, None)    

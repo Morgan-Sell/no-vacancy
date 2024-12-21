@@ -13,11 +13,11 @@ from feature_engine.imputation import CategoricalImputer
 def booking_data():
     data = {
         "Booking_ID": [f"INN0000{i}" for i in range(1, 11)],
-        "number_of_adults": [1, 1, 2, 1, 1, 2, 2, 1, 2, 1],
-        "number_of_children": [1, 0, 1, 0, 0, 2, 1, 1, 0, 2],
-        "number_of_weekend_nights": [2, 1, 1, 0, 1, 2, 0, 1, 1, 0],
-        "number_of_week_nights": [5, 3, 3, 2, 2, 4, 3, 5, 2, 1],
-        "type_of_meal": [
+        "number of adults": [1, 1, 2, 1, 1, 2, 2, 1, 2, 1],
+        "number of children": [1, 0, 1, 0, 0, 2, 1, 1, 0, 2],
+        "number of weekend nights": [2, 1, 1, 0, 1, 2, 0, 1, 1, 0],
+        "number of week nights": [5, 3, 3, 2, 2, 4, 3, 5, 2, 1],
+        "type of meal": [
             "Meal Plan 1",
             "Not Selected",
             "Meal Plan 1",
@@ -29,8 +29,8 @@ def booking_data():
             "Meal Plan 1",
             "Not Selected",
         ],
-        "car_parking_space": [0, 0, 0, 0, 0, 1, 1, 0, 0, 1],
-        "room_type": [
+        "car parking space": [0, 0, 0, 0, 0, 1, 1, 0, 0, 1],
+        "room type": [
             "Room_Type 1",
             "Room_Type 3",
             "Room_Type 3",
@@ -42,8 +42,8 @@ def booking_data():
             "Room_Type 1",
             "Room_Type 1",
         ],
-        "lead_time": [224, 5, 1, 211, 48, 150, 35, 60, 20, 10],
-        "market_segment": [
+        "lead time": [224, 5, 1, 211, 48, 150, 35, 60, 20, 10],
+        "market segment": [
             "Offline",
             "Online",
             "Airline",
@@ -59,7 +59,7 @@ def booking_data():
         "repeated": [0] * 10,
         "P-C": [0] * 10,
         "P-not-C": [0] * 10,
-        "average_price": [
+        "average price": [
             88.00,
             106.68,
             50.00,
@@ -71,8 +71,8 @@ def booking_data():
             60.00,
             110.00,
         ],
-        "special_requests": [0, 1, 0, 1, 0, 0, 1, 1, 0, 1],
-        "date_of_reservation": [
+        "special requests": [0, 1, 0, 1, 0, 0, 1, 1, 0, 1],
+        "date of reservation": [
             "10/2/2015",
             "11/6/2018",
             "2/28/2018",
@@ -84,7 +84,7 @@ def booking_data():
             "9/12/2020",
             "7/8/2021",
         ],
-        "booking_status": [
+        "booking status": [
             "Not_Canceled",
             "Not_Canceled",
             "Canceled",
