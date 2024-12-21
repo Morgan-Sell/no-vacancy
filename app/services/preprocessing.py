@@ -75,6 +75,9 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
         return X_tr
 
     def _to_snake_case(self, name: str) -> str:
+        # Replace hyphens (-) with underscores (_)
+        name = name.replace("-", "_")
+
         # Preserve existing underscores and replace spaces or special characters with underscores
         name = re.sub(
             r"[^\w\s]", "", name
@@ -87,6 +90,8 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
 
     def _convert_columns_to_snake_case(self, df: pd.DataFrame) -> pd.DataFrame:
         # Transform column names
-        new_columns = [to_snake_case(col).replace("__", "_") for col in df.columns]
+        new_columns = [
+            self._to_snake_case(col).replace("__", "_") for col in df.columns
+        ]
         df.columns = new_columns
         return df

@@ -4,3 +4,5 @@ black
 pytest
 pytest-cov
 simplejson
+scikit-learn
+feature-engine
