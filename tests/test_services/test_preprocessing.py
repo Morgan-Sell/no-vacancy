@@ -1,7 +1,6 @@
 import pytest
 
-from app.services.config_services import (MONTH_ABBREVIATION_MAP,
-                                          VARIABLE_RENAME_MAP)
+from app.services.config_services import MONTH_ABBREVIATION_MAP, VARIABLE_RENAME_MAP
 from app.services.preprocessing import NoVacancyDataProcessing
 
 

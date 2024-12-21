@@ -6,3 +6,4 @@ pytest-cov
 simplejson
 scikit-learn
 feature-engine
+xgboost
