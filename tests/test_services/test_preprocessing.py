@@ -1,6 +1,7 @@
 import pytest
 
-from app.services.config_services import MONTH_ABBREVIATION_MAP, VARIABLE_RENAME_MAP
+from app.services.config_services import (BOOKING_MAP, MONTH_ABBREVIATION_MAP,
+                                          VARIABLE_RENAME_MAP)
 from app.services.preprocessing import NoVacancyDataProcessing
 
 
@@ -28,6 +29,7 @@ def test_to_snake_case(input_str, expected_output):
         variable_rename={},
         month_abbreviation={},
         vars_to_drop=[],
+        booking_map={},
     )
 
     # Action & Assert
@@ -40,6 +42,7 @@ def test_convert_columns_to_snake_case(booking_data):
         variable_rename={},
         month_abbreviation={},
         vars_to_drop=[],
+        booking_map={},
     )
 
     # Action
@@ -78,22 +81,29 @@ def test_no_vacancy_data_processing_transform(booking_data):
         variable_rename=VARIABLE_RENAME_MAP,
         month_abbreviation=MONTH_ABBREVIATION_MAP,
         vars_to_drop=vars_to_drop,
+        booking_map=BOOKING_MAP,
     )
 
+    X = booking_data.drop(columns=["booking status"])
+    y = booking_data["booking status"]
+
     # Action
-    result_df = transformer.transform(booking_data)
+    transformer.fit(X, y)
+    X_tr, y_tr = transformer.transform(X, y)
 
     # Assert
-    assert result_df.shape[0] == booking_data.shape[0]
+    assert X_tr.shape[0] == booking_data.shape[0]
+    assert y_tr.shape[0] == booking_data.shape[0]
     # Add 2 for the new columns "month_of_reservation" and "day_of_week"
-    assert result_df.shape[1] == booking_data.shape[1] - len(vars_to_drop) + 2
+    # Subtract 1 because "booking status" is removed.
+    assert X_tr.shape[1] == booking_data.shape[1] - len(vars_to_drop) + 2 - 1
 
     # Check that the columns have been dropped
-    assert "booking_id" not in result_df.columns
-    assert "date_of_reservation" not in result_df.columns
+    assert "Booking_ID" not in X_tr.columns
+    assert "date of reservation" not in X_tr.columns
 
     # Check that "month_of_reservation" was properly extracted
-    assert list(result_df["month_of_reservation"]) == [
+    assert list(X_tr["month_of_reservation"]) == [
         "Oct",
         "Nov",
         "Feb",
@@ -107,15 +117,19 @@ def test_no_vacancy_data_processing_transform(booking_data):
     ]
 
     # Check that "day_of_week" was properly extracted
-    assert list(result_df["day_of_week"]) == [
-        "Saturday",
-        "Sunday",
-        "Monday",
-        "Thursday",
+    assert list(X_tr["day_of_week"]) == [
         "Friday",
-        "Monday",
-        "Friday",
-        "Saturday",
         "Tuesday",
         "Wednesday",
+        "Saturday",
+        "Wednesday",
+        "Friday",
+        "Friday",
+        "Friday",
+        "Saturday",
+        "Thursday",
     ]
+
+    # Confirm y_tr only contains 0s and 1s
+    unique_values = set(y_tr.unique())
+    assert unique_values.issubset({0, 1})

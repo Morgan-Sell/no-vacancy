@@ -1,12 +1,11 @@
 import pandas as pd
 import pytest
-from xgboost import XGBClassifier
-
-from app.services.preprocessing import NoVacancyDataProcessing
-from app.services.pipeline import NoVacancyPipeline
-
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
+from xgboost import XGBClassifier
+
+from app.services.pipeline import NoVacancyPipeline
+from app.services.preprocessing import NoVacancyDataProcessing
 
 
 @pytest.fixture(scope="function")
@@ -104,7 +103,10 @@ def booking_data():
 @pytest.fixture(scope="function")
 def sample_pipeline():
     processor = NoVacancyDataProcessing(
-        variable_rename={}, month_abbreviation={}, vars_to_drop=[]
+        variable_rename={},
+        month_abbreviation={},
+        vars_to_drop=[],
+        booking_map={},
     )
     imputer = CategoricalImputer()
     encoder = OneHotEncoder()
