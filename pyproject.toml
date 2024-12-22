@@ -52,3 +52,11 @@ ignore = ["E501"]
 line-length = 88 # Standard PEP8 line length
 target-version = ["py311"]
 skip-string-normalization = false # If true, black won't normalize quotes
+
+
+[tool.isort]
+multi_line_output = 3 # Use vertical hanging indent style
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88

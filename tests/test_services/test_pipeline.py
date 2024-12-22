@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-import pandas as pd
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
@@ -48,8 +48,7 @@ def test_pipeline_fit(mock_fit, sample_pipeline, booking_data):
 
     # Action
     pipeline.fit(
-        booking_data.drop(columns=["booking status"]),
-        booking_data["booking status"]
+        booking_data.drop(columns=["booking status"]), booking_data["booking status"]
     )
 
     # Assert
