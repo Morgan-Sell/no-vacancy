@@ -35,13 +35,13 @@ def train_pipeline():
     y = data[TARGET_VARIABLE]
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=1 - TRAIN_RATIO, random=33
+        X, y, test_size=1 - TRAIN_RATIO, random_state=33
     )
 
     # Define pipeline components
     processor = NoVacancyDataProcessing(
-        variable_rename_map=VARIABLE_RENAME_MAP,
-        month_abbreviation_map=MONTH_ABBREVIATION_MAP,
+        variable_rename=VARIABLE_RENAME_MAP,
+        month_abbreviation=MONTH_ABBREVIATION_MAP,
         vars_to_drop=VARS_TO_DROP,
         booking_map=BOOKING_MAP,
     )
@@ -53,6 +53,7 @@ def train_pipeline():
 
     # Train, finetune & test pipeline
     pipe = NoVacancyPipeline(processor, imputer, encoder, clsfr)
+    pipe.pipeline(SEARCH_SPACE)
     pipe.fit(X_train, y_train)
 
     y_probs = pipe.predict_proba(X_test)[:, 1]

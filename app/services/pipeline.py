@@ -25,6 +25,7 @@ class NoVacancyPipeline:
         self.imputer = imputer
         self.encoder = encoder
         self.estimator = clsfr
+        self.pipe = None # Placeholder fo the constructed pipeline
 
     def pipeline(self, search_space):
         pipe = Pipeline(
@@ -36,7 +37,21 @@ class NoVacancyPipeline:
             ]
         )
 
-        rscv = RandomizedSearchCV(
+        self.rscv = RandomizedSearchCV(
             pipe, search_space, cv=5, n_jobs=-1, return_train_score=False, verbose=3
         )
-        return rscv
+        return self.rscv
+
+
+    def fit(self, X, y):
+        """Fit the pipeline using RandomizedSearchCV."""
+        if not hasattr(self, "rscv"):
+            raise AttributeError("Pipeline not instantiated. Call `pipeline` method first.")
+        self.rscv.fit(X, y)
+
+
+    def predict_proba(self, X):
+        """Make predictions using the best estimator from RandomizedSearchCV."""
+        if not hasattr(self, "rscv"):
+            raise AttributeError("Pipeline not instantiated. Call `pipeline` method first.")
+        return self.rscv.best_estimator_.predict_proba(X)

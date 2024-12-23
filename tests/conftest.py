@@ -1,3 +1,7 @@
+import os
+import tempfile
+from unittest.mock import MagicMock, patch
+
 import pandas as pd
 import pytest
 from feature_engine.encoding import OneHotEncoder
@@ -113,3 +117,35 @@ def sample_pipeline():
     estimator = XGBClassifier()
 
     return NoVacancyPipeline(processor, imputer, encoder, estimator)
+
+
+@pytest.fixture(scope="function")
+def mock_read_csv(mocker, booking_data):
+    """Mock pandas read_csv to return booking_data."""
+    return mocker.patch("pandas.read_csv", return_value=booking_data)
+
+
+@pytest.fixture(scope="function")
+def mock_pipeline(mocker, sample_pipeline):
+    """Mock the NoVacancyPipeline to avoid actual model training."""
+    mock_pipeline = mocker.patch("app.services.trainer.NoVacancyPipeline", return_value=sample_pipeline)
+    mock_pipeline.fit = MagicMock(return_value=None)
+    mock_pipeline.predict_proba = MagicMock(return_value=[[0.1, 0.9], [0.7, 0.3]])
+    return mock_pipeline
+
+
+@pytest.fixture(scope="function")
+def mock_logger(mocker):
+    """Mock the logger to suppress output during testing."""
+    return mocker.patch("app.services.trainer.logger")
+
+
+
+@pytest.fixture(scope="function")
+def temp_booking_data_csv(booking_data):
+    """Write booking_data to a temporary CSV file."""
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
+        booking_data.to_csv(temp_file, index=False)
+        temp_file.flush()  # Ensure data is written to the disk
+        yield temp_file.name  # provide the temp file path to the test
+    os.remove(temp_file.name)
