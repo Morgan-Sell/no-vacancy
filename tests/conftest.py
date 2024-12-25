@@ -351,7 +351,7 @@ def mock_logger(mocker):
 @pytest.fixture(scope="function")
 def temp_booking_data_csv(booking_data):
     """Write booking_data to a temporary CSV file."""
-    with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".csv") as temp_file:
         booking_data.to_csv(temp_file, index=False)
         temp_file.flush()  # Ensure data is written to the disk
         yield temp_file.name  # provide the temp file path to the test

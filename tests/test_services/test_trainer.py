@@ -1,3 +1,4 @@
+import pandas as pd
 from sklearn.metrics import roc_auc_score
 from app.services.trainer import train_pipeline
 from app.services.config_services import DATA_PATHS
@@ -14,6 +15,7 @@ def test_train_pipeline_success(
     """
     # Arrange: Mock the DATA_PATHS to point to the temporary file
     mocker.patch("app.services.trainer.DATA_PATHS", {"raw_data": temp_booking_data_csv})
+    mocker.patch("pandas.read_csv", return_value=pd.read_csv(temp_booking_data_csv))
 
     # Action
     train_pipeline()

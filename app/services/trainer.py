@@ -30,7 +30,7 @@ warnings.filterwarnings("ignore")
 
 def train_pipeline():
     # Load data
-    data = pd.read_csv(DATA_PATHS["raw_data"])
+    data = pd.read_csv(DATA_PATHS["raw_data"]) # TODO: Need to update when data storage is added
     X = data.drop(columns=[TARGET_VARIABLE])
     y = data[TARGET_VARIABLE]
 
