@@ -45,9 +45,7 @@ def train_pipeline():
         vars_to_drop=VARS_TO_DROP,
         booking_map=BOOKING_MAP,
     )
-    imputer = CategoricalImputer(
-        imputation_method="frequent", variables=VARS_TO_IMPUTE
-    )
+    imputer = CategoricalImputer(imputation_method="frequent", variables=VARS_TO_IMPUTE)
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
     clsfr = RandomForestClassifier()
 

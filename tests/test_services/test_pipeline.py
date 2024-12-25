@@ -5,7 +5,7 @@ from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
-from xgboost import XGBClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 from app.services.preprocessing import NoVacancyDataProcessing
 
@@ -14,7 +14,7 @@ def test_pipeline_initization(sample_pipeline):
     assert isinstance(sample_pipeline.processor, NoVacancyDataProcessing)
     assert isinstance(sample_pipeline.imputer, CategoricalImputer)
     assert isinstance(sample_pipeline.encoder, OneHotEncoder)
-    assert isinstance(sample_pipeline.estimator, XGBClassifier)
+    assert isinstance(sample_pipeline.estimator, RandomForestClassifier)
 
 
 def test_pipeline_structure(sample_pipeline):

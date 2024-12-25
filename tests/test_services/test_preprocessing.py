@@ -62,8 +62,7 @@ def test_convert_columns_to_snake_case(booking_data):
         "car_parking_space",
         "room_type",
         "lead_time",
-        "market_segment",
-        "type",
+        "market_segment_type",
         "repeated",
         "p_c",
         "p_not_c",
@@ -117,6 +116,11 @@ def test_no_vacancy_data_processing_transform(booking_data):
         "Aug",
         "Sep",
         "Jul",
+        "Jan",
+        "Jun",
+        "May",
+        "Mar",
+        "Nov",
     ]
 
     # Check that "day_of_week" was properly extracted
@@ -131,6 +135,11 @@ def test_no_vacancy_data_processing_transform(booking_data):
         "Friday",
         "Saturday",
         "Thursday",
+        "Saturday",
+        "Thursday",
+        "Friday",
+        "Tuesday",
+        "Friday",
     ]
 
     # Confirm y_tr only contains 0s and 1s
