@@ -40,12 +40,12 @@ VARS_TO_OHE = [
 
 # -- Model Training --
 SEARCH_SPACE = {
-    "n_estimators ": list(range(1, 502, 50)),
-    "max_features ": ["log2 ", "sqrt "],
-    "max_depth ": list(range(1, 32, 5)),
-    "min_samples_split ": [2, 5, 10],
-    "min_samples_leaf ": [1, 2, 4],
-    "bootstrap ": [True, False],
+    "model__n_estimators": list(range(1, 502, 50)),
+    "model__max_features": ["log2 ", "sqrt "],
+    "model__max_depth": list(range(1, 32, 5)),
+    "model__min_samples_split": [2, 5, 10],
+    "model__min_samples_leaf": [1, 2, 4],
+    "model__bootstrap": [True, False],
 }
 
 TRAIN_RATIO = 0.7

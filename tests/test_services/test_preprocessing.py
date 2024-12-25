@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 
 from app.services.config_services import (
@@ -105,42 +106,26 @@ def test_no_vacancy_data_processing_transform(booking_data):
     assert "date of reservation" not in X_tr.columns
 
     # Check that "month_of_reservation" was properly extracted
-    assert list(X_tr["month_of_reservation"]) == [
-        "Oct",
-        "Nov",
-        "Feb",
-        "May",
-        "Apr",
-        "Mar",
-        "Dec",
-        "Aug",
-        "Sep",
-        "Jul",
-        "Jan",
-        "Jun",
-        "May",
-        "Mar",
-        "Nov",
-    ]
+    expected_months = (
+        pd.to_datetime(booking_data["date of reservation"]).dt.strftime("%b").tolist()
+    )
+    assert all(
+        month == expected_month
+        for month, expected_month in zip(
+            X_tr["month_of_reservation"].tolist(), expected_months
+        )
+    )
 
     # Check that "day_of_week" was properly extracted
-    assert list(X_tr["day_of_week"]) == [
-        "Friday",
-        "Tuesday",
-        "Wednesday",
-        "Saturday",
-        "Wednesday",
-        "Friday",
-        "Friday",
-        "Friday",
-        "Saturday",
-        "Thursday",
-        "Saturday",
-        "Thursday",
-        "Friday",
-        "Tuesday",
-        "Friday",
-    ]
+    expected_weekdays = (
+        pd.to_datetime(booking_data["date of reservation"]).dt.strftime("%A").tolist()
+    )
+    assert all(
+        weekday == expected_weekday
+        for weekday, expected_weekday in zip(
+            X_tr["day_of_week"].tolist(), expected_weekdays
+        )
+    )
 
     # Confirm y_tr only contains 0s and 1s
     unique_values = set(y_tr.unique())

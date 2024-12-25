@@ -28,7 +28,7 @@ class NoVacancyPipeline:
         self.pipe = None  # Placeholder fo the constructed pipeline
 
     def pipeline(self, search_space):
-        pipe = Pipeline(
+        self.pipe = Pipeline(
             [
                 ("cleaning_step", self.processor),
                 ("imputation_step", self.imputer),
@@ -38,7 +38,12 @@ class NoVacancyPipeline:
         )
 
         self.rscv = RandomizedSearchCV(
-            pipe, search_space, cv=5, n_jobs=-1, return_train_score=False, verbose=3
+            estimator=self.pipe,
+            param_distributions=search_space,
+            cv=5,
+            n_jobs=-1,
+            return_train_score=False,
+            verbose=3,
         )
         return self.rscv
 
