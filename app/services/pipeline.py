@@ -3,6 +3,7 @@ from typing import Union
 
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
+import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
@@ -16,21 +17,19 @@ _logger = logging.getLogger(__name__)
 class NoVacancyPipeline:
     def __init__(
         self,
-        processor: NoVacancyDataProcessing,
         imputer: CategoricalImputer,
         encoder: OneHotEncoder,
         clsfr: Union[BaseEstimator, XGBClassifier],
     ):
-        self.processor = processor
         self.imputer = imputer
         self.encoder = encoder
         self.estimator = clsfr
         self.pipe = None  # Placeholder fo the constructed pipeline
+        self.rscv = None  # Placeholder for the RandomizedSearchCV object
 
     def pipeline(self, search_space):
         self.pipe = Pipeline(
             [
-                ("cleaning_step", self.processor),
                 ("imputation_step", self.imputer),
                 ("encoding_step", self.encoder),
                 ("model", self.estimator),
@@ -45,11 +44,10 @@ class NoVacancyPipeline:
             return_train_score=False,
             verbose=3,
         )
-        return self.rscv
 
     def fit(self, X, y):
         """Fit the pipeline using RandomizedSearchCV."""
-        if not hasattr(self, "rscv"):
+        if self.rscv is None:
             raise AttributeError(
                 "Pipeline not instantiated. Call `pipeline` method first."
             )

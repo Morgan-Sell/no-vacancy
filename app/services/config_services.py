@@ -25,7 +25,7 @@ BOOKING_MAP = {
     "Canceled": 1,
 }
 
-VARS_TO_DROP = ["Booking_ID", "date of reservation"]
+VARS_TO_DROP = ["booking_id", "date_of_reservation"]
 
 # -- Feature Engineering --
 VARS_TO_IMPUTE = ["month_of_reservation", "day_of_week"]
@@ -41,7 +41,7 @@ VARS_TO_OHE = [
 # -- Model Training --
 SEARCH_SPACE = {
     "model__n_estimators": list(range(1, 502, 50)),
-    "model__max_features": ["log2 ", "sqrt "],
+    "model__max_features": ["log2", "sqrt"],
     "model__max_depth": list(range(1, 32, 5)),
     "model__min_samples_split": [2, 5, 10],
     "model__min_samples_leaf": [1, 2, 4],
