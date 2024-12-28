@@ -20,10 +20,11 @@ def test_pipeline_initization(sample_pipeline):
 def test_pipeline_structure(sample_pipeline, booking_data):
     # Arrange
     search_space = {
-        "model__n_estimators": [100, 200, 300],
-        "model__max_depth": [3, 4, 5],
-        "model__learning_rate": [0.1, 0.01, 0.001],
+    "model__n_estimators": list(range(1, 502, 50)),
+    "model__max_features": ["log2", "sqrt"],
+    "model__max_depth": [3, 5],
     }
+
     processor = NoVacancyDataProcessing(
         variable_rename=VARIABLE_RENAME_MAP,
         month_abbreviation=MONTH_ABBREVIATION_MAP,
@@ -36,16 +37,15 @@ def test_pipeline_structure(sample_pipeline, booking_data):
     X_tr, y_tr = processor.fit_transform(X, y)
 
     # Action
-    pipeline = sample_pipeline.pipeline(search_space)
-    pipeline.fit(X_tr, y_tr)
-
+    sample_pipeline.pipeline(search_space)
+    sample_pipeline.fit(X_tr, y_tr)
 
     # Assert
-    assert isinstance(pipeline, RandomizedSearchCV)
-    assert isinstance(pipeline.estimator, Pipeline)
-    assert "imputation_step" in pipeline.estimator.named_steps
-    assert "encoding_step" in pipeline.estimator.named_steps
-    assert "model" in pipeline.estimator.named_steps
+    assert isinstance(sample_pipeline.rscv, RandomizedSearchCV)
+    assert isinstance(sample_pipeline.pipe, Pipeline)
+    assert "imputation_step" in sample_pipeline.pipe.named_steps
+    assert "encoding_step" in sample_pipeline.pipe.named_steps
+    assert "model" in sample_pipeline.pipe.named_steps
 
 
 @patch("sklearn.model_selection.RandomizedSearchCV.fit")
@@ -55,10 +55,10 @@ def test_pipeline_fit(mock_fit, sample_pipeline, booking_data):
         "model__n_estimators": [100, 200],
         "model__max_depth": [3, 5],
     }
-    pipeline = sample_pipeline.pipeline(search_space)
+    sample_pipeline.pipeline(search_space)
 
     # Action
-    pipeline.fit(
+    sample_pipeline.fit(
         booking_data.drop(columns=["booking status"]), booking_data["booking status"]
     )
 
