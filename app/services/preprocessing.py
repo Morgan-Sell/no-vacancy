@@ -81,15 +81,15 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
 
         return X_tr, y_tr
 
-
-    def fit_transform(self, X: pd.DataFrame, y: pd.Series = None) -> Tuple[pd.DataFrame, pd.Series]:
+    def fit_transform(
+        self, X: pd.DataFrame, y: pd.Series = None
+    ) -> Tuple[pd.DataFrame, pd.Series]:
         """
         Must override TransformerMixin's fit_transform method so y is returned.
         Othterwise, y will be lost in the pipeline.
         """
         self.fit(X, y)
         return self.transform(X, y)
-
 
     def _to_snake_case(self, name: str) -> str:
         # Replace hyphens (-) with underscores (_)

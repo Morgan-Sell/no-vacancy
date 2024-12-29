@@ -15,6 +15,12 @@ _logger = logging.getLogger(__name__)
 
 
 class NoVacancyPipeline:
+    """
+    A custom pipeline for training and predicting on the NoVacancy dataset.
+
+    NoVacancyDataProcessing is omitted because it transforms the target variable, 
+    which causes issues with the pipeline.
+    """
     def __init__(
         self,
         imputer: CategoricalImputer,

@@ -7,7 +7,12 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
 
-from app.services.config_services import BOOKING_MAP, MONTH_ABBREVIATION_MAP, VARIABLE_RENAME_MAP, VARS_TO_DROP
+from app.services.config_services import (
+    BOOKING_MAP,
+    MONTH_ABBREVIATION_MAP,
+    VARIABLE_RENAME_MAP,
+    VARS_TO_DROP,
+)
 from app.services.preprocessing import NoVacancyDataProcessing
 
 
@@ -18,11 +23,14 @@ def test_pipeline_initization(sample_pipeline):
 
 
 def test_pipeline_structure(sample_pipeline, booking_data):
+    """
+    Ensure the pipeline is properly configured with the correct steps.
+    """
     # Arrange
     search_space = {
-    "model__n_estimators": list(range(1, 502, 50)),
-    "model__max_features": ["log2", "sqrt"],
-    "model__max_depth": [3, 5],
+        "model__n_estimators": list(range(1, 502, 50)),
+        "model__max_features": ["log2", "sqrt"],
+        "model__max_depth": [3, 5],
     }
 
     processor = NoVacancyDataProcessing(
@@ -33,9 +41,8 @@ def test_pipeline_structure(sample_pipeline, booking_data):
     )
     X = booking_data.drop(columns=["booking status"])
     y = booking_data["booking status"]
-
     X_tr, y_tr = processor.fit_transform(X, y)
-    print("test_pipeline_structure y_tr: ", type(y_tr))
+
     # Action
     sample_pipeline.pipeline(search_space)
     sample_pipeline.fit(X_tr, y_tr)
@@ -48,25 +55,36 @@ def test_pipeline_structure(sample_pipeline, booking_data):
     assert "model" in sample_pipeline.pipe.named_steps
 
 
-@patch("sklearn.model_selection.RandomizedSearchCV.fit")
-def test_pipeline_fit(mock_fit, sample_pipeline, booking_data):
+def test_pipeline_fit(sample_pipeline, booking_data):
+    """
+    Ensure the pipeline's training behavior is correct.
+    """
     # Arrange
     search_space = {
         "model__n_estimators": [100, 200],
         "model__max_depth": [3, 5],
     }
-    sample_pipeline.pipeline(search_space)
+
+    processor = NoVacancyDataProcessing(
+        variable_rename=VARIABLE_RENAME_MAP,
+        month_abbreviation=MONTH_ABBREVIATION_MAP,
+        vars_to_drop=VARS_TO_DROP,
+        booking_map=BOOKING_MAP,
+    )
+    X = booking_data.drop(columns=["booking status"])
+    y = booking_data["booking status"]
+    X_tr, y_tr = processor.fit_transform(X, y)
+
 
     # Action
-    sample_pipeline.fit(
-        booking_data.drop(columns=["booking status"]), booking_data["booking status"]
-    )
+    sample_pipeline.pipeline(search_space)
+    sample_pipeline.fit(X_tr, y_tr)
 
     # Assert
-    # Verify that fit() method of RandomizedSearchCV was only called once
-    mock_fit.assert_called_once()
+    # Verify RandomSearchCV is successfully fitted
+    assert sample_pipeline.rscv is not None, "RandomizedSearchCV was not initialized."
+    assert hasattr(sample_pipeline.rscv, "best_estimator_"), "RandomizedSearchCV was not fitted."
 
-    # Verify that X and y are passed as arguments
-    fit_args = mock_fit.call_args[0]
-    assert isinstance(fit_args[0], pd.DataFrame)
-    assert isinstance(fit_args[1], pd.Series)
+    # Verify X and y have valid types
+    assert isinstance(X_tr, pd.DataFrame)
+    assert isinstance(y_tr, pd.Series) 
