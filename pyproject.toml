@@ -24,13 +24,9 @@ classifiers = [
 testpaths = ["."]
 addopts = [
     "--cov=app",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-    "--cov-branch",
-    "--cov-config=.coveragerc"
+    "--cov-report=term-missing"
 ]
 env = { PYTHONPATH = "." }
-plugins = ["pytest-cov", "pytest-mock"]
 
 
 [tool.coverage.run]

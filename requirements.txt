@@ -8,3 +8,4 @@ scikit-learn
 feature-engine
 xgboost
 pytest-mock
+pytest-env
