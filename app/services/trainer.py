@@ -58,7 +58,7 @@ def train_pipeline():
     clsfr = RandomForestClassifier()
 
     # Train, finetune & test pipeline
-    pipe = NoVacancyPipeline(processor, imputer, encoder, clsfr)
+    pipe = NoVacancyPipeline(imputer, encoder, clsfr)
     pipe.pipeline(SEARCH_SPACE)
     pipe.fit(X_train_tr, y_train_tr)
 

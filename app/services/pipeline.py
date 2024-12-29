@@ -1,9 +1,9 @@
 import logging
 from typing import Union
 
+import pandas as pd
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
@@ -18,9 +18,10 @@ class NoVacancyPipeline:
     """
     A custom pipeline for training and predicting on the NoVacancy dataset.
 
-    NoVacancyDataProcessing is omitted because it transforms the target variable, 
+    NoVacancyDataProcessing is omitted because it transforms the target variable,
     which causes issues with the pipeline.
     """
+
     def __init__(
         self,
         imputer: CategoricalImputer,

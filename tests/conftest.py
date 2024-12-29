@@ -8,7 +8,12 @@ from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
 from sklearn.ensemble import RandomForestClassifier
 
-from app.services.config_services import BOOKING_MAP, MONTH_ABBREVIATION_MAP, VARIABLE_RENAME_MAP, VARS_TO_DROP
+from app.services.config_services import (
+    BOOKING_MAP,
+    MONTH_ABBREVIATION_MAP,
+    VARIABLE_RENAME_MAP,
+    VARS_TO_DROP,
+)
 from app.services.pipeline import NoVacancyPipeline
 from app.services.preprocessing import NoVacancyDataProcessing
 
@@ -266,7 +271,7 @@ def booking_data():
             "10/2/2015",
             "11/6/2018",
             "2/28/2018",
-            "5/20/2017",
+            "12/20/2017",
             "4/11/2018",
             "3/15/2019",
             "12/25/2020",
@@ -274,7 +279,7 @@ def booking_data():
             "9/12/2020",
             "7/8/2021",
             "1/15/2022",
-            "6/25/2020",
+            "12/25/2020",
             "5/10/2019",
             "3/30/2021",
             "11/11/2022",

@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestClassifier
 
 from app.services.config_services import (
     BOOKING_MAP,
@@ -75,7 +75,6 @@ def test_pipeline_fit(sample_pipeline, booking_data):
     y = booking_data["booking status"]
     X_tr, y_tr = processor.fit_transform(X, y)
 
-
     # Action
     sample_pipeline.pipeline(search_space)
     sample_pipeline.fit(X_tr, y_tr)
@@ -83,8 +82,10 @@ def test_pipeline_fit(sample_pipeline, booking_data):
     # Assert
     # Verify RandomSearchCV is successfully fitted
     assert sample_pipeline.rscv is not None, "RandomizedSearchCV was not initialized."
-    assert hasattr(sample_pipeline.rscv, "best_estimator_"), "RandomizedSearchCV was not fitted."
+    assert hasattr(
+        sample_pipeline.rscv, "best_estimator_"
+    ), "RandomizedSearchCV was not fitted."
 
     # Verify X and y have valid types
     assert isinstance(X_tr, pd.DataFrame)
-    assert isinstance(y_tr, pd.Series) 
+    assert isinstance(y_tr, pd.Series)
