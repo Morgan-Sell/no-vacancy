@@ -1,5 +1,7 @@
+import glob
 import os
 import tempfile
+import time
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -358,3 +360,44 @@ def temp_booking_data_csv(booking_data):
         temp_file.flush()  # Ensure data is written to the disk
         yield temp_file.name  # provide the temp file path to the test
     os.remove(temp_file.name)
+
+
+# @pytest.fixture(scope="session", autouse=True)
+# def cleanup_coverage_files(request):
+#     def cleanup():
+#         coverage_files = glob.glob(".coverage*")
+#         for file in coverage_files:
+#             try:
+#                 os.remove(file)
+#             except OSError as e:
+#                 print(f"Failed to delete {file}: {e}")
+
+#     # Register the cleanup function to run after all tests
+#     # request is a special fixture provided by pytest that allows dynamic test resource handling.
+#     request.addfinalizer(cleanup)
+
+def pytest_sessionfinish(session, exitstatus):
+    """
+    Ensures .coverage files are combined, reported, and removed after all tests are done.
+    """
+    print("\n🔄 Combining and cleaning .coverage files after all tests...")
+
+    try:
+        # Ensure coverage data is finalized
+        os.system("coverage combine")
+        os.system("coverage report")
+        os.system("coverage erase")  # Removes coverage data files
+
+        # Remove any lingering .coverage files
+        coverage_files = glob.glob(".coverage*")
+        for file in coverage_files:
+            if file.endswith(".coveragerc"):
+                print(f"⏩ Skipping deletion of configuration file: {file}")
+                continue
+            try:
+                os.remove(file)
+                print(f"✅ Deleted: {file}")
+            except OSError as e:
+                print(f"❌ Failed to delete {file}: {e}")
+    except Exception as e:
+        print(f"❌ pytest_sessionfinish encountered an error: {e}")

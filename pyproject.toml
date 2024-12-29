@@ -22,7 +22,13 @@ classifiers = [
 
 [tool.pytest.ini_options]
 testpaths = ["."]
-addopts = ["--cov=app", "--cov-report=term-missing", "--strict-markers"]
+addopts = [
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-branch",
+    "--cov-config=.coveragerc"
+]
 env = { PYTHONPATH = "." }
 plugins = ["pytest-cov", "pytest-mock"]
 
