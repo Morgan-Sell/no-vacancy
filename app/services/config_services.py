@@ -58,3 +58,4 @@ DATA_PATHS = {
     "processed_data": "data/processed/processed_no_vacancy.csv",
     "model_save_path": "data/models/xgboost_model.pkl",
 }
+

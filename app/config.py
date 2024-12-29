@@ -12,6 +12,9 @@ FORMATTER = logging.Formatter(
 LOG_DIR = join(PACKAGE_ROOT, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = join(LOG_DIR, "no_vacancy_api.log")
+# -- Data Management --
+PIPELINE_DIR = "app/models"
+PIPELINE_SAVE_FILE = "no_vacancy_pipeline"
 
 # Versioning
 __api_version__ = "0.0.0"
