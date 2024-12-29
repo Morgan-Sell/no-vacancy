@@ -35,7 +35,7 @@ def test_pipeline_structure(sample_pipeline, booking_data):
     y = booking_data["booking status"]
 
     X_tr, y_tr = processor.fit_transform(X, y)
-
+    print("test_pipeline_structure y_tr: ", type(y_tr))
     # Action
     sample_pipeline.pipeline(search_space)
     sample_pipeline.fit(X_tr, y_tr)
