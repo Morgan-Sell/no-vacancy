@@ -63,7 +63,7 @@ def test_pipeline_fit(sample_pipeline, booking_data):
     search_space = {
         "model__n_estimators": [100, 200],
         "model__max_depth": [3, 5, 7],
-        "model__max_features": ["sqrt", "log2"]
+        "model__max_features": ["sqrt", "log2"],
     }
 
     processor = NoVacancyDataProcessing(

@@ -378,6 +378,7 @@ def cleanup_coverage_files(request):
     # request is a special fixture provided by pytest that allows dynamic test resource handling.
     request.addfinalizer(cleanup)
 
+
 def pytest_sessionfinish(session, exitstatus):
     """
     Ensures .coverage files are removed after all tests are done.
@@ -401,7 +402,6 @@ def pytest_sessionfinish(session, exitstatus):
         print(f"❌ pytest_sessionfinish encountered an error: {e}")
 
 
-
 @pytest.fixture(scope="function")
 def temp_pipeline_path(tmp_path):
     temp_dir = tmp_path / "pipeline"
@@ -410,15 +410,17 @@ def temp_pipeline_path(tmp_path):
 
 
 @pytest.fixture(scope="function")
-def dm():
+def dm(temp_pipeline_path):
     """
-    Use fixture to instantiate DataManagement to follow DRY 
+    Use fixture to instantiate DataManagement to follow DRY
     principle and enable easier code changes.
     """
-    return DataManagement()
+    # Create temporary pipeline path before instantiating DataManagement
+    with patch("app.services.data_management.PIPELINE_DIR", temp_pipeline_path.parent):
+        return DataManagement()
 
 
 @pytest.fixture(scope="function")
 def sample_pipeline():
     """Return a sample pipeline object."""
-    return {"model": "mock_no_vacancy_pipeline"}
+    return {"model": "mock_pipeline"}
