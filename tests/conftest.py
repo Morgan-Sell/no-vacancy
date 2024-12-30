@@ -16,6 +16,7 @@ from app.services.config_services import (
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
 )
+from app.services.data_management import DataManagement
 from app.services.pipeline import NoVacancyPipeline
 from app.services.preprocessing import NoVacancyDataProcessing
 
@@ -398,3 +399,26 @@ def pytest_sessionfinish(session, exitstatus):
                 print(f"❌ Failed to delete {file}: {e}")
     except Exception as e:
         print(f"❌ pytest_sessionfinish encountered an error: {e}")
+
+
+
+@pytest.fixture(scope="function")
+def temp_pipeline_path(tmp_path):
+    temp_dir = tmp_path / "pipeline"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    return temp_dir / "test_pipeline.pkl"
+
+
+@pytest.fixture(scope="function")
+def dm():
+    """
+    Use fixture to instantiate DataManagement to follow DRY 
+    principle and enable easier code changes.
+    """
+    return DataManagement()
+
+
+@pytest.fixture(scope="function")
+def sample_pipeline():
+    """Return a sample pipeline object."""
+    return {"model": "mock_no_vacancy_pipeline"}
