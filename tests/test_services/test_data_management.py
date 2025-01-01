@@ -72,3 +72,43 @@ def test_load_pipeline_failure(dm):
             # Act & Assert
             with pytest.raises(RuntimeError, match="❌ Failed to load pipeline: Explode!"):
                 dm.load_pipeline()
+
+# -----------------------------
+# Test: delete_pipeline
+# -----------------------------
+def test_delete_pipeline_success(dm, temp_pipeline_path):
+    # Arrange
+    expected_path = temp_pipeline_path.parent / "no_vacancy_pipeline"
+    expected_path.touch()  # Create an empty file to simulate an existing pipeline
+
+    with patch("os.remove") as mock_remove:
+        # Act
+        dm.delete_pipeline()
+
+        # Assert
+        mock_remove.assert_called_once_with(expected_path)
+
+
+def test_delete_pipeline_not_found(dm, temp_pipeline_path):
+    # Arrange
+    expected_path = temp_pipeline_path.parent / "no_vacancy_pipeline"
+
+    with patch.object(dm.logger, "warning") as mock_warning:
+        # Act
+        dm.delete_pipeline()
+
+        # Assert
+        mock_warning.assert_called_once_with(
+            f"❌ No pipeline found to delete at {expected_path}"
+        )
+
+def test_delete_pipeline_failure(dm, temp_pipeline_path):
+    # Arrange
+    expected_path = temp_pipeline_path.parent / "no_vacancy_pipeline"
+    expected_path.touch() # create an empty file to simulate an existig pipeline
+
+    with patch("os.remove", side_effect=Exception("Kaboom!")):
+        with pytest.raises(RuntimeError, match="❌ Failed to delete pipeline: Kaboom!"):
+            # Act & Assert
+            dm.delete_pipeline()
+
