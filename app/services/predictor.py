@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def handle_error(error_type, message, exception):
     logger.error(f"{message}: {exception}")
-    raise error_type(f"{message}: {exception}") #from exception
+    raise error_type(f"{message}: {exception}")  # from exception
 
 
 def make_prediction(test_data: pd.DataFrame):
@@ -27,10 +27,12 @@ def make_prediction(test_data: pd.DataFrame):
     try:
         if not isinstance(test_data, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame.")
-        
+
         if test_data.empty:
-            raise ValueError("Input data is empty. Cannot make predictions on an empty DataFrame.")
-        
+            raise ValueError(
+                "Input data is empty. Cannot make predictions on an empty DataFrame."
+            )
+
         # Load pipeline
         dm = DataManagement()
         pipeline = dm.load_pipeline()
@@ -69,6 +71,3 @@ def make_prediction(test_data: pd.DataFrame):
         handle_error(FileNotFoundError, "❌ No pipeline found", e)
     except Exception as e:
         handle_error(RuntimeError, "❌ Prediction failed", e)
-
-
-            

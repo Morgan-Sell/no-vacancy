@@ -34,7 +34,10 @@ def test_make_prediction_with_empty_data():
     empty_data = pd.DataFrame()
 
     # Act & Assert
-    with pytest.raises(ValueError, match="❌ Invalid input: Input data is empty. Cannot make predictions on an empty DataFrame."):
+    with pytest.raises(
+        ValueError,
+        match="❌ Invalid input: Input data is empty. Cannot make predictions on an empty DataFrame.",
+    ):
         make_prediction(empty_data)
 
 
@@ -45,9 +48,10 @@ def test_make_prediction_pipeline_not_found(booking_data):
         side_effect=FileNotFoundError("Pipeline not found"),
     ):
         # Act & Assert
-        with pytest.raises(FileNotFoundError, match="❌ No pipeline found: Pipeline not found"):
+        with pytest.raises(
+            FileNotFoundError, match="❌ No pipeline found: Pipeline not found"
+        ):
             make_prediction(booking_data)
-
 
 
 def test_make_prediction_unexpected_error(booking_data):
@@ -58,10 +62,12 @@ def test_make_prediction_unexpected_error(booking_data):
 
     with patch(
         "app.services.data_management.DataManagement.load_pipeline",
-        return_value=mock_pipeline
+        return_value=mock_pipeline,
     ):
         # Act & Assert
-        with pytest.raises(RuntimeError, match="❌ Prediction failed: Unexpected prediction error"):
+        with pytest.raises(
+            RuntimeError, match="❌ Prediction failed: Unexpected prediction error"
+        ):
             make_prediction(booking_data)
 
 
@@ -69,7 +75,9 @@ def test_make_prediction_invalid_input_type():
     # Arrange
     invalid_input = {"breakfast": [3, "waffles"]}
 
-    with pytest.raises(ValueError, match="❌ Invalid input: Input must be a pandas DataFrame"):
+    with pytest.raises(
+        ValueError, match="❌ Invalid input: Input must be a pandas DataFrame"
+    ):
         make_prediction(invalid_input)
 
 
@@ -83,7 +91,7 @@ def test_make_prediction_single_observation(booking_data):
 
     with patch(
         "app.services.data_management.DataManagement.load_pipeline",
-        return_value=mock_pipeline
+        return_value=mock_pipeline,
     ):
         # Act
         results = make_prediction(single_observation)
