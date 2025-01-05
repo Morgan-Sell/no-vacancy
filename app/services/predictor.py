@@ -1,5 +1,6 @@
 import logging
 
+import numpy as np
 import pandas as pd
 
 from app.config import __model_version__
@@ -15,9 +16,17 @@ from app.services.preprocessing import NoVacancyDataProcessing
 logger = logging.getLogger(__name__)
 
 
+def handle_error(error_type, message, exception):
+    logger.error(f"{message}: {exception}")
+    raise error_type(f"{message}: {exception}") from exception
+
+
 def make_prediction(test_data: pd.DataFrame):
 
     try:
+        if test_data.empty:
+            raise ValueError("Input data is empty. Cannot make predictions on an empty DataFrame.")
+        
         # Load pipeline
         dm = DataManagement()
         pipeline = dm.load_pipeline()
@@ -37,6 +46,8 @@ def make_prediction(test_data: pd.DataFrame):
         predictions = pipeline.predict(X_test_prcsd)
         probabilities = pipeline.predict_proba(X_test_prcsd)
 
+        probabilities = np.array(probabilities)
+
         # Format predictions into a dataframe
         results = pd.DataFrame(
             {
@@ -48,9 +59,10 @@ def make_prediction(test_data: pd.DataFrame):
 
         return results
 
+    except ValueError as e:
+        handle_error(ValueError, "❌ Invalid input:", e)
     except FileNotFoundError as e:
-        logger.error(f"❌ No pipeline found: {e}")
-        raise RuntimeError(f"❌ No pipeline found: {e}")
+        handle_error(ValueError, "❌ No pipelind found:", e)
     except Exception as e:
-        logger.error(f"❌ Prediction failed: {e}")
-        raise RuntimeError(f"❌ Prediction failed: {e}")
+        handle_error(RuntimeError, "❌ Prediction failed:", e)
+
