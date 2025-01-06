@@ -9,6 +9,11 @@ from app.services.config_services import DATA_PATHS
 from app.services.pipeline import NoVacancyPipeline
 
 
+def handle_error_dm(logger, error_type, message, exception):
+    logger.error(f"{message}: {exception}")
+    raise error_type(f"{message}: {exception}")
+
+
 # TODO: Change log savings from local directory to cloud provider storage, e.g., AWS S3.
 class DataManagement:
     """
@@ -23,31 +28,28 @@ class DataManagement:
         try:
             if not isinstance(pipeline, NoVacancyPipeline):
                 raise TypeError(
-                    "❌ The pipeline to be saved must be an instance of NoVacancyPipeline."
+                    "The pipeline to be saved must be an instance of NoVacancyPipeline."
                 )
 
             joblib.dump(pipeline, self.pipeline_path)
             self.logger.info(f"✅ Pipeline successfully saved at {self.pipeline_path}")
 
-        except TypeError as e:
-            self.logger.error(f"❌ TypeError during pipeline saving: {e}")
-            raise
         except Exception as e:
-            self.logger.error(f"❌ Unexpected error during pipeline saving: {e}")
-            raise
+            handle_error_dm(self.logger, type(e), "❌ Error during pipeline saving", e)
+
 
     def load_pipeline(self) -> NoVacancyPipeline:
         try:
-            if not self.pipeline_path.exist():
+            if not self.pipeline_path.exists():
                 raise FileNotFoundError(
-                    f"❌ Pipeline file not found at {self.pipeline_path}"
+                    f"Pipeline file not found at {self.pipeline_path}"
                 )
 
             pipeline = joblib.load(self.pipeline_path)
 
             if not isinstance(pipeline, NoVacancyPipeline):
                 raise TypeError(
-                    "❌ Loaded pipeline is not an instance of NoVacancyPipeline."
+                    "Loaded pipeline is not an instance of NoVacancyPipeline."
                 )
 
             self.logger.info(
@@ -55,21 +57,14 @@ class DataManagement:
             )
             return pipeline
 
-        except FileNotFoundError as e:
-            self.logger.error(f"❌ FileNotFoundError during pipeline loading: {e}")
-            raise
-        except TypeError as e:
-            self.logger.error(f"❌ TypeError during pipeline loading: {e}")
-            raise
         except Exception as e:
-            self.logger.error(f"❌ Unexpected error during pipeline loading: {e}")
-            raise
+            handle_error_dm(self.logger, type(e), "❌ Error during pipeline loading", e)
 
     def delete_pipeline(self) -> None:
         try:
             if not self.pipeline_path.exists():
                 raise FileNotFoundError(
-                    f"❌ Pipeline file not found at {self.pipeline_path}"
+                    f"Pipeline file not found at {self.pipeline_path}"
                 )
 
             # Delete file as specified location
@@ -78,9 +73,5 @@ class DataManagement:
                 f"✅ Pipeline successfully deleted from {self.pipeline_path}"
             )
 
-        except FileNotFoundError as e:
-            self.logger.error(f"❌ FileNotFoundError during pipeline deletion: {e}")
-            raise
         except Exception as e:
-            self.logger.error(f"❌ Unexpected error during pipeline deletion: {e}")
-            raise
+            handle_error_dm(self.logger, type(e), "❌ Error during pipeline deletion", e)

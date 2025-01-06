@@ -6,6 +6,7 @@ import joblib
 import pytest
 
 from app.services.data_management import DataManagement
+from app.services.pipeline import NoVacancyPipeline
 
 
 # -----------------------------
@@ -21,56 +22,39 @@ def test_save_pipeline_success(dm, mock_pipeline):
         mock_dump.assert_called_once_with(mock_pipeline, dm.pipeline_path)
 
 
-def test_save_pipeline_failure(dm, sample_pipeline, temp_pipeline_path):
+def test_save_pipeline_invalid_type(dm):
+    with pytest.raises(TypeError, match="❌ Error during pipeline saving: The pipeline to be saved must be an instance of NoVacancyPipeline"):
+        dm.save_pipeline("Wrong pipe!")
 
-    with patch("joblib.dump") as mock_joblib_dump:
-        mock_joblib_dump.side_effect = Exception("Boom!")
 
-        # Act & Assert
-        with pytest.raises(RuntimeError, match="❌ Failed to save pipeline: Boom!"):
-            dm.save_pipeline(sample_pipeline)
-
+def test_save_pipeline_exception(dm, mock_pipeline):
+    with patch("joblib.dump", side_effect=Exception("BOOM!")):
+        with pytest.raises(Exception, match="❌ Error during pipeline saving: BOOM!"):
+            dm.save_pipeline(mock_pipeline)
 
 # -----------------------------
 # Test: load_pipeline
 # -----------------------------
-def test_load_pipeline_success(dm, sample_pipeline, temp_pipeline_path):
-    # Arrange
-    expected_path = temp_pipeline_path.parent / "no_vacancy_pipeline"
-
-    with patch("joblib.load", return_value=sample_pipeline) as mock_joblib_load:
-        joblib.dump(sample_pipeline, expected_path)
-
-        # Act
-        result = dm.load_pipeline()
-
-        # Assert
-        mock_joblib_load.assert_called_once_with(expected_path)
-        assert result == sample_pipeline
+def test_load_pipeline_success(dm, mock_pipeline):
+    # patch.object() mocks an attribute or method of a specific class, rather than a global reference in a module
+    with patch.object(Path, "exists", return_value=True):
+        with patch("joblib.load", return_value=mock_pipeline):
+            loaded_pipeline = dm.load_pipeline()
+            assert isinstance(loaded_pipeline, NoVacancyPipeline)
 
 
-def test_load_pipeline_not_found(dm, temp_pipeline_path):
-    # Arrange
-    expected_path = temp_pipeline_path.parent / "no_vacancy_pipeline"
-
-    if expected_path.exists():
-        os.remove(expected_path)
-
-    # Act & Assert
-    with pytest.raises(
-        FileNotFoundError, match=f"❌ No pipeline found at {expected_path}"
-    ):
-        dm.load_pipeline()
+def test_load_pipeline_not_found(dm):
+    with patch.object(Path, "exists", return_value=False):
+        with pytest.raises(FileNotFoundError, match="❌ Error during pipeline loading: Pipeline file not found at"):
+            dm.load_pipeline()
 
 
-def test_load_pipeline_failure(dm):
-    # Arrange: Ensure self.pipeline_path exists otherwise FileNotFoundError will be raised
-    with patch("pathlib.Path.exists", return_value=True):
+def test_load_pipeline_exception(dm):
+    # Mock dm.pipeline_path.exists() so FileNotFoundError is not raised.
+    with patch.object(Path, "exists", return_value=True):
         with patch("joblib.load", side_effect=Exception("Explode!")):
-
-            # Act & Assert
-            with pytest.raises(
-                RuntimeError, match="❌ Failed to load pipeline: Explode!"
+            with pytest.raises( 
+                Exception, match="❌ Error during pipeline loading: Explode!"
             ):
                 dm.load_pipeline()
 
@@ -79,38 +63,28 @@ def test_load_pipeline_failure(dm):
 # Test: delete_pipeline
 # -----------------------------
 def test_delete_pipeline_success(dm, temp_pipeline_path):
-    # Arrange
-    expected_path = temp_pipeline_path.parent / "no_vacancy_pipeline"
-    expected_path.touch()  # Create an empty file to simulate an existing pipeline
+    # Simulate an existing pipeline file
+    temp_pipeline_path.touch()
 
-    with patch("os.remove") as mock_remove:
-        # Act
+    assert temp_pipeline_path.exists() is True
+
+    dm.delete_pipeline()
+
+    assert temp_pipeline_path.exists() is False
+
+
+def test_delete_pipeline_not_found(dm):
+    with pytest.raises(FileNotFoundError, match="❌ Error during pipeline deletion: Pipeline file not found at"):
         dm.delete_pipeline()
 
-        # Assert
-        mock_remove.assert_called_once_with(expected_path)
 
+def test_delete_pipeline_exception(dm, temp_pipeline_path):
+    # Simulate an existing pipeline file
+    temp_pipeline_path.touch()
 
-def test_delete_pipeline_not_found(dm, temp_pipeline_path):
-    # Arrange
-    expected_path = temp_pipeline_path.parent / "no_vacancy_pipeline"
-
-    with patch.object(dm.logger, "warning") as mock_warning:
-        # Act
-        dm.delete_pipeline()
-
-        # Assert
-        mock_warning.assert_called_once_with(
-            f"❌ No pipeline found to delete at {expected_path}"
-        )
-
-
-def test_delete_pipeline_failure(dm, temp_pipeline_path):
-    # Arrange
-    expected_path = temp_pipeline_path.parent / "no_vacancy_pipeline"
-    expected_path.touch()  # create an empty file to simulate an existig pipeline
-
-    with patch("os.remove", side_effect=Exception("Kaboom!")):
-        with pytest.raises(RuntimeError, match="❌ Failed to delete pipeline: Kaboom!"):
-            # Act & Assert
+    with patch.object(Path, "unlink", side_effect=Exception("OH NO!")):
+        with pytest.raises(
+            Exception,
+            match="❌ Error during pipeline deletion: OH NO!"
+        ):
             dm.delete_pipeline()

@@ -338,14 +338,12 @@ def sample_pipeline():
 
 
 @pytest.fixture(scope="function")
-def mock_pipeline(mocker, sample_pipeline):
-    """Mock the NoVacancyPipeline to avoid actual model training."""
-    mock_pipeline = mocker.patch(
-        "app.services.trainer.NoVacancyPipeline", return_value=sample_pipeline
-    )
-    mock_pipeline.fit = MagicMock(return_value=None)
-    mock_pipeline.predict_proba = MagicMock(return_value=[[0.1, 0.9], [0.7, 0.3]])
-    return mock_pipeline
+def mock_pipeline(sample_pipeline):
+    """Mock the training and prediction behavior of NoVacancyPipeline."""
+    sample_pipeline.fit = MagicMock(return_value=None)
+    sample_pipeline.predict = MagicMock(return_value=[1, 0])
+    sample_pipeline.predict_proba = MagicMock(return_value=[[0.1, 0.9], [0.8, 0.2]])
+    return sample_pipeline
 
 
 @pytest.fixture(scope="function")
@@ -407,9 +405,8 @@ def pytest_sessionfinish(session, exitstatus):
 
 @pytest.fixture(scope="function")
 def temp_pipeline_path(tmp_path):
-    temp_dir = tmp_path / "pipeline"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    return temp_dir / "test_pipeline.pkl"
+    """Provide a temporary path for pipeline storage."""
+    return tmp_path / "no_vacancy_pipeline.pkl"
 
 
 @pytest.fixture(scope="function")
@@ -418,6 +415,12 @@ def dm(temp_pipeline_path):
     Use fixture to instantiate DataManagement to follow DRY
     principle and enable easier code changes.
     """
-    # Create temporary pipeline path before instantiating DataManagement
-    with patch("app.services.data_management.PIPELINE_DIR", temp_pipeline_path.parent):
+    # Mock DATA_PATHS["model_save_path"] b/c (1) tests should rely on hardcoded
+    # global paths that may interfere with the application and (2) if DATA_PATHS
+    # structure changes, the tests will seamlessly adapt.
+    with patch.dict(
+        "app.services.config_services.DATA_PATHS",
+        {"model_save_path": str(temp_pipeline_path)},
+        clear=False, # Ensures other DATA_PATHS keys are not impacted
+    ):
         return DataManagement()
