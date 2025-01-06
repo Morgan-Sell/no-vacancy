@@ -6,6 +6,7 @@ import joblib
 
 from app.config import PIPELINE_DIR, PIPELINE_SAVE_FILE, get_logger
 from app.services.config_services import DATA_PATHS
+from app.services.pipeline import NoVacancyPipeline
 
 
 # TODO: Change log savings from local directory to cloud provider storage, e.g., AWS S3.
@@ -18,48 +19,68 @@ class DataManagement:
         self.logger = get_logger(logger_name=__name__)
         self.pipeline_path = Path(DATA_PATHS["model_save_path"])
 
-    def save_pipeline(self, pipeline_to_persist: Any) -> None:
-        """
-        Save the pipeline locally to the specified PIPELINE_DIR.
-        """
+    def save_pipeline(self, pipeline) -> None:
         try:
-            self.pipeline_path.parent.mkdir(parents=True, exist_ok=True)
-            joblib.dump(pipeline_to_persist, self.pipeline_path)
+            if not isinstance(pipeline, NoVacancyPipeline):
+                raise TypeError(
+                    "❌ The pipeline to be saved must be an instance of NoVacancyPipeline."
+                )
+
+            joblib.dump(pipeline, self.pipeline_path)
             self.logger.info(f"✅ Pipeline successfully saved at {self.pipeline_path}")
+
+        except TypeError as e:
+            self.logger.error(f"❌ TypeError during pipeline saving: {e}")
+            raise
         except Exception as e:
-            error_msg = f"❌ Failed to save pipeline: {e}"
-            self.logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            self.logger.error(f"❌ Unexpected error during pipeline saving: {e}")
+            raise
 
-    def load_pipeline(self) -> Any:
-        if not self.pipeline_path.exists():
-            error_msg = f"❌ No pipeline found at {self.pipeline_path}"
-            self.logger.error(error_msg)
-            raise FileNotFoundError(error_msg)
-
+    def load_pipeline(self) -> NoVacancyPipeline:
         try:
+            if not self.pipeline_path.exist():
+                raise FileNotFoundError(
+                    f"❌ Pipeline file not found at {self.pipeline_path}"
+                )
+
             pipeline = joblib.load(self.pipeline_path)
+
+            if not isinstance(pipeline, NoVacancyPipeline):
+                raise TypeError(
+                    "❌ Loaded pipeline is not an instance of NoVacancyPipeline."
+                )
+
             self.logger.info(
-                f"✅ Pipeline successfuly loaded from {self.pipeline_path}"
+                f"✅ Pipeline successfully loaded from {self.pipeline_path}"
             )
             return pipeline
+
+        except FileNotFoundError as e:
+            self.logger.error(f"❌ FileNotFoundError during pipeline loading: {e}")
+            raise
+        except TypeError as e:
+            self.logger.error(f"❌ TypeError during pipeline loading: {e}")
+            raise
         except Exception as e:
-            error_msg = f"❌ Failed to load pipeline: {e}"
-            self.logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            self.logger.error(f"❌ Unexpected error during pipeline loading: {e}")
+            raise
 
     def delete_pipeline(self) -> None:
         try:
-            if self.pipeline_path.is_file():
-                os.remove(self.pipeline_path)
-                self.logger.info(
-                    f"✅ Pipeline successfully deleted at {self.pipeline_path}"
+            if not self.pipeline_path.exists():
+                raise FileNotFoundError(
+                    f"❌ Pipeline file not found at {self.pipeline_path}"
                 )
-            else:
-                self.logger.warning(
-                    f"❌ No pipeline found to delete at {self.pipeline_path}"
-                )
+
+            # Delete file as specified location
+            self.pipeline_path.unlink()
+            self.logger.info(
+                f"✅ Pipeline successfully deleted from {self.pipeline_path}"
+            )
+
+        except FileNotFoundError as e:
+            self.logger.error(f"❌ FileNotFoundError during pipeline deletion: {e}")
+            raise
         except Exception as e:
-            error_msg = f"❌ Failed to delete pipeline: {e}"
-            self.logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            self.logger.error(f"❌ Unexpected error during pipeline deletion: {e}")
+            raise

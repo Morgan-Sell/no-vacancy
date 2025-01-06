@@ -320,18 +320,21 @@ def booking_data():
 
 
 @pytest.fixture(scope="function")
-def sample_pipeline():
-    imputer = CategoricalImputer()
-    encoder = OneHotEncoder()
-    estimator = RandomForestClassifier()
-
-    return NoVacancyPipeline(imputer, encoder, estimator)
-
-
-@pytest.fixture(scope="function")
 def mock_read_csv(mocker, booking_data):
     """Mock pandas read_csv to return booking_data."""
     return mocker.patch("pandas.read_csv", return_value=booking_data)
+
+
+@pytest.fixture(scope="function")
+def sample_pipeline():
+    """Provide a valid sample NoVacancyPipeline instance."""
+    imputer = CategoricalImputer(imputation_method="frequent", variables=["var1"])
+    encoder = OneHotEncoder(variables=["var2"])
+    estimator = RandomForestClassifier()
+    
+    pipeline = NoVacancyPipeline(imputer, encoder, estimator)
+    pipeline.pipeline({})  # Pass empty search space for simplicity
+    return pipeline
 
 
 @pytest.fixture(scope="function")
@@ -418,9 +421,3 @@ def dm(temp_pipeline_path):
     # Create temporary pipeline path before instantiating DataManagement
     with patch("app.services.data_management.PIPELINE_DIR", temp_pipeline_path.parent):
         return DataManagement()
-
-
-@pytest.fixture(scope="function")
-def sample_pipeline():
-    """Return a sample pipeline object."""
-    return {"model": "mock_pipeline"}
