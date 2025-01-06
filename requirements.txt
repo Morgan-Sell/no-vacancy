@@ -4,7 +4,7 @@ black
 pytest
 pytest-cov
 simplejson
-scikit-learn
+scikit-learn==1.5.2 
 feature-engine
 xgboost
 pytest-mock

@@ -21,6 +21,7 @@ from app.services.config_services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
+from app.services.data_management import DataManagement
 from app.services.pipeline import NoVacancyPipeline
 from app.services.preprocessing import NoVacancyDataProcessing
 
@@ -62,10 +63,14 @@ def train_pipeline():
     pipe.pipeline(SEARCH_SPACE)
     pipe.fit(X_train_tr, y_train_tr)
 
+    # Save the pipeline
+    dm = DataManagement()
+    dm.save_pipeline(pipe.rscv.best_estimator_)
+
+    # Perform predictions and evaluate performance
     y_probs = pipe.predict_proba(X_test_tr)[:, 1]
     auc = roc_auc_score(y_test_tr, y_probs)
     print("AUC: ", round(auc, 5))
-
     logger.info(f"{__model_version__} - AUC: {auc}")
 
 

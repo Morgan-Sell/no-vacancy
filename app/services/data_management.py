@@ -5,6 +5,7 @@ from typing import Any
 import joblib
 
 from app.config import PIPELINE_DIR, PIPELINE_SAVE_FILE, get_logger
+from app.services.config_services import DATA_PATHS
 
 
 # TODO: Change log savings from local directory to cloud provider storage, e.g., AWS S3.
@@ -15,7 +16,7 @@ class DataManagement:
 
     def __init__(self):
         self.logger = get_logger(logger_name=__name__)
-        self.pipeline_path = Path(PIPELINE_DIR) / PIPELINE_SAVE_FILE
+        self.pipeline_path = Path(DATA_PATHS["model_save_path"])
 
     def save_pipeline(self, pipeline_to_persist: Any) -> None:
         """

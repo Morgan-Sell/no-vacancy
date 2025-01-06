@@ -48,6 +48,18 @@ def make_prediction(test_data: pd.DataFrame):
         )
         X_test_prcsd, _ = processor.transform(X_test)
 
+        # Reconcile training and test data shapes
+        # OHE columns in test data may not exist in training data
+        # This ensures that the test data has the same columns as the training data
+        expected_columns = pipeline.rscv.best_estimator_.named_steps[
+            "encoding_step"
+        ].get_feature_names_out()
+        X_test_prcsd = X_test_prcsd.reindex(columns=expected_columns, fill_value=0)
+
+        # TODO: Omit columns that exist in the test dataset, but not the training dataset
+
+        # TODO: Add a check to ensure that the test data has the same columns as the training data
+
         # Generate the predictions using the pipeline
         predictions = pipeline.predict(X_test_prcsd)
         probabilities = pipeline.predict_proba(X_test_prcsd)
