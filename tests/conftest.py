@@ -331,7 +331,7 @@ def sample_pipeline():
     imputer = CategoricalImputer(imputation_method="frequent", variables=["var1"])
     encoder = OneHotEncoder(variables=["var2"])
     estimator = RandomForestClassifier()
-    
+
     pipeline = NoVacancyPipeline(imputer, encoder, estimator)
     pipeline.pipeline({})  # Pass empty search space for simplicity
     return pipeline
@@ -345,6 +345,36 @@ def mock_pipeline(sample_pipeline):
     sample_pipeline.predict_proba = MagicMock(return_value=[[0.1, 0.9], [0.8, 0.2]])
     return sample_pipeline
 
+
+@pytest.fixture(scope="function")
+def sample_processor():
+    """Provide a valid sample NoVacancyDataProcessing instance."""
+    processor = NoVacancyDataProcessing(
+        variable_rename=VARIABLE_RENAME_MAP,
+        month_abbreviation=MONTH_ABBREVIATION_MAP,
+        vars_to_drop=VARS_TO_DROP,
+        booking_map=BOOKING_MAP,
+    )
+    return processor
+
+@pytest.fixture(scope="function")
+def mock_processor(sample_processor):
+    """Mock the behavior of NoVacancyDataProcessing."""
+    sample_processor.fit = MagicMock(return_value=sample_processor)
+    sample_processor.transform = MagicMock(
+        return_value=(
+            pd.DataFrame(
+                {
+                    "number_of_adults": [1, 2],
+                    "number_of_children": [0, 1],
+                    "month_of_reservation": ["Jan", "Feb"],
+                    "day_of_week": ["Monday", "Tuesday"],
+                }
+            ),
+            pd.Series([1, 0]),
+        )
+    )
+    return sample_processor
 
 @pytest.fixture(scope="function")
 def mock_logger(mocker):
@@ -421,6 +451,6 @@ def dm(temp_pipeline_path):
     with patch.dict(
         "app.services.config_services.DATA_PATHS",
         {"model_save_path": str(temp_pipeline_path)},
-        clear=False, # Ensures other DATA_PATHS keys are not impacted
+        clear=False,  # Ensures other DATA_PATHS keys are not impacted
     ):
         return DataManagement()

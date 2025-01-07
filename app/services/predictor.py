@@ -36,19 +36,13 @@ def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
         # Load pipeline
         if dm is None:
             dm = DataManagement()
-        pipeline = dm.load_pipeline()
+        pipeline, processor = dm.load_pipeline()
 
-        # Preprocess input data
-        X_test = test_data.copy()
-
-        processor = NoVacancyDataProcessing(
-            variable_rename=VARIABLE_RENAME_MAP,
-            month_abbreviation=MONTH_ABBREVIATION_MAP,
-            vars_to_drop=VARS_TO_DROP,
-            booking_map=BOOKING_MAP,
-        )
-        X_test_prcsd, _ = processor.transform(X_test)
-
+        # Process test data using loaded processor
+        print("Before Processing Test Data Columns:", test_data.columns)
+        X_test_prcsd, _ = processor.transform(test_data)
+        print("After Processing Test Data Columns:", X_test_prcsd.columns)
+        
         # Extract feature names from the imputer step
         imputer = pipeline.rscv.best_estimator_.named_steps["imputation_step"]
         encoder = pipeline.rscv.best_estimator_.named_steps["encoding_step"]
@@ -61,21 +55,32 @@ def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
         if not hasattr(encoder, "n_features_in_"):
             encoder.n_features_in_ = X_test_prcsd.shape[1]
 
-        # Reconcile training and test data shapes
-        # OHE columns in test data may not exist in training data
-        # This ensures that the test data has the same columns as the training data
+        # Ensure column consistency with the pipeline's expected columns
+        # OHE columns in training data may not exist in test data
         expected_columns = pipeline.rscv.best_estimator_.named_steps[
             "encoding_step"
         ].get_feature_names_out()
+        
+        # Align test data with the expected columns
         X_test_prcsd = X_test_prcsd.reindex(columns=expected_columns, fill_value=0)
 
-        # TODO: Omit columns that exist in the test dataset, but not the training dataset
+        # Explicitly update medatadata ('n_features_in_') in the transformers
+        imputer = pipeline.rscv.best_estimator_.named_steps["imputation_step"]
+        encoder = pipeline.rscv.best_estimator_.named_steps["encoding_step"]
 
-        # TODO: Add a check to ensure that the test data has the same columns as the training data
-        print("X_train_prcsd columns: ", X_train_prcsd.columns)
-        print("X_train_prcsd shape: ", X_train_prcsd.shape)       
-        print("X_test_prcsd columns: ", X_test_prcsd.columns)
-        print("X_test_prcsd shape: ", X_test_prcsd.shape)
+        if hasattr(imputer, "n_features_in_"):
+            imputer.n_features_in_ = X_test_prcsd.shape[1]
+        if hasattr(encoder, "n_features_in_"):
+            encoder.n_features_in_ = X_test_prcsd.shape[1]
+
+        # Validate metadata consistency
+        assert imputer.n_features_in_ == X_test_prcsd.shape[1], (
+            "❌ Imputer metadata mismatch: n_features_in_ does not match the number of test dataset columns."
+        )
+        assert encoder.n_features_in_ == X_test_prcsd.shape[1], (
+            "❌ Encoder metadata mismatch: n_features_in_ does not match the number of test dataset columns."
+        )
+        # TODO: Omit columns that exist in the test dataset, but not the training dataset
 
         # Generate the predictions using the pipeline
         predictions = pipeline.predict(X_test_prcsd)
