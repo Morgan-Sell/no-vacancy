@@ -67,3 +67,11 @@ class NoVacancyPipeline:
                 "Pipeline not instantiated. Call `pipeline` method first."
             )
         return self.rscv.best_estimator_.predict_proba(X)
+ 
+    def predict(self, X):
+        """Make class predictions using the best estimator from RandomizedSearchCV."""
+        if not hasattr(self, "rscv"):
+            raise AttributeError(
+                "Pipeline not instantiated. Call `pipeline` method first."
+            )
+        return self.rscv.best_estimator_.predict(X)

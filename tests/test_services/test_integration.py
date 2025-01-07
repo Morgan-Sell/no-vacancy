@@ -20,7 +20,7 @@ from app.services.predictor import make_prediction
 from app.services.preprocessing import NoVacancyDataProcessing
 
 
-def test_end_to_end_pipeline(booking_data):
+def test_end_to_end_pipeline(booking_data, dm, temp_pipeline_path):
     # Step 1: Data Preprocessing
     processor = NoVacancyDataProcessing(
         variable_rename=VARIABLE_RENAME_MAP,
@@ -32,6 +32,13 @@ def test_end_to_end_pipeline(booking_data):
         booking_data.drop(columns=["booking status"]), booking_data["booking status"]
     )
 
+    # Assertions: Data Preprocessing
+    assert isinstance(X_processed, pd.DataFrame), "X_processed is not a DataFrame."
+    assert isinstance(y_processed, pd.Series), "y_processed is not a Series."
+    assert not X_processed.empty, "X_processed is empty"
+    assert not y_processed.empty, "y_processed is empty"
+    assert X_processed.shape[0] == y_processed.shape[0], "X and y row counts do not equal "
+
     # Step 2: Pipeline training
     imputer = CategoricalImputer(imputation_method="frequent", variables=VARS_TO_IMPUTE)
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
@@ -41,18 +48,36 @@ def test_end_to_end_pipeline(booking_data):
     pipeline.pipeline(SEARCH_SPACE)
     pipeline.fit(X_processed, y_processed)
 
-    # Step 3: Save the pipeline
-    dm = DataManagement()
-    dm.save_pipeline(pipeline.rscv.best_estimator_)
+    # Asserts: Pipeline training
+    assert hasattr(pipeline, "rscv"), "Pipeline does not have rscv attribute."
+    assert pipeline.rscv.best_estimator_ is not None, "Best estimator is None."
 
-    # Step 4: Prediction
-    predictions = make_prediction(booking_data)
+    # Step 3: Save  pipeline using the dm pytest fixture
+    dm.save_pipeline(pipeline)
 
-    # Assertions
-    assert isinstance(predictions, pd.DataFrame)
-    assert predictions.shape[0] == booking_data.shape[0]
+    # Assertions: Pipeline saving
+    assert dm.pipeline_path == temp_pipeline_path, "Pipeline path does not match temp path."
+
+    # Step 4: Load pipeline
+    loaded_pipeline = dm.load_pipeline()
+
+    # Assertions: Pipeline loading
+    assert loaded_pipeline is not None, "Loaded pipeline is None."
+    assert hasattr(loaded_pipeline, "predict"), "Loaded pipeline missing predict method."
+
+    # Step 5: Prediction
+    predictions = make_prediction(booking_data, dm)
+
+    # Assertions: Prediction
+    assert isinstance(predictions, pd.DataFrame), "Predictions are not a DataFrame."
+    assert predictions.shape[0] == booking_data.shape[0], "Prediction row count does not match input data."
     assert predictions.columns.tolist() == [
         "prediction",
         "probability_not_canceled",
         "probabilities_canceled",
-    ]
+    ], "Prediction columns do not match expected output." 
+
+    # Validation prediction results
+    assert predictions["prediction"].isin([0, 1]).all(), "Predictions contain invalid values."
+    assert predictions["probability_not_canceled"].between(0, 1).all(), "Probability values are out of bounds."
+    assert predictions["probabilities_canceled"].between(0, 1).all(), "Probability values are out of bounds."

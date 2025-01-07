@@ -22,7 +22,7 @@ def handle_error(error_type, message, exception):
     raise error_type(f"{message}: {exception}")  # from exception
 
 
-def make_prediction(test_data: pd.DataFrame):
+def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
 
     try:
         if not isinstance(test_data, pd.DataFrame):
@@ -34,7 +34,8 @@ def make_prediction(test_data: pd.DataFrame):
             )
 
         # Load pipeline
-        dm = DataManagement()
+        if dm is None:
+            dm = DataManagement()
         pipeline = dm.load_pipeline()
 
         # Preprocess input data
@@ -48,6 +49,18 @@ def make_prediction(test_data: pd.DataFrame):
         )
         X_test_prcsd, _ = processor.transform(X_test)
 
+        # Extract feature names from the imputer step
+        imputer = pipeline.rscv.best_estimator_.named_steps["imputation_step"]
+        encoder = pipeline.rscv.best_estimator_.named_steps["encoding_step"]
+
+        # Explicitly set metadata if it's missing; otherwise, the pipeline will fail b/c
+        # X_train_prcsd and X_train_prcsd have different "columns"
+        if not hasattr(imputer, "n_features_in_"):
+            imputer.n_features_in_ = X_test_prcsd.shape[1]
+
+        if not hasattr(encoder, "n_features_in_"):
+            encoder.n_features_in_ = X_test_prcsd.shape[1]
+
         # Reconcile training and test data shapes
         # OHE columns in test data may not exist in training data
         # This ensures that the test data has the same columns as the training data
@@ -59,6 +72,10 @@ def make_prediction(test_data: pd.DataFrame):
         # TODO: Omit columns that exist in the test dataset, but not the training dataset
 
         # TODO: Add a check to ensure that the test data has the same columns as the training data
+        print("X_train_prcsd columns: ", X_train_prcsd.columns)
+        print("X_train_prcsd shape: ", X_train_prcsd.shape)       
+        print("X_test_prcsd columns: ", X_test_prcsd.columns)
+        print("X_test_prcsd shape: ", X_test_prcsd.shape)
 
         # Generate the predictions using the pipeline
         predictions = pipeline.predict(X_test_prcsd)
