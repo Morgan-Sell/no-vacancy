@@ -28,17 +28,9 @@ class DataManagement:
     def save_pipeline(
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
     ) -> None:
+        self._validate_pipeline_and_processor(pipeline, processor)
+     
         try:
-            if not isinstance(pipeline, NoVacancyPipeline):
-                raise TypeError(
-                    "The pipeline to be saved must be an instance of NoVacancyPipeline."
-                )
-
-            if not isinstance(processor, NoVacancyDataProcessing):
-                raise TypeError(
-                    "The processor to be saved must be an instance of NoVacancyDataProcessing."
-                )
-
             # Save both pipeline and processor as a dictionary
             joblib.dump(
                 {"pipeline": pipeline, "processor": processor},
@@ -64,15 +56,8 @@ class DataManagement:
             pipeline = artifacts.get("pipeline")
             processor = artifacts.get("processor")
 
-            if not isinstance(pipeline, NoVacancyPipeline):
-                raise TypeError(
-                    "Loaded pipeline is not an instance of NoVacancyPipeline."
-                )
-
-            if not isinstance(processor, NoVacancyDataProcessing):
-                raise TypeError(
-                    "Loaded processor is not an instance of NoVacancyDataProcessing."
-                )
+            self._validate_pipeline_and_processor(pipeline, processor)
+           
             self.logger.info(
                 f"✅ Pipeline and processor successfully loaded from {self.pipeline_path}"
             )
@@ -97,4 +82,18 @@ class DataManagement:
         except Exception as e:
             handle_error_dm(
                 self.logger, type(e), "❌ Error during pipeline deletion", e
+            )
+
+    def _validate_pipeline_and_processor(
+        self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
+    ) -> None:
+        
+        if not isinstance(pipeline, NoVacancyPipeline):
+            raise TypeError(
+                "❌ Error during pipeline validation: The pipeline must be an instance of NoVacancyPipeline"
+            )
+
+        if not isinstance(processor, NoVacancyDataProcessing):
+            raise TypeError(
+                "❌ Error during pipeline validation: The processor must be an instance of NoVacancyDataProcessing"
             )

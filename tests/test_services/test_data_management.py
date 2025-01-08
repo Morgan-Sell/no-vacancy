@@ -55,30 +55,20 @@ def test_load_pipeline_success(dm, mock_pipeline, mock_processor, booking_data):
     with patch.object(Path, "exists", return_value=True):
         with patch("joblib.load", return_value={"pipeline": mock_pipeline, "processor": mock_processor}):
             loaded_pipeline, loaded_processor = dm.load_pipeline()
+            
+            # Check data types
             assert isinstance(loaded_pipeline, NoVacancyPipeline)
             assert isinstance(loaded_processor, NoVacancyDataProcessing)
+
+            # Check methods
+            assert hasattr(loaded_pipeline, "predict")
+            assert hasattr(loaded_processor, "transform")
             
             # Check processor metadata
             assert hasattr(loaded_processor, "vars_to_drop"), "❌ Processor missing 'vars_to_drop'."
             assert hasattr(loaded_processor, "variable_rename"), "❌ Processor missing 'variable_rename'."
             assert hasattr(loaded_processor, "month_abbreviation"), "❌ Processor missing 'month_abbreviation'."
-            
-            # Functional validation
-            try:
-                # Apply transformation with the loaded processor
-                X_test, _ = loaded_processor.transform(
-                    booking_data.drop(columns=["booking status"]), 
-                    booking_data["booking status"]
-                )
-                
-                assert not X_test.empty, "❌ Transformed test data is empty."
-                
-                # Run prediction with the loaded pipeline
-                predictions = loaded_pipeline.predict(X_test)
-                assert predictions is not None, "❌ Pipeline failed to generate predictions."
-            except Exception as e:
-                pytest.fail(f"❌ Functional validation failed after loading artifacts: {e}")
-
+        
 
 def test_load_pipeline_not_found(dm):
     with patch.object(Path, "exists", return_value=False):
@@ -87,6 +77,16 @@ def test_load_pipeline_not_found(dm):
             match="❌ Error during pipeline loading: Pipeline file not found at",
         ):
             dm.load_pipeline()
+
+
+def test_load_pipeline_invalid_artifacts(dm):
+    with patch.object(Path, "exists", return_value=True):
+        with patch("joblib.load", return_value={"pipeline": "Invalid", "processor": "Invalid"}):
+            with pytest.raises(
+                TypeError,
+                match="❌ Error during pipeline loading: Loaded pipeline is not an instance of NoVacancyPipeline"
+            ):
+                dm.load_pipeline()
 
 
 def test_load_pipeline_exception(dm):
@@ -105,11 +105,9 @@ def test_load_pipeline_exception(dm):
 def test_delete_pipeline_success(dm, temp_pipeline_path):
     # Simulate an existing pipeline file
     temp_pipeline_path.touch()
-
     assert temp_pipeline_path.exists() is True
 
     dm.delete_pipeline()
-
     assert temp_pipeline_path.exists() is False
 
 
@@ -130,3 +128,40 @@ def test_delete_pipeline_exception(dm, temp_pipeline_path):
             Exception, match="❌ Error during pipeline deletion: OH NO!"
         ):
             dm.delete_pipeline()
+
+# ---------------------------------
+# Validate Pipeline and Processor
+# ---------------------------------
+
+def test_validate_pipeline_and_processor_valid(dm, sample_pipeline, sample_processor):
+    """Test successful validation of pipeline and processor."""
+    dm._validate_pipeline_and_processor(sample_pipeline, sample_processor)
+
+
+def test_validate_pipeline_and_processor_invalid_pipeline(dm, sample_processor):
+    """Test validation with an invalid pipeline."""
+    with pytest.raises(
+        TypeError,
+        match="❌ Error during pipeline validation: The pipeline must be an instance of NoVacancyPipeline",
+    ):
+        dm._validate_pipeline_and_processor("Invalid Pipeline", sample_processor)
+
+
+def test_validate_pipeline_and_processor_invalid_processor(dm, sample_pipeline):
+    """Test validation with an invalid processor."""
+    with pytest.raises(
+        TypeError,
+        match="❌ Error during pipeline validation: The processor must be an instance of NoVacancyDataProcessing",
+    ):
+        dm._validate_pipeline_and_processor(sample_pipeline, "Invalid Processor")
+
+
+# -----------------------------------------
+# Integration b/t Pipeline and Processor
+# -----------------------------------------
+def test_pipeline_processor_integration(dm, booking_data, sample_pipeline, sample_processor):
+    """Test pipeline and processor integration."""
+    X_test_prcsd, _ = sample_processor.transform(booking_data.drop(columns=["booking status"], errors="ignore"))
+    predictions = sample_pipeline.predict(X_test_prcsd)
+    assert len(predictions) == len(X_test_prcsd)
+    assert isinstance(predictions, list)
