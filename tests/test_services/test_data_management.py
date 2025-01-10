@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import joblib
+import numpy as np
 import pytest
 
 from app.services.config_services import VARS_TO_IMPUTE, VARS_TO_OHE
@@ -186,10 +187,15 @@ def test_pipeline_processor_integration(booking_data, sample_processor):
     # Fit pipeline
     pipeline.fit(X_prcsd, y_prcsd)
     
-    print("Transformed Test Data Columns:", X_prcsd.columns)
-    print("Expected Pipeline Columns:", sample_pipeline.rscv.best_estimator_.named_steps["encoding_step"].get_feature_names_out())
-
+    # Predict
+    predictions = pipeline.predict(X_prcsd)
+    probs = pipeline.predict_proba(X_prcsd)
     
-    predictions = sample_pipeline.predict(X_prcsd)
+    # Assert
     assert len(predictions) == len(X_prcsd)
-    assert isinstance(predictions, list)
+    assert isinstance(predictions, np.ndarray)
+
+    assert probs.shape == (len(X_prcsd), 2)
+    assert np.all((probs >= 0) & (probs <= 1))
+
+    assert pipeline.rscv.best_estimator_ is not None
