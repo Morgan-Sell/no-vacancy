@@ -5,9 +5,13 @@ from unittest.mock import Mock, patch
 import joblib
 import pytest
 
-from app.services.data_management import DataManagement
+from app.services.config_services import VARS_TO_IMPUTE, VARS_TO_OHE
 from app.services.pipeline import NoVacancyPipeline
 from app.services.preprocessing import NoVacancyDataProcessing
+
+from feature_engine.encoding import OneHotEncoder
+from feature_engine.imputation import CategoricalImputer
+from sklearn.ensemble import RandomForestClassifier
 
 
 # -----------------------------
@@ -132,7 +136,6 @@ def test_delete_pipeline_exception(dm, temp_pipeline_path):
 # ---------------------------------
 # Validate Pipeline and Processor
 # ---------------------------------
-
 def test_validate_pipeline_and_processor_valid(dm, sample_pipeline, sample_processor):
     """Test successful validation of pipeline and processor."""
     dm._validate_pipeline_and_processor(sample_pipeline, sample_processor)
@@ -159,9 +162,34 @@ def test_validate_pipeline_and_processor_invalid_processor(dm, sample_pipeline):
 # -----------------------------------------
 # Integration b/t Pipeline and Processor
 # -----------------------------------------
-def test_pipeline_processor_integration(dm, booking_data, sample_pipeline, sample_processor):
-    """Test pipeline and processor integration."""
-    X_test_prcsd, _ = sample_processor.transform(booking_data.drop(columns=["booking status"], errors="ignore"))
-    predictions = sample_pipeline.predict(X_test_prcsd)
-    assert len(predictions) == len(X_test_prcsd)
+def test_pipeline_processor_integration(booking_data, sample_processor):
+    # Transform data
+    X = booking_data.drop(columns=["booking status"])
+    y = booking_data["booking status"]
+    X_prcsd, y_prcsd = sample_processor.transform(X, y)
+
+    # Define the pipeline attributes
+    imputer = CategoricalImputer(imputation_method="frequent", variables=VARS_TO_IMPUTE)
+    encoder = OneHotEncoder(variables=VARS_TO_OHE)
+    clsfr = RandomForestClassifier()
+
+    # Define the search space for RCSV
+    search_space = {
+        "model__n_estimators": [100, 200, 300],
+        "model__max_depth": [3, 5, 7],
+    }
+
+    # Initialize the pipeline
+    pipeline = NoVacancyPipeline(imputer, encoder, clsfr)
+    pipeline.pipeline(search_space)
+
+    # Fit pipeline
+    pipeline.fit(X_prcsd, y_prcsd)
+    
+    print("Transformed Test Data Columns:", X_prcsd.columns)
+    print("Expected Pipeline Columns:", sample_pipeline.rscv.best_estimator_.named_steps["encoding_step"].get_feature_names_out())
+
+    
+    predictions = sample_pipeline.predict(X_prcsd)
+    assert len(predictions) == len(X_prcsd)
     assert isinstance(predictions, list)
