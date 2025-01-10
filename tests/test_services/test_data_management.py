@@ -5,14 +5,13 @@ from unittest.mock import Mock, patch
 import joblib
 import numpy as np
 import pytest
+from feature_engine.encoding import OneHotEncoder
+from feature_engine.imputation import CategoricalImputer
+from sklearn.ensemble import RandomForestClassifier
 
 from app.services.config_services import VARS_TO_IMPUTE, VARS_TO_OHE
 from app.services.pipeline import NoVacancyPipeline
 from app.services.preprocessing import NoVacancyDataProcessing
-
-from feature_engine.encoding import OneHotEncoder
-from feature_engine.imputation import CategoricalImputer
-from sklearn.ensemble import RandomForestClassifier
 
 
 # -----------------------------
@@ -58,9 +57,12 @@ def test_save_pipeline_exception(dm, mock_pipeline, mock_processor):
 def test_load_pipeline_success(dm, mock_pipeline, mock_processor, booking_data):
     # patch.object() mocks an attribute or method of a specific class, rather than a global reference in a module
     with patch.object(Path, "exists", return_value=True):
-        with patch("joblib.load", return_value={"pipeline": mock_pipeline, "processor": mock_processor}):
+        with patch(
+            "joblib.load",
+            return_value={"pipeline": mock_pipeline, "processor": mock_processor},
+        ):
             loaded_pipeline, loaded_processor = dm.load_pipeline()
-            
+
             # Check data types
             assert isinstance(loaded_pipeline, NoVacancyPipeline)
             assert isinstance(loaded_processor, NoVacancyDataProcessing)
@@ -68,12 +70,18 @@ def test_load_pipeline_success(dm, mock_pipeline, mock_processor, booking_data):
             # Check methods
             assert hasattr(loaded_pipeline, "predict")
             assert hasattr(loaded_processor, "transform")
-            
+
             # Check processor metadata
-            assert hasattr(loaded_processor, "vars_to_drop"), "❌ Processor missing 'vars_to_drop'."
-            assert hasattr(loaded_processor, "variable_rename"), "❌ Processor missing 'variable_rename'."
-            assert hasattr(loaded_processor, "month_abbreviation"), "❌ Processor missing 'month_abbreviation'."
-        
+            assert hasattr(
+                loaded_processor, "vars_to_drop"
+            ), "❌ Processor missing 'vars_to_drop'."
+            assert hasattr(
+                loaded_processor, "variable_rename"
+            ), "❌ Processor missing 'variable_rename'."
+            assert hasattr(
+                loaded_processor, "month_abbreviation"
+            ), "❌ Processor missing 'month_abbreviation'."
+
 
 def test_load_pipeline_not_found(dm):
     with patch.object(Path, "exists", return_value=False):
@@ -86,10 +94,12 @@ def test_load_pipeline_not_found(dm):
 
 def test_load_pipeline_invalid_artifacts(dm):
     with patch.object(Path, "exists", return_value=True):
-        with patch("joblib.load", return_value={"pipeline": "Invalid", "processor": "Invalid"}):
+        with patch(
+            "joblib.load", return_value={"pipeline": "Invalid", "processor": "Invalid"}
+        ):
             with pytest.raises(
                 TypeError,
-                match="❌ Error during pipeline loading: Loaded pipeline is not an instance of NoVacancyPipeline"
+                match="❌ Error during pipeline loading: Loaded pipeline is not an instance of NoVacancyPipeline",
             ):
                 dm.load_pipeline()
 
@@ -133,6 +143,7 @@ def test_delete_pipeline_exception(dm, temp_pipeline_path):
             Exception, match="❌ Error during pipeline deletion: OH NO!"
         ):
             dm.delete_pipeline()
+
 
 # ---------------------------------
 # Validate Pipeline and Processor
@@ -186,11 +197,11 @@ def test_pipeline_processor_integration(booking_data, sample_processor):
 
     # Fit pipeline
     pipeline.fit(X_prcsd, y_prcsd)
-    
+
     # Predict
     predictions = pipeline.predict(X_prcsd)
     probs = pipeline.predict_proba(X_prcsd)
-    
+
     # Assert
     assert len(predictions) == len(X_prcsd)
     assert isinstance(predictions, np.ndarray)

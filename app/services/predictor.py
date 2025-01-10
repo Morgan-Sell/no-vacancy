@@ -42,7 +42,7 @@ def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
         print("Before Processing Test Data Columns:", test_data.columns)
         X_test_prcsd, _ = processor.transform(test_data)
         print("After Processing Test Data Columns:", X_test_prcsd.columns)
-        
+
         # Extract feature names from the imputer step
         imputer = pipeline.rscv.best_estimator_.named_steps["imputation_step"]
         encoder = pipeline.rscv.best_estimator_.named_steps["encoding_step"]
@@ -60,7 +60,7 @@ def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
         expected_columns = pipeline.rscv.best_estimator_.named_steps[
             "encoding_step"
         ].get_feature_names_out()
-        
+
         # Align test data with the expected columns
         X_test_prcsd = X_test_prcsd.reindex(columns=expected_columns, fill_value=0)
 
@@ -74,12 +74,12 @@ def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
             encoder.n_features_in_ = X_test_prcsd.shape[1]
 
         # Validate metadata consistency
-        assert imputer.n_features_in_ == X_test_prcsd.shape[1], (
-            "❌ Imputer metadata mismatch: n_features_in_ does not match the number of test dataset columns."
-        )
-        assert encoder.n_features_in_ == X_test_prcsd.shape[1], (
-            "❌ Encoder metadata mismatch: n_features_in_ does not match the number of test dataset columns."
-        )
+        assert (
+            imputer.n_features_in_ == X_test_prcsd.shape[1]
+        ), "❌ Imputer metadata mismatch: n_features_in_ does not match the number of test dataset columns."
+        assert (
+            encoder.n_features_in_ == X_test_prcsd.shape[1]
+        ), "❌ Encoder metadata mismatch: n_features_in_ does not match the number of test dataset columns."
         # TODO: Omit columns that exist in the test dataset, but not the training dataset
 
         # Generate the predictions using the pipeline

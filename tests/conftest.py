@@ -357,6 +357,7 @@ def sample_processor():
     )
     return processor
 
+
 @pytest.fixture(scope="function")
 def mock_processor(sample_processor):
     """Mock the behavior of NoVacancyDataProcessing."""
@@ -375,6 +376,7 @@ def mock_processor(sample_processor):
         )
     )
     return sample_processor
+
 
 @pytest.fixture(scope="function")
 def mock_logger(mocker):

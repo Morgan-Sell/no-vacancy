@@ -29,7 +29,7 @@ class DataManagement:
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
     ) -> None:
         self._validate_pipeline_and_processor(pipeline, processor)
-     
+
         try:
             # Save both pipeline and processor as a dictionary
             joblib.dump(
@@ -57,7 +57,7 @@ class DataManagement:
             processor = artifacts.get("processor")
 
             self._validate_pipeline_and_processor(pipeline, processor)
-           
+
             self.logger.info(
                 f"✅ Pipeline and processor successfully loaded from {self.pipeline_path}"
             )
@@ -87,7 +87,7 @@ class DataManagement:
     def _validate_pipeline_and_processor(
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
     ) -> None:
-        
+
         if not isinstance(pipeline, NoVacancyPipeline):
             raise TypeError(
                 "❌ Error during pipeline validation: The pipeline must be an instance of NoVacancyPipeline"
