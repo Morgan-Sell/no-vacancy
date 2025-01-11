@@ -28,7 +28,7 @@ def test_end_to_end_pipeline(booking_data, dm, temp_pipeline_path):
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=33
     )
-
+    print("X_train columns before processing:", X_train.columns)
     # Step 2: Data Preprocessing
     processor = NoVacancyDataProcessing(
         variable_rename=VARIABLE_RENAME_MAP,
@@ -36,13 +36,13 @@ def test_end_to_end_pipeline(booking_data, dm, temp_pipeline_path):
         vars_to_drop=VARS_TO_DROP,
         booking_map=BOOKING_MAP,
     )
-    X_prcsd, y_prcsd = processor.fit_transform(X_train, y_train)
+    X_train_prcsd, y_train_prcsd = processor.fit_transform(X_train, y_train)
 
     # Assertions: Data Preprocessing
-    assert isinstance(X_prcsd, pd.DataFrame), "X_prcsd is not a DataFrame."
-    assert isinstance(y_prcsd, pd.Series), "y_prcsd is not a Series."
+    assert isinstance(X_train_prcsd, pd.DataFrame), "X_prcsd is not a DataFrame."
+    assert isinstance(y_train_prcsd, pd.Series), "y_prcsd is not a Series."
     assert (
-        X_prcsd.shape[0] == y_prcsd.shape[0]
+        X_train_prcsd.shape[0] == y_train_prcsd.shape[0]
     ), "X_prcsd and y_prcsd row counts do not equal "
 
     # Step 3: Train pipeline
@@ -52,7 +52,7 @@ def test_end_to_end_pipeline(booking_data, dm, temp_pipeline_path):
 
     pipeline = NoVacancyPipeline(imputer, encoder, estimator)
     pipeline.pipeline(SEARCH_SPACE)
-    pipeline.fit(X_prcsd, y_prcsd)
+    pipeline.fit(X_train_prcsd, y_train_prcsd)
 
     # Asserts: Pipeline training
     assert hasattr(pipeline, "rscv"), "Pipeline does not have rscv attribute."
@@ -79,21 +79,21 @@ def test_end_to_end_pipeline(booking_data, dm, temp_pipeline_path):
         loaded_processor, "transform"
     ), "Loaded processor missing transform method."
 
+
     # Step 5: Preprocess and align test data
-    X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
-    expected_columns = loaded_pipeline.rscv.best_estimator_.named_steps[
-        "encoding_step"
-    ].get_feature_names_out()
-    X_test_prcsd = X_test_prcsd.reindex(columns=expected_columns, fill_value=0)
-    print("Test data columns before predictions:", X_test_prcsd.columns)
+    # X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
+    # expected_columns = loaded_pipeline.rscv.best_estimator_.named_steps[
+    #     "encoding_step"
+    # ].get_feature_names_out()
+    # X_test_prcsd = X_test_prcsd.reindex(columns=expected_columns, fill_value=0)
 
     # Step 6: Prediction
-    predictions = make_prediction(X_test_prcsd, dm)
+    predictions = make_prediction(X_test, dm)
 
     # Assertions: Prediction
     assert isinstance(predictions, pd.DataFrame), "Predictions are not a DataFrame."
     assert (
-        predictions.shape[0] == X_test_prcsd.shape[0]
+        predictions.shape[0] == X_test.shape[0]
     ), "Prediction row count does not match input data."
     assert predictions.columns.tolist() == [
         "prediction",

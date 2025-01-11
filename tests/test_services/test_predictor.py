@@ -6,27 +6,38 @@ import pytest
 from app.services.predictor import make_prediction
 
 
-def test_make_prediction_success(booking_data):
-    # Arrange: Mock NoVacancyPipeline return values
-    mock_pipeline = MagicMock()
-    mock_pipeline.predict.return_value = [0, 1, 0]
-    mock_pipeline.predict_proba.return_value = [[0.8, 0.2], [0.3, 0.7], [0.9, 0.1]]
+def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, dm):
+    # Arrange: Create mock rscv and best_estimator_
+    mock_rscv = MagicMock()
+    mock_best_estimator = MagicMock()
 
+    # Mock the named_steps of the best estimator
+    mock_best_estimator.named_steps = {
+        "imputation_step": MagicMock(),
+        "encoding_step": MagicMock(get_feature_names_out=MagicMock(return_value=["col1", "col2"])),
+    }
+
+    # Assign best_estimator_ to mock_rscv
+    mock_rscv.best_estimator_ = mock_best_estimator
+
+    # Attach rscv to mock_pipeline
+    mock_pipeline.rscv = mock_rscv
+    
     with patch(
         "app.services.data_management.DataManagement.load_pipeline",
-        return_value=mock_pipeline,
+        return_value=(mock_pipeline, mock_processor)
     ):
         # Act
-        results = make_prediction(booking_data)
+        results = make_prediction(booking_data, dm)
 
         # Assert
         assert isinstance(results, pd.DataFrame)
-        assert results.shape[0] == 3
-        assert results.columns.tolist() == [
+        assert len(results) == 2, "Expected 2 predictions from mock_pipeline."
+        assert list(results.columns) == [
             "prediction",
             "probability_not_canceled",
             "probabilities_canceled",
-        ]
+        ], "Unexpected columns in prediction results."
 
 
 def test_make_prediction_with_empty_data():
@@ -41,8 +52,8 @@ def test_make_prediction_with_empty_data():
         make_prediction(empty_data)
 
 
-def test_make_prediction_pipeline_not_found(booking_data):
-    # Arrange
+def test_make_prediction_pipeline_not_found(booking_data, mock_processor, dm):
+    # Arrange: Patch DataManagement to raise FileNotFoundError
     with patch(
         "app.services.data_management.DataManagement.load_pipeline",
         side_effect=FileNotFoundError("Pipeline not found"),
@@ -51,24 +62,36 @@ def test_make_prediction_pipeline_not_found(booking_data):
         with pytest.raises(
             FileNotFoundError, match="❌ No pipeline found: Pipeline not found"
         ):
-            make_prediction(booking_data)
+            make_prediction(booking_data, dm)
 
 
-def test_make_prediction_unexpected_error(booking_data):
-    # Arrange
-    mock_pipeline = MagicMock()
-    mock_pipeline.predict.side_effect = Exception("Unexpected prediction error")
-    mock_pipeline.predict_proba.return_vale = [[0.8, 0.2], [0.3, 0.7]]
+def test_make_prediction_unexpected_error(booking_data, mock_pipeline, mock_processor, dm):
+    # Arrange: Create a mock RandomizedSearchCV with best_estimator_
+    mock_rscv = MagicMock()
+    mock_best_estimator = MagicMock()
 
+    # Simulate the unexpected error during prediction
+    mock_best_estimator.predict.side_effect = Exception("Unexpected prediction error")
+    mock_best_estimator.predict_proba.return_value = [[0.8, 0.2], [0.3, 0.7]]
+
+    # Attach the best_estimator_ to mock_rscv
+    mock_rscv.best_estimator_ = mock_best_estimator
+
+    # Attach rscv to the mock_pipeline
+    mock_pipeline.rscv = mock_rscv
+
+    # Patch DataManagement to return the mock pipeline and processor
     with patch(
         "app.services.data_management.DataManagement.load_pipeline",
-        return_value=mock_pipeline,
+        return_value=(mock_pipeline, mock_processor),
     ):
         # Act & Assert
         with pytest.raises(
             RuntimeError, match="❌ Prediction failed: Unexpected prediction error"
         ):
-            make_prediction(booking_data)
+            make_prediction(booking_data, dm)
+
+
 
 
 def test_make_prediction_invalid_input_type():

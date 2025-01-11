@@ -39,9 +39,7 @@ def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
         pipeline, processor = dm.load_pipeline()
 
         # Process test data using loaded processor
-        print("Before Processing Test Data Columns:", test_data.columns)
         X_test_prcsd, _ = processor.transform(test_data)
-        print("After Processing Test Data Columns:", X_test_prcsd.columns)
 
         # Extract feature names from the imputer step
         imputer = pipeline.rscv.best_estimator_.named_steps["imputation_step"]
