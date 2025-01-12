@@ -70,9 +70,7 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
         X_tr["day_of_week"] = pd.to_datetime(X_tr["date_of_reservation"]).dt.day_name()
 
         # Remove selected features
-        print("Columns before dropping vars_to_drop:", X_tr.columns)
         X_tr.drop(self.vars_to_drop, axis=1, errors="ignore", inplace=True)
-        print("Columns after dropping vars_to_drop:", X_tr.columns)
 
         # Make select column names more intuitive
         X_tr.rename(columns=self.variable_rename, inplace=True)

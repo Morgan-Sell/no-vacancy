@@ -65,7 +65,7 @@ def train_pipeline():
 
     # Save the pipeline
     dm = DataManagement()
-    dm.save_pipeline(pipe.rscv.best_estimator_)
+    dm.save_pipeline(pipe, processor)
 
     # Perform predictions and evaluate performance
     y_probs = pipe.predict_proba(X_test_tr)[:, 1]

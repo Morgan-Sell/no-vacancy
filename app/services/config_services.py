@@ -54,7 +54,7 @@ TARGET_VARIABLE = "booking status"
 
 # TODO: Update paths
 DATA_PATHS = {
-    "raw_data": "data/raw/no_vacancy.csv",
+    "raw_data": "data/raw/train.csv",
     "processed_data": "data/processed/processed_no_vacancy.csv",
     "model_save_path": "app/models/no_vacancy_pipeline.pkl",
 }

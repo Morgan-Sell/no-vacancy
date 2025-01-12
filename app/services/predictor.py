@@ -38,8 +38,12 @@ def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
             dm = DataManagement()
         pipeline, processor = dm.load_pipeline()
 
+        print("\nmake_predictions test_data (raw input): ", test_data.columns)
+
         # Process test data using loaded processor
         X_test_prcsd, _ = processor.transform(test_data)
+
+        print("\nmake_predictions X_test_prcsd columns after processing: ", X_test_prcsd.columns)
 
         # Extract feature names from the imputer step
         imputer = pipeline.rscv.best_estimator_.named_steps["imputation_step"]
@@ -58,6 +62,7 @@ def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
         expected_columns = pipeline.rscv.best_estimator_.named_steps[
             "encoding_step"
         ].get_feature_names_out()
+
 
         # Align test data with the expected columns
         X_test_prcsd = X_test_prcsd.reindex(columns=expected_columns, fill_value=0)
@@ -80,6 +85,7 @@ def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
         ), "❌ Encoder metadata mismatch: n_features_in_ does not match the number of test dataset columns."
         # TODO: Omit columns that exist in the test dataset, but not the training dataset
 
+        print("make_predictions X_test_prcsd columns after reindexing: ", X_test_prcsd.columns)
         # Generate the predictions using the pipeline
         predictions = pipeline.predict(X_test_prcsd)
         probabilities = pipeline.predict_proba(X_test_prcsd)

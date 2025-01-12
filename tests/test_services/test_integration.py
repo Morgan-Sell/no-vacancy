@@ -28,7 +28,7 @@ def test_end_to_end_pipeline(booking_data, dm, temp_pipeline_path):
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=33
     )
-    print("X_train columns before processing:", X_train.columns)
+
     # Step 2: Data Preprocessing
     processor = NoVacancyDataProcessing(
         variable_rename=VARIABLE_RENAME_MAP,
