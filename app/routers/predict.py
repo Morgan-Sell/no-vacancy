@@ -1,8 +1,9 @@
 # import simplejson
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 import pandas as pd
 from pydantic import BaseModel
+from requests import request
 
 from app.config import __model_version__, get_logger
 from app.services.data_management import DataManagement
@@ -16,29 +17,33 @@ router = APIRouter(prefix="/predict", tags=["predict"])
 
 
 # Pydantic model for input validation
-class PredictRequest(BaseModel):
-    data: dict
+class PredictionRequest(BaseModel):
+    data: list[dict]
 
 
 @router.post("/", response_model=dict)
-def predict(request_data: PredictRequest) -> dict:
-    try: 
-        # Convert the request data to a pandas DataFrame
+def predict(request_data: PredictionRequest) -> dict:
+    try:
+        # Log the received input
+        _logger.debug(f"Inputs: {request_data}")
+
+        # Convert the input data to a pandas DataFrame
         test_data = pd.DataFrame(request_data.data)
 
-        # Ensure data management and predictions can run
+        # Ensure predictions can be made
         dm = DataManagement()
         results = make_prediction(test_data, dm)
-    
-        # Convert results to dictionary format for JSON response
-        return {
-            "predictions": results["prediction"].tolist(),
-            "probability_not_canceled": results["probability_not_canceled"].tolist(),
-            "probabilities_canceled": results["probabilities_canceled"].tolist(),
-        }
-    
-    except HTTPException as http_exc:
-        raise http_exc
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}")
 
+        # Extract predictions and version
+        predictions = results["prediction"].to_list()
+        version = results["version"]
+
+        # FastAPI automatically converts Python data structures into JSON responses
+        return {
+            "predictions": predictions,
+            "version": version,
+        } 
+    
+    except Exception as exc:
+        _logger.error(f"Unexpected error during prediction: {exc}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}")

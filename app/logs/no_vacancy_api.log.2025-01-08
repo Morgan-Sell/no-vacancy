@@ -1,0 +1,2 @@
+2025-01-08 08:14:20,189 - app.services.data_management - ERROR -handle_error_dm:14 - ❌ Error during pipeline loading: Loaded pipeline is not an instance of NoVacancyPipeline.
+2025-01-08 08:14:54,858 - app.services.data_management - ERROR -handle_error_dm:14 - ❌ Error during pipeline loading: Explode!

@@ -9,3 +9,5 @@ feature-engine
 xgboost
 pytest-mock
 pytest-env
+requests
+httpx>=0.24.0
