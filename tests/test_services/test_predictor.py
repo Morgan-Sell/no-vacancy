@@ -70,15 +70,19 @@ def test_make_prediction_unexpected_error(booking_data, mock_pipeline, mock_proc
     mock_rscv = MagicMock()
     mock_best_estimator = MagicMock()
 
-    # Simulate the unexpected error during prediction
-    mock_best_estimator.predict.side_effect = Exception("Unexpected prediction error")
-    mock_best_estimator.predict_proba.return_value = [[0.8, 0.2], [0.3, 0.7]]
+    # Mock named_steps in best_estimator_ to avoid AttributeError
+    mock_best_estimator.named_steps = {
+        "imputation_step": MagicMock(),
+        "encoding_step": MagicMock(get_feature_names_out=MagicMock(return_value=["col1", "col2"])),
+    }
 
     # Attach the best_estimator_ to mock_rscv
     mock_rscv.best_estimator_ = mock_best_estimator
 
-    # Attach rscv to the mock_pipeline
+    # Simulate the unexpected error during prediction
     mock_pipeline.rscv = mock_rscv
+    mock_pipeline.predict.side_effect = Exception("Unexpected prediction error")
+
 
     # Patch DataManagement to return the mock pipeline and processor
     with patch(
@@ -92,8 +96,6 @@ def test_make_prediction_unexpected_error(booking_data, mock_pipeline, mock_proc
             make_prediction(booking_data, dm)
 
 
-
-
 def test_make_prediction_invalid_input_type():
     # Arrange
     invalid_input = {"breakfast": [3, "waffles"]}
@@ -104,20 +106,34 @@ def test_make_prediction_invalid_input_type():
         make_prediction(invalid_input)
 
 
-def test_make_prediction_single_observation(booking_data):
-    # Arrange
+def test_make_prediction_single_observation(booking_data, mock_pipeline, mock_processor, dm):
+    # Use a single observation
     single_observation = booking_data.iloc[0].to_frame().T.copy()
 
-    mock_pipeline = MagicMock()
+    # Mock rscv and best_estimator_
+    mock_rscv = MagicMock()
+    mock_best_estimator = MagicMock()
+
+    # Simulate named_steps for best_estimator_
+    mock_best_estimator.named_steps = {
+        "imputation_step": MagicMock(),
+        "encoding_step": MagicMock(get_feature_names_out=MagicMock(return_value=["col1", "col2"])),
+    }
+
+    # Attach mocks
+    mock_rscv.best_estimator_ = mock_best_estimator
+    mock_pipeline.rscv = mock_rscv
+
+    # Mock prediction behavior
     mock_pipeline.predict.return_value = [1]
     mock_pipeline.predict_proba.return_value = [[0.3, 0.7]]
 
     with patch(
         "app.services.data_management.DataManagement.load_pipeline",
-        return_value=mock_pipeline,
+        return_value=(mock_pipeline, mock_processor)
     ):
         # Act
-        results = make_prediction(single_observation)
+        results = make_prediction(single_observation, dm)
 
         # Assert
         assert isinstance(results, pd.DataFrame)
