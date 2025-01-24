@@ -12,16 +12,12 @@ from app.services.predictor import make_prediction
 # Initalize logger
 _logger = get_logger(logger_name=__name__)
 
-# Define the router
-router = APIRouter(prefix="/predict", tags=["predict"])
-
 
 # Pydantic model for input validation
 class PredictionRequest(BaseModel):
     data: list[dict]
 
 
-@router.post("/", response_model=dict)
 def predict(request_data: PredictionRequest) -> dict:
     try:
         # Log the received input
