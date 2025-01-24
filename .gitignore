@@ -163,5 +163,10 @@ cython_debug/
 #.idea/
 
 # datasets
-/data
+# /data
 
+# logs
+logs/
+
+# VS Code
+.vscode/

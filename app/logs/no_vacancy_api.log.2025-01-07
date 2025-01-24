@@ -1,6 +1,0 @@
-2025-01-07 09:28:25,109 - app.services.data_management - ERROR -handle_error_dm:13 - ❌ Error during pipeline saving: The pipeline to be saved must be an instance of NoVacancyPipeline.
-2025-01-07 09:42:23,001 - app.services.data_management - ERROR -handle_error_dm:13 - ❌ Error during pipeline loading: Pipeline file not found at app/models/no_vacancy_pipeline.pkl
-2025-01-07 09:42:23,001 - app.services.data_management - ERROR -handle_error_dm:13 - ❌ Error during pipeline loading: Pipeline file not found at app/models/no_vacancy_pipeline.pkl
-2025-01-07 15:58:50,887 - app.services.data_management - ERROR -handle_error_dm:14 - ❌ Error during pipeline saving: The pipeline to be saved must be an instance of NoVacancyPipeline.
-2025-01-07 15:59:14,035 - app.services.data_management - ERROR -handle_error_dm:14 - ❌ Error during pipeline saving: The processor to be saved must be an instance of NoVacancyDataProcessing.
-2025-01-07 15:59:52,381 - app.services.data_management - ERROR -handle_error_dm:14 - ❌ Error during pipeline saving: BOOM!
