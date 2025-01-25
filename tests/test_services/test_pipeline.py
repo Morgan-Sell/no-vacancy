@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 
-from app.services.config_services import (
+from app.services import (
     BOOKING_MAP,
     MONTH_ABBREVIATION_MAP,
     VARIABLE_RENAME_MAP,

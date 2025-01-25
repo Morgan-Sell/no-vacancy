@@ -9,8 +9,6 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
-from app.services.preprocessing import NoVacancyDataProcessing
-
 _logger = logging.getLogger(__name__)
 
 

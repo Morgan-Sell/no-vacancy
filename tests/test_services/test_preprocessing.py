@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from app.services.config_services import (
+from app.services import (
     BOOKING_MAP,
     MONTH_ABBREVIATION_MAP,
     VARIABLE_RENAME_MAP,

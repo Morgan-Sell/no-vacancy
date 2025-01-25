@@ -10,11 +10,14 @@ from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
 from sklearn.ensemble import RandomForestClassifier
 
-from app.services.config_services import (
+from app.services import (
     BOOKING_MAP,
+    IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
+    VARS_TO_IMPUTE,
+    VARS_TO_OHE,
 )
 from app.services.data_management import DataManagement
 from app.services.pipeline import NoVacancyPipeline
@@ -328,8 +331,8 @@ def mock_read_csv(mocker, booking_data):
 @pytest.fixture(scope="function")
 def sample_pipeline():
     """Provide a valid sample NoVacancyPipeline instance."""
-    imputer = CategoricalImputer(imputation_method="frequent", variables=["var1"])
-    encoder = OneHotEncoder(variables=["var2"])
+    imputer = CategoricalImputer(imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE)
+    encoder = OneHotEncoder(variables=VARS_TO_OHE)
     estimator = RandomForestClassifier()
 
     pipeline = NoVacancyPipeline(imputer, encoder, estimator)
@@ -451,7 +454,7 @@ def dm(temp_pipeline_path):
     # global paths that may interfere with the application and (2) if DATA_PATHS
     # structure changes, the tests will seamlessly adapt.
     with patch.dict(
-        "app.services.config_services.DATA_PATHS",
+        "app.services.DATA_PATHS",
         {"model_save_path": str(temp_pipeline_path)},
         clear=False,  # Ensures other DATA_PATHS keys are not impacted
     ):

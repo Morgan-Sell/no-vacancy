@@ -8,6 +8,9 @@ client = TestClient(app)
 
 
 def test_predict_endpoint(booking_data):
+    """
+    Pipeline file must exist at app/models/no_vacancy_pipeline.pkl to run this test.
+    """
     # Arrange
     sample_obs = pd.DataFrame(booking_data.iloc[[0]].copy())
     payload = {"data": sample_obs.to_dict(orient="records")}

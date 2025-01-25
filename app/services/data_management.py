@@ -5,7 +5,7 @@ from typing import Any, Tuple
 import joblib
 
 from app.config import PIPELINE_DIR, PIPELINE_SAVE_FILE, get_logger
-from app.services.config_services import DATA_PATHS
+from app.services import DATA_PATHS
 from app.services.pipeline import NoVacancyPipeline
 from app.services.preprocessing import NoVacancyDataProcessing
 

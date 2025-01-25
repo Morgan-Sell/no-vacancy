@@ -5,7 +5,7 @@ from feature_engine.imputation import CategoricalImputer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
-from app.services.config_services import (
+from app.services import (
     BOOKING_MAP,
     DATA_PATHS,
     MONTH_ABBREVIATION_MAP,

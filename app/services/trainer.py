@@ -9,9 +9,10 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 
 from app.config import __model_version__
-from app.services.config_services import (
+from app.services import (
     BOOKING_MAP,
     DATA_PATHS,
+    IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
     SEARCH_SPACE,
     TARGET_VARIABLE,
@@ -54,7 +55,7 @@ def train_pipeline():
     X_test_tr, y_test_tr = processor.transform(X_test, y_test)
 
     # Define pipeline components
-    imputer = CategoricalImputer(imputation_method="frequent", variables=VARS_TO_IMPUTE)
+    imputer = CategoricalImputer(imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE)
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
     clsfr = RandomForestClassifier()
 

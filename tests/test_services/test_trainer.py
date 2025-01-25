@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from sklearn.metrics import roc_auc_score
 
-from app.services.config_services import DATA_PATHS
+from app.services import DATA_PATHS
 from app.services.trainer import train_pipeline
 
 
