@@ -6,8 +6,11 @@ from pydantic import BaseModel
 from requests import request
 
 from app.config import __model_version__, get_logger
-from app.services.data_management import DataManagement
+from app.services.pipeline_management import PipelineManagement
 from app.services.predictor import make_prediction
+
+# Define the router
+router = APIRouter(prefix="/predict", tags=["predict"])
 
 # Initalize logger
 _logger = get_logger(logger_name=__name__)
@@ -17,7 +20,7 @@ _logger = get_logger(logger_name=__name__)
 class PredictionRequest(BaseModel):
     data: list[dict]
 
-
+@router.post("/", response_model=dict)
 def predict(request_data: PredictionRequest) -> dict:
     try:
         # Log the received input
@@ -27,7 +30,7 @@ def predict(request_data: PredictionRequest) -> dict:
         test_data = pd.DataFrame(request_data.data)
 
         # Ensure predictions can be made
-        dm = DataManagement()
+        dm = PipelineManagement()
         results = make_prediction(test_data, dm)
 
         # Extract predictions and version

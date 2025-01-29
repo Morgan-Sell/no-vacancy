@@ -6,7 +6,7 @@ import pytest
 from app.services.predictor import make_prediction
 
 
-def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, dm):
+def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm):
     # Arrange: Create mock rscv and best_estimator_
     mock_rscv = MagicMock()
     mock_best_estimator = MagicMock()
@@ -28,7 +28,7 @@ def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, dm
         return_value=(mock_pipeline, mock_processor)
     ):
         # Act
-        results = make_prediction(booking_data, dm)
+        results = make_prediction(booking_data, pm)
 
         # Assert
         assert isinstance(results, pd.DataFrame)
@@ -52,7 +52,7 @@ def test_make_prediction_with_empty_data():
         make_prediction(empty_data)
 
 
-def test_make_prediction_pipeline_not_found(booking_data, mock_processor, dm):
+def test_make_prediction_pipeline_not_found(booking_data, mock_processor, pm):
     # Arrange: Patch DataManagement to raise FileNotFoundError
     with patch(
         "app.services.data_management.DataManagement.load_pipeline",
@@ -62,10 +62,10 @@ def test_make_prediction_pipeline_not_found(booking_data, mock_processor, dm):
         with pytest.raises(
             FileNotFoundError, match="❌ No pipeline found: Pipeline not found"
         ):
-            make_prediction(booking_data, dm)
+            make_prediction(booking_data, pm)
 
 
-def test_make_prediction_unexpected_error(booking_data, mock_pipeline, mock_processor, dm):
+def test_make_prediction_unexpected_error(booking_data, mock_pipeline, mock_processor, pm):
     # Arrange: Create a mock RandomizedSearchCV with best_estimator_
     mock_rscv = MagicMock()
     mock_best_estimator = MagicMock()
@@ -93,7 +93,7 @@ def test_make_prediction_unexpected_error(booking_data, mock_pipeline, mock_proc
         with pytest.raises(
             RuntimeError, match="❌ Prediction failed: Unexpected prediction error"
         ):
-            make_prediction(booking_data, dm)
+            make_prediction(booking_data, pm)
 
 
 def test_make_prediction_invalid_input_type():
@@ -106,7 +106,7 @@ def test_make_prediction_invalid_input_type():
         make_prediction(invalid_input)
 
 
-def test_make_prediction_single_observation(booking_data, mock_pipeline, mock_processor, dm):
+def test_make_prediction_single_observation(booking_data, mock_pipeline, mock_processor, pm):
     # Use a single observation
     single_observation = booking_data.iloc[0].to_frame().T.copy()
 
@@ -133,7 +133,7 @@ def test_make_prediction_single_observation(booking_data, mock_pipeline, mock_pr
         return_value=(mock_pipeline, mock_processor)
     ):
         # Act
-        results = make_prediction(single_observation, dm)
+        results = make_prediction(single_observation, pm)
 
         # Assert
         assert isinstance(results, pd.DataFrame)

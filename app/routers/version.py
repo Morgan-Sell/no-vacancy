@@ -4,7 +4,12 @@ from fastapi.responses import HTMLResponse
 from app.config import __api_version__, __model_version__
 
 
-async def version():
+# Define the router
+router = APIRouter(prefix="/version", tags=["version"])
+
+
+@router.post("/", response_class=dict)
+def version():
     """
     API and model version endpoint.
     """

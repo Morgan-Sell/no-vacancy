@@ -11,7 +11,7 @@ from app.services import (
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
 )
-from app.services.data_management import DataManagement
+from app.services.pipeline_management import PipelineManagement
 from app.services.preprocessing import NoVacancyDataProcessing
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ def handle_error(error_type, message, exception):
     raise error_type(f"{message}: {exception}")  # from exception
 
 
-def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
+def make_prediction(test_data: pd.DataFrame, dm: PipelineManagement = None):
 
     try:
         if not isinstance(test_data, pd.DataFrame):
@@ -35,7 +35,7 @@ def make_prediction(test_data: pd.DataFrame, dm: DataManagement = None):
 
         # Load pipeline
         if dm is None:
-            dm = DataManagement()
+            dm = PipelineManagement()
         pipeline, processor = dm.load_pipeline()
 
         print("\nmake_predictions test_data (raw input): ", test_data.columns)

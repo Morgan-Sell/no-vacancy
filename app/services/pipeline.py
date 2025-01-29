@@ -9,6 +9,8 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
+from app.services import RSCV_PARAMS
+
 _logger = logging.getLogger(__name__)
 
 
@@ -44,10 +46,7 @@ class NoVacancyPipeline:
         self.rscv = RandomizedSearchCV(
             estimator=self.pipe,
             param_distributions=search_space,
-            cv=5,
-            n_jobs=-1,
-            return_train_score=False,
-            verbose=3,
+            **RSCV_PARAMS,
         )
 
     def fit(self, X, y):

@@ -16,7 +16,7 @@ def handle_error_dm(logger, error_type, message, exception):
 
 
 # TODO: Change log savings from local directory to cloud provider storage, e.g., AWS S3.
-class DataManagement:
+class PipelineManagement:
     """
     Handles saving, loading, and managing the pipeline.
     """

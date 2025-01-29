@@ -19,7 +19,7 @@ from app.services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from app.services.data_management import DataManagement
+from app.services.pipeline_management import PipelineManagement
 from app.services.pipeline import NoVacancyPipeline
 from app.services.preprocessing import NoVacancyDataProcessing
 
@@ -445,7 +445,7 @@ def temp_pipeline_path(tmp_path):
 
 
 @pytest.fixture(scope="function")
-def dm(temp_pipeline_path):
+def pm(temp_pipeline_path):
     """
     Use fixture to instantiate DataManagement to follow DRY
     principle and enable easier code changes.
@@ -458,4 +458,4 @@ def dm(temp_pipeline_path):
         {"model_save_path": str(temp_pipeline_path)},
         clear=False,  # Ensures other DATA_PATHS keys are not impacted
     ):
-        return DataManagement()
+        return PipelineManagement()

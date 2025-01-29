@@ -22,7 +22,7 @@ from app.services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from app.services.data_management import DataManagement
+from app.services.pipeline_management import PipelineManagement
 from app.services.pipeline import NoVacancyPipeline
 from app.services.preprocessing import NoVacancyDataProcessing
 
@@ -65,7 +65,7 @@ def train_pipeline():
     pipe.fit(X_train_tr, y_train_tr)
 
     # Save the pipeline
-    dm = DataManagement()
+    dm = PipelineManagement()
     dm.save_pipeline(pipe, processor)
 
     # Perform predictions and evaluate performance

@@ -15,13 +15,13 @@ from app.services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from app.services.data_management import DataManagement
+from app.services.pipeline_management import PipelineManagement
 from app.services.pipeline import NoVacancyPipeline
 from app.services.predictor import make_prediction
 from app.services.preprocessing import NoVacancyDataProcessing
 
 
-def test_end_to_end_pipeline(booking_data, dm, temp_pipeline_path):
+def test_end_to_end_pipeline(booking_data, pm, temp_pipeline_path):
     # Step 1: Split data into train and test
     X = booking_data.drop(columns=["booking status"])
     y = booking_data["booking status"]
@@ -59,15 +59,15 @@ def test_end_to_end_pipeline(booking_data, dm, temp_pipeline_path):
     assert pipeline.rscv.best_estimator_ is not None, "Best estimator is None."
 
     # Step 4: Save pipeline using the dm pytest fixture
-    dm.save_pipeline(pipeline, processor)
+    pm.save_pipeline(pipeline, processor)
 
     # Assertions: Pipeline saving
     assert (
-        dm.pipeline_path == temp_pipeline_path
+        pm.pipeline_path == temp_pipeline_path
     ), "Pipeline path does not match temp path."
 
     # Step 5: Load pipeline & processor
-    loaded_pipeline, loaded_processor = dm.load_pipeline()
+    loaded_pipeline, loaded_processor = pm.load_pipeline()
 
     # Assertions: Pipeline & Processor loading
     assert loaded_pipeline is not None, "Loaded pipeline is None."
@@ -88,7 +88,7 @@ def test_end_to_end_pipeline(booking_data, dm, temp_pipeline_path):
     # X_test_prcsd = X_test_prcsd.reindex(columns=expected_columns, fill_value=0)
 
     # Step 6: Prediction
-    predictions = make_prediction(X_test, dm)
+    predictions = make_prediction(X_test, pm)
 
     # Assertions: Prediction
     assert isinstance(predictions, pd.DataFrame), "Predictions are not a DataFrame."
