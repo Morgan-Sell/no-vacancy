@@ -9,7 +9,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
-from app.services import RSCV_PARAMS
+from services import RSCV_PARAMS
 
 _logger = logging.getLogger(__name__)
 

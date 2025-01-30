@@ -15,7 +15,7 @@ LOG_FILE = join(LOG_DIR, "no_vacancy_api.log")
 
 # -- Data Management --
 PIPELINE_DIR = "app/models"
-PIPELINE_SAVE_FILE = "no_vacancy_pipeline"
+PIPELINE_SAVE_FILE = "no_vacancy_pipeline.pkl"
 
 # Versioning
 __api_version__ = "0.0.0"

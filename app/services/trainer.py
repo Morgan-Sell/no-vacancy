@@ -8,8 +8,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 
-from app.config import __model_version__
-from app.services import (
+from config import __model_version__
+from services import (
     BOOKING_MAP,
     DATA_PATHS,
     IMPUTATION_METHOD,
@@ -22,9 +22,9 @@ from app.services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from app.services.pipeline_management import PipelineManagement
-from app.services.pipeline import NoVacancyPipeline
-from app.services.preprocessing import NoVacancyDataProcessing
+from services.pipeline_management import PipelineManagement
+from services.pipeline import NoVacancyPipeline
+from services.preprocessing import NoVacancyDataProcessing
 
 logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
-from app.config import get_logger
-from app.routers import health, predict, version
+from config import get_logger
+from routers import health, predict, version
 
 _logger = get_logger(logger_name=__name__)
 

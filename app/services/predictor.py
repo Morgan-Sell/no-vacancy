@@ -4,15 +4,15 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.config import __model_version__
-from app.services import (
+from config import __model_version__
+from services import (
     BOOKING_MAP,
     MONTH_ABBREVIATION_MAP,
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
 )
-from app.services.pipeline_management import PipelineManagement
-from app.services.preprocessing import NoVacancyDataProcessing
+from services.pipeline_management import PipelineManagement
+from services.preprocessing import NoVacancyDataProcessing
 
 logger = logging.getLogger(__name__)
 
