@@ -15,7 +15,6 @@ router = APIRouter(prefix="/predict", tags=["predict"])
 # Initalize logger
 _logger = get_logger(logger_name=__name__)
 
-_logger.debut(f"Calling external API at {}")
 
 # Pydantic model for input validation
 class PredictionRequest(BaseModel):
