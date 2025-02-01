@@ -23,7 +23,7 @@ The web server is built using FastAPI and is containerized with Docker.
    git checkout web-server
    ```
 
-3. Build the Docker image (replace <docker_username> with your Docker Hub username).
+3. Build the Docker image (replace <docker_username> with your Docker Hub username). Make sure Docker is running on your local PC.
    ```
    docker build -t <docker_username>/no-vacancy:v1 . 
    ```
