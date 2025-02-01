@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from fastapi.responses import HTMLResponse
+from fastapi.responses import JSONResponse
 
 from config import get_logger
 
@@ -11,7 +11,7 @@ router = APIRouter(
 _logger = get_logger(logger_name=__name__)
 
 
-@router.get("/", response_class=dict)
+@router.get("/", response_class=JSONResponse)
 def health():
     """
     Health check endpoint

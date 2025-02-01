@@ -1,6 +1,5 @@
 # import simplejson
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
 import pandas as pd
 from pydantic import BaseModel
 
@@ -20,9 +19,13 @@ _logger = get_logger(logger_name=__name__)
 class PredictionRequest(BaseModel):
     data: list[dict]
 
+# Pydantic model for output validation
+class PredictionResponse(BaseModel):
+    predictions: list[float]
+    version: str
 
-@router.post("/", response_model=dict)
-def predict(request_data: PredictionRequest) -> dict:
+@router.post("/", response_model=PredictionResponse)
+def predict(request_data: PredictionRequest):
     try:
         # Log the received input
         _logger.debug(f"Inputs: {request_data}")

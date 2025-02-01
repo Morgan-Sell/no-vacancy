@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
 from config import __api_version__, __model_version__
 
@@ -7,7 +8,7 @@ from config import __api_version__, __model_version__
 router = APIRouter(prefix="/version", tags=["version"])
 
 
-@router.post("/", response_class=dict)
+@router.get("/", response_class=JSONResponse)
 def version():
     """
     API and model version endpoint.
