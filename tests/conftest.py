@@ -10,7 +10,9 @@ from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
 from sklearn.ensemble import RandomForestClassifier
 
-from app.services import (
+# 'app' is not required because pytest automatically adds the root directory to sys.path
+# This capability is configured in pyproject.toml.
+from services import (
     BOOKING_MAP,
     IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
@@ -19,9 +21,9 @@ from app.services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from app.services.pipeline_management import PipelineManagement
-from app.services.pipeline import NoVacancyPipeline
-from app.services.preprocessing import NoVacancyDataProcessing
+from services.pipeline_management import PipelineManagement
+from services.pipeline import NoVacancyPipeline
+from services.preprocessing import NoVacancyDataProcessing
 
 
 @pytest.fixture(scope="function")
@@ -343,6 +345,8 @@ def sample_pipeline():
 @pytest.fixture(scope="function")
 def mock_pipeline(sample_pipeline):
     """Mock the training and prediction behavior of NoVacancyPipeline."""
+    assert isinstance(sample_pipeline, NoVacancyPipeline), "❌ sample_pipeline is not an instance of NoVacancyPipeline"
+    
     sample_pipeline.fit = MagicMock(return_value=None)
     sample_pipeline.predict = MagicMock(return_value=[1, 0])
     sample_pipeline.predict_proba = MagicMock(return_value=[[0.1, 0.9], [0.8, 0.2]])

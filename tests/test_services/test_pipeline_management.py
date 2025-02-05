@@ -32,7 +32,7 @@ def test_save_pipeline_success(pm, mock_pipeline, mock_processor):
 def test_save_pipeline_invalid_pipeline(pm, mock_processor):
     with pytest.raises(
         TypeError,
-        match="❌ Error during pipeline saving: The pipeline to be saved must be an instance of NoVacancyPipeline",
+        match="❌ Error during pipeline validation: The pipeline must be an instance of NoVacancyPipeline",
     ):
         pm.save_pipeline("Wrong pipe!", mock_processor)
 
@@ -40,7 +40,7 @@ def test_save_pipeline_invalid_pipeline(pm, mock_processor):
 def test_save_pipeline_invalid_processor(pm, mock_pipeline):
     with pytest.raises(
         TypeError,
-        match="❌ Error during pipeline saving: The processor to be saved must be an instance of NoVacancyDataProcessing",
+        match="❌ Error during processor validation: The processor must be an instance of NoVacancyDataProcessing",
     ):
         pm.save_pipeline(mock_pipeline, "Wrong processor!")
 

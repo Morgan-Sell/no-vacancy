@@ -21,12 +21,12 @@ classifiers = [
 
 
 [tool.pytest.ini_options]
-testpaths = ["app"]
+testpaths = ["tests"]
+pythonpath = ["app", "tests"]
 addopts = [
     "--cov=app",
     "--cov-report=term-missing"
 ]
-env = { PYTHONPATH = "app" }
 
 
 [tool.coverage.run]

@@ -2,7 +2,6 @@ import logging
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from config import __model_version__
 from services import (
