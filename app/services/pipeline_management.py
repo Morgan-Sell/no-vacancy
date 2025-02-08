@@ -87,11 +87,6 @@ class PipelineManagement:
     def _validate_pipeline_and_processor(
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
     ) -> None:
-        print(f"DEBUG: pipeline module: {pipeline.__class__.__module__}")
-        print(f"DEBUG: expected module: {NoVacancyPipeline.__module__}")
-        print(f"DEBUG: pipeline class: {pipeline.__class__}")
-        print(f"DEBUG: expected class: {NoVacancyPipeline}")
-
         if not isinstance(pipeline, NoVacancyPipeline):
             raise TypeError(
                 "❌ Error during pipeline validation: The pipeline must be an instance of NoVacancyPipeline"

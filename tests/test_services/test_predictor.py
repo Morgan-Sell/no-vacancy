@@ -24,7 +24,7 @@ def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm
     mock_pipeline.rscv = mock_rscv
     
     with patch(
-        "app.services.data_management.DataManagement.load_pipeline",
+        "app.services.pipeline_management.PipelineManagement.load_pipeline",
         return_value=(mock_pipeline, mock_processor)
     ):
         # Act
@@ -53,9 +53,9 @@ def test_make_prediction_with_empty_data():
 
 
 def test_make_prediction_pipeline_not_found(booking_data, mock_processor, pm):
-    # Arrange: Patch DataManagement to raise FileNotFoundError
+    # Arrange: Patch PipelineManagement to raise FileNotFoundError
     with patch(
-        "app.services.data_management.DataManagement.load_pipeline",
+        "app.services.pipeline_management.PipelineManagement.load_pipeline",
         side_effect=FileNotFoundError("Pipeline not found"),
     ):
         # Act & Assert
@@ -84,9 +84,9 @@ def test_make_prediction_unexpected_error(booking_data, mock_pipeline, mock_proc
     mock_pipeline.predict.side_effect = Exception("Unexpected prediction error")
 
 
-    # Patch DataManagement to return the mock pipeline and processor
+    # Patch PipelineManagement to return the mock pipeline and processor
     with patch(
-        "app.services.data_management.DataManagement.load_pipeline",
+        "app.services.pipeline_management.PipelineManagement.load_pipeline",
         return_value=(mock_pipeline, mock_processor),
     ):
         # Act & Assert
@@ -129,7 +129,7 @@ def test_make_prediction_single_observation(booking_data, mock_pipeline, mock_pr
     mock_pipeline.predict_proba.return_value = [[0.3, 0.7]]
 
     with patch(
-        "app.services.data_management.DataManagement.load_pipeline",
+        "app.services.pipeline_management.PipelineManagement.load_pipeline",
         return_value=(mock_pipeline, mock_processor)
     ):
         # Act

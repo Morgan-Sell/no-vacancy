@@ -59,6 +59,13 @@ def train_pipeline():
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
     clsfr = RandomForestClassifier()
 
+
+
+
+
+    print("X_train_tr columns: ", X_train_tr.columns)   
+    print("\nX_test_tr columns: ", X_test_tr.columns)
+
     # Train, finetune & test pipeline
     pipe = NoVacancyPipeline(imputer, encoder, clsfr)
     pipe.pipeline(SEARCH_SPACE)
@@ -67,6 +74,10 @@ def train_pipeline():
     # Save the pipeline
     dm = PipelineManagement()
     dm.save_pipeline(pipe, processor)
+
+    # Align columns of train and test sets
+    expected_columns = pipe.rscv.best_estimator_.named_steps["encoding_step"].get_feature_names_out()
+    X_test_tr = X_test_tr.reindex(columns=expected_columns, fill_value=0)
 
     # Perform predictions and evaluate performance
     y_probs = pipe.predict_proba(X_test_tr)[:, 1]
