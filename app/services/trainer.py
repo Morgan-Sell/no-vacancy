@@ -51,8 +51,8 @@ def train_pipeline():
         vars_to_drop=VARS_TO_DROP,
         booking_map=BOOKING_MAP,
     )
-    X_train_tr, y_train_tr = processor.fit_transform(X_train, y_train)
-    X_test_tr, y_test_tr = processor.transform(X_test, y_test)
+    X_train_prcsd, y_train_prcsd = processor.fit_transform(X_train, y_train)
+    X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
 
     # Define pipeline components
     imputer = CategoricalImputer(imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE)
@@ -60,16 +60,22 @@ def train_pipeline():
     clsfr = RandomForestClassifier()
 
 
-
-
-
-    print("X_train_tr columns: ", X_train_tr.columns)   
-    print("\nX_test_tr columns: ", X_test_tr.columns)
+    # print("[DEBUG] X_train_prcsd columns: ", X_train_prcsd.columns)   
+    # print("\n[DEBUG] X_test_prcsd columns: ", X_test_prcsd.columns)
 
     # Train, finetune & test pipeline
     pipe = NoVacancyPipeline(imputer, encoder, clsfr)
     pipe.pipeline(SEARCH_SPACE)
-    pipe.fit(X_train_tr, y_train_tr)
+    pipe.fit(X_train_prcsd, y_train_prcsd)
+
+    print("-------------------")
+    print("DEBUG TRAINING TRANSFORM()")
+    print("-------------------")
+    print()
+    X_train_tr = pipe.transform(X_train_prcsd)
+
+    # print("\n[DEBUG] X_train_tr columns: ", X_train_tr.columns)
+
 
     # Save the pipeline
     dm = PipelineManagement()
@@ -77,11 +83,14 @@ def train_pipeline():
 
     # Align columns of train and test sets
     expected_columns = pipe.rscv.best_estimator_.named_steps["encoding_step"].get_feature_names_out()
-    X_test_tr = X_test_tr.reindex(columns=expected_columns, fill_value=0)
-
+    # X_test_tr = X_test_tr.reindex(columns=expected_columns, fill_value=0)
+    print("-------------------")
+    print("DEBUG TESTING TRANSFORM()")
+    print("-------------------")
+    print()
     # Perform predictions and evaluate performance
-    y_probs = pipe.predict_proba(X_test_tr)[:, 1]
-    auc = roc_auc_score(y_test_tr, y_probs)
+    y_probs = pipe.predict_proba(X_test_prcsd)[:, 1]
+    auc = roc_auc_score(y_test_prcsd, y_probs)
     print("AUC: ", round(auc, 5))
     logger.info(f"{__model_version__} - AUC: {auc}")
 

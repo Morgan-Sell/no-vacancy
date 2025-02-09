@@ -9,6 +9,7 @@ from services import (
     MONTH_ABBREVIATION_MAP,
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
+    DEPENDENT_VAR_NAME
 )
 from services.pipeline_management import PipelineManagement
 from services.preprocessing import NoVacancyDataProcessing
@@ -40,7 +41,9 @@ def make_prediction(test_data: pd.DataFrame, pm: PipelineManagement = None):
         print("\nmake_predictions test_data (raw input): ", test_data.columns)
 
         # Process test data using loaded processor
-        X_test_prcsd, _ = processor.transform(test_data)
+        X_test = test_data.drop(columns=[DEPENDENT_VAR_NAME])
+        y_test = test_data[DEPENDENT_VAR_NAME]
+        X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
 
         print("\nmake_predictions X_test_prcsd columns after processing: ", X_test_prcsd.columns)
 

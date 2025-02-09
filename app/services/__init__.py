@@ -3,6 +3,9 @@
 # ------------------------------------------
 
 # -- Data Processing --
+DEPENDENT_VAR_NAME = "booking status"
+
+
 VARIABLE_RENAME_MAP = {
     "repeated": "is_repeat_guest",
     "pc": "num_previous_cancellations",
@@ -44,10 +47,10 @@ VARS_TO_OHE = [
 
 # -- Pipeline (pipeline.py) --
 RSCV_PARAMS = {
-    "n_iter": 50,
+    "n_iter": 20, # TODO: Update to 50 after debugging
     "scoring": "roc_auc",
     "n_jobs": -1,
-    "cv": 5,
+    "cv": 3, # TODO: Update to 5 after debugging
     "verbose": 1,
     "return_train_score": False,
 }
