@@ -34,72 +34,49 @@ class NoVacancyPipeline:
         self.pipe = None  # Placeholder fo the constructed pipeline
         self.rscv = None  # Placeholder for the RandomizedSearchCV object
 
-    def pipeline(self, search_space):
+
+
+    def fit(self, X, y, search_space):
+        """Fit imputer and encoder separately, then train the model using transformed data."""
+        
+        # Fit imputer and transform X
+        self.imputer.fit(X)
+        X_imputed = self.imputer.transform(X)
+
+        # Fit encoder and transform X
+        self.encoder.fit(X_imputed)
+        X_encoded = self.encoder.transform(X_imputed)
+
+        # Fit the model using transformed X
+        self.rscv = RandomizedSearchCV(
+            estimator=self.estimator,
+            param_distributions=search_space,
+            **RSCV_PARAMS,
+        )
+        self.rscv.fit(X_encoded, y)
+
+        # Create the final pipeline with the best estimator
         self.pipe = Pipeline(
             [
                 ("imputation_step", self.imputer),
                 ("encoding_step", self.encoder),
-                ("model", self.estimator),
+                ("model", self.rscv.best_estimator_),
             ]
         )
 
-        self.rscv = RandomizedSearchCV(
-            estimator=self.pipe,
-            param_distributions=search_space,
-            **RSCV_PARAMS,
-        )
+        return self
 
-    def fit(self, X, y):
-        """Fit the pipeline using RandomizedSearchCV."""
-        if self.rscv is None:
-            raise AttributeError(
-                "Pipeline not instantiated. Call `pipeline` method first."
-            )
-        self.rscv.fit(X, y)
-
-
-    def transform(self, X):
-        """Apply imputation and encoding transformations to input data."""
-        if self.rscv is None:
-            raise AttributeError(
-                "Pipeline not instantiated. Call `pipeline` method first."
-            )
-        
-        print("\n[DEBUG] Transforming input data...")
-
-        # Apply imputation
-        imputer = self.rscv.best_estimator_.named_steps["imputation_step"]
-        print("\n[DEBUG] Before imputation columns:", X.columns)
-
-        X_imputed = imputer.transform(X)
-        print("\n[DEBUG] After imputation columns:", X_imputed.columns)
-
-        # Apply encoding
-        encoder = self.rscv.best_estimator_.named_steps["encoding_step"]
-        print("\n[DEBUG] Before encoding columns:", X_imputed.columns)
-
-        X_encoded = encoder.transform(X_imputed)
-        print("\n[DEBUG] After encoding columns:", X_encoded.columns)
-
-        return X_encoded
-    
-
-    def predict_proba(self, X):
-        """Make predictions using the best estimator from RandomizedSearchCV."""
-        if not hasattr(self, "rscv"):
-            raise AttributeError(
-                "Pipeline not instantiated. Call `pipeline` method first."
-            )
-        
-        X_transformed = self.transform(X)
-        return self.rscv.best_estimator_.predict_proba(X_transformed)
 
     def predict(self, X):
-        """Make class predictions using the best estimator from RandomizedSearchCV."""
-        if not hasattr(self, "rscv"):
-            raise AttributeError(
-                "Pipeline not instantiated. Call `pipeline` method first."
-            )
+        """Predict class using the final pipeline (with imputer and encoder)."""
+        if self.pipe is None:
+            raise AttributeError("Pipeline is not trained. Call 'fit' method first.")
         
-        X_transformed = self.transform(X)
-        return self.rscv.best_estimator_.predict(X_transformed)
+        return self.pipe.predict(X)
+
+
+    def predict_proba(self, X):
+        """Predict probabilities using the final pipeline (with imputer and encoder)."""
+        if self.pipe is None:
+            raise AttributeError("Pipeline is not trained. Call 'fit' method first.")
+        return self.pipe.predict_proba(X)

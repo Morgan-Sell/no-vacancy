@@ -170,3 +170,6 @@ logs/
 
 # VS Code
 .vscode/
+
+# Pickle files
+models/

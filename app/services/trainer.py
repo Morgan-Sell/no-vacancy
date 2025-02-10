@@ -65,29 +65,12 @@ def train_pipeline():
 
     # Train, finetune & test pipeline
     pipe = NoVacancyPipeline(imputer, encoder, clsfr)
-    pipe.pipeline(SEARCH_SPACE)
-    pipe.fit(X_train_prcsd, y_train_prcsd)
+    pipe.fit(X_train_prcsd, y_train_prcsd, search_space=SEARCH_SPACE)
 
-    print("-------------------")
-    print("DEBUG TRAINING TRANSFORM()")
-    print("-------------------")
-    print()
-    X_train_tr = pipe.transform(X_train_prcsd)
+    # Save the pipeline and processor
+    pm = PipelineManagement()
+    pm.save_pipeline(pipe, processor)
 
-    # print("\n[DEBUG] X_train_tr columns: ", X_train_tr.columns)
-
-
-    # Save the pipeline
-    dm = PipelineManagement()
-    dm.save_pipeline(pipe, processor)
-
-    # Align columns of train and test sets
-    expected_columns = pipe.rscv.best_estimator_.named_steps["encoding_step"].get_feature_names_out()
-    # X_test_tr = X_test_tr.reindex(columns=expected_columns, fill_value=0)
-    print("-------------------")
-    print("DEBUG TESTING TRANSFORM()")
-    print("-------------------")
-    print()
     # Perform predictions and evaluate performance
     y_probs = pipe.predict_proba(X_test_prcsd)[:, 1]
     auc = roc_auc_score(y_test_prcsd, y_probs)
