@@ -55,7 +55,7 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
         y_tr = y.copy() if y is not None else None
 
         # Standardize column name text
-        X_tr = self._convert_columns_to_snake_case(X_tr)
+        X_tr = self.__convert_columns_to_snake_case(X_tr)
 
         # Extract month and day of week features from "date of reservation"
         X_tr["date_of_reservation"] = pd.to_datetime(
@@ -91,7 +91,7 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
         self.fit(X, y)
         return self.transform(X, y)
 
-    def _to_snake_case(self, name: str) -> str:
+    def __to_snake_case(self, name: str) -> str:
         # Replace hyphens (-) with underscores (_)
         name = name.replace("-", "_")
 
@@ -105,10 +105,10 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
         name = re.sub(r"[\s]+", "_", name)  # Replace spaces with underscores
         return name.lower()
 
-    def _convert_columns_to_snake_case(self, df: pd.DataFrame) -> pd.DataFrame:
+    def __convert_columns_to_snake_case(self, df: pd.DataFrame) -> pd.DataFrame:
         # Transform column names
         new_columns = [
-            self._to_snake_case(col).replace("__", "_") for col in df.columns
+            self.__to_snake_case(col).replace("__", "_") for col in df.columns
         ]
         df.columns = new_columns
         return df

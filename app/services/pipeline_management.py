@@ -28,7 +28,7 @@ class PipelineManagement:
     def save_pipeline(
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
     ) -> None:
-        self._validate_pipeline_and_processor(pipeline, processor)
+        self.__validate_pipeline_and_processor(pipeline, processor)
 
         try:
             # Save both pipeline and processor as a dictionary
@@ -56,7 +56,7 @@ class PipelineManagement:
             pipeline = artifacts.get("pipeline")
             processor = artifacts.get("processor")
 
-            self._validate_pipeline_and_processor(pipeline, processor)
+            self.__validate_pipeline_and_processor(pipeline, processor)
 
             self.logger.info(
                 f"✅ Pipeline and processor successfully loaded from {self.pipeline_path}"
@@ -84,7 +84,7 @@ class PipelineManagement:
                 self.logger, type(e), "❌ Error during pipeline deletion", e
             )
 
-    def _validate_pipeline_and_processor(
+    def __validate_pipeline_and_processor(
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
     ) -> None:
         if not isinstance(pipeline, NoVacancyPipeline):
