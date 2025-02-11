@@ -39,12 +39,12 @@ def predict(request_data: PredictionRequest):
 
         # Extract predictions and version
         predictions = results["prediction"].to_list()
-        version = results["version"]
+        # version = results["version"]
 
         # FastAPI automatically converts Python data structures into JSON responses
         return {
             "predictions": predictions,
-            "version": version,
+            "version": __model_version__,
         } 
     
     except Exception as exc:

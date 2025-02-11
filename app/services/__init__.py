@@ -78,5 +78,5 @@ TARGET_VARIABLE = "booking status"
 DATA_PATHS = {
     "raw_data": "data/raw/train.csv",
     "processed_data": "data/processed/processed_no_vacancy.csv",
-    "model_save_path": "app/models/no_vacancy_pipeline.pkl",
+    "model_save_path": "models/no_vacancy_pipeline.pkl",
 }
