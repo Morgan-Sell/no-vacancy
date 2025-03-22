@@ -1,0 +1,36 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: novacancy_user
+      POSTGRES_PASSWORD: penthousesuite
+      POSTGRES_DB: novacancy
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+
+app:
+    build: .
+    container_name: novacancy-app
+    depends_on:
+      - db
+    environment:
+      POSTGRES_USER: novacancy_user
+      POSTGRES_PASSWORD: penthousesuite
+      POSTGRES_DB: novacancy
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      DATA_DIR: ./data/raw
+      TRAIN_TABLE: train_table
+      VALIDATION_TABLE: validation_table
+      TEST_TABLE: test_table
+    volumes:
+      - .:/app
+    command: python scripts/import_csv_to_postgres.py
+
+volumes:
+  db_data:

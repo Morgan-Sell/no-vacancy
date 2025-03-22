@@ -44,3 +44,24 @@ def get_logger(*, logger_name):
     logger.addHandler(get_file_handler())
     logger.propagate = False
     return logger
+
+# -- Postgres Config --
+DB_HOST = os.getenv("POSTGRES_HOST", "db")
+DB_PORT = os.getenv("POSTGRES_PORT", "5432")
+DB_NAME = os.getenv("POSTGRES_DB", "novacancy")
+DB_USER = os.getenv("POSTGRES_USER", "novacancy_user")
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "penthousesuite")
+
+# CSV File Paths
+DATA_DIR = os.getenv("DATA_DIR", "./data/raw")
+TRAIN_CSV_FILE_PATH = os.path.join(DATA_DIR, "train.csv")
+VALIDATION_CSV_FILE_PATH = os.path.join(DATA_DIR, "validation.csv")
+TEST_CSV_FILE_PATH = os.path.join(DATA_DIR, "test.csv")
+
+# Table Mappings: CSV -> Table Name
+CSV_TABLE_MAP = {
+    TRAIN_CSV_FILE_PATH: os.getenv("TRAIN_TABLE", "train_table"),
+    VALIDATION_CSV_FILE_PATH: os.getenv("VALIDATION_TABLE", "validation_table"),
+    TEST_CSV_FILE_PATH: os.getenv("TEST_TABLE", "test_table"),
+}
+CSV_HASH_TABLE = "data_import_log"
