@@ -15,8 +15,8 @@ from app.services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from app.services.pipeline_management import PipelineManagement
 from app.services.pipeline import NoVacancyPipeline
+from app.services.pipeline_management import PipelineManagement
 from app.services.predictor import make_prediction
 from app.services.preprocessing import NoVacancyDataProcessing
 
@@ -78,7 +78,6 @@ def test_end_to_end_pipeline(booking_data, pm, temp_pipeline_path):
     assert hasattr(
         loaded_processor, "transform"
     ), "Loaded processor missing transform method."
-
 
     # Step 5: Preprocess and align test data
     # X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)

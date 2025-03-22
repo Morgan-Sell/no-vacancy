@@ -5,13 +5,10 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import psycopg2
 import pytest
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-from sklearn.ensemble import RandomForestClassifier
-
-# 'app' is not required because pytest automatically adds the root directory to sys.path
-# This capability is configured in pyproject.toml.
 from services import (
     BOOKING_MAP,
     IMPUTATION_METHOD,
@@ -21,9 +18,18 @@ from services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from services.pipeline_management import PipelineManagement
 from services.pipeline import NoVacancyPipeline
+from services.pipeline_management import PipelineManagement
 from services.preprocessing import NoVacancyDataProcessing
+from sklearn.ensemble import RandomForestClassifier
+
+# 'app' is not required because pytest automatically adds the root directory to sys.path
+# This capability is configured in pyproject.toml.
+from app.config import CSV_HASH_TABLE, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
+
+# Constants
+TEST_TABLE = "test_import_table"
+HASH_TABLE = CSV_HASH_TABLE
 
 
 @pytest.fixture(scope="function")
@@ -333,7 +339,9 @@ def mock_read_csv(mocker, booking_data):
 @pytest.fixture(scope="function")
 def sample_pipeline():
     """Provide a valid sample NoVacancyPipeline instance."""
-    imputer = CategoricalImputer(imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE)
+    imputer = CategoricalImputer(
+        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
+    )
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
     estimator = RandomForestClassifier()
 
@@ -345,8 +353,10 @@ def sample_pipeline():
 @pytest.fixture(scope="function")
 def mock_pipeline(sample_pipeline):
     """Mock the training and prediction behavior of NoVacancyPipeline."""
-    assert isinstance(sample_pipeline, NoVacancyPipeline), "❌ sample_pipeline is not an instance of NoVacancyPipeline"
-    
+    assert isinstance(
+        sample_pipeline, NoVacancyPipeline
+    ), "❌ sample_pipeline is not an instance of NoVacancyPipeline"
+
     sample_pipeline.fit = MagicMock(return_value=None)
     sample_pipeline.predict = MagicMock(return_value=[1, 0])
     sample_pipeline.predict_proba = MagicMock(return_value=[[0.1, 0.9], [0.8, 0.2]])
@@ -463,3 +473,47 @@ def pm(temp_pipeline_path):
         clear=False,  # Ensures other DATA_PATHS keys are not impacted
     ):
         return PipelineManagement()
+
+
+@pytest.fixture(scope="module")
+def test_db_conn():
+    """Connect to Postgres test DB."""
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+    )
+    yield conn
+    conn.close()
+
+
+@pytest.fixture(scope="function", autouse=True)
+def setup_test_tables(test_db_conn):
+    """
+    Create test table before test, drop both test + log tables after.
+    """
+
+    with test_db_conn.cursor() as cur:
+        # Setup: create empty test table + clear log table
+        cur.execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS {TEST_TABLE} (
+                id SERIAL PRIMARY KEY,
+                number_of_adults INTEGER,
+                number_of_weekend_nights INTEGER
+            );
+        """
+        )
+        cur.execute(f"DELETE FROM {TEST_TABLE};")
+        cur.execute(f"DELETE FROM {HASH_TABLE};")
+        test_db_conn.commit()
+
+    yield  # Run test
+
+    with test_db_conn.cursor() as cur:
+        # Teardown: drop test table + clean up log entries from test file
+        cur.execute(f"DROP TABLE IF EXISTS {TEST_TABLE};")
+        cur.execute(f"DELTE FROM {HASH_TABLE} WHERE filename LIKE '%test_%';")
+        test_db_conn.commit()

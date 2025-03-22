@@ -1,6 +1,7 @@
 import hashlib
 import os
-from scripts.import_csv_to_postgres import hash_csv, get_csv_row_count
+
+from scripts.import_csv_to_postgres import get_csv_row_count, hash_csv
 
 
 def test_hash_csv(temp_booking_data_csv):

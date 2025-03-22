@@ -2,18 +2,20 @@ import csv
 import hashlib
 import os
 from datetime import datetime
+
 import psycopg2
+
 from app.config import (
-    DB_HOST,
-    DB_PORT,
-    DB_NAME,
-    DB_USER,
-    DB_PASSWORD,
-    TRAIN_CSV_FILE_PATH,
-    VALIDATION_CSV_FILE_PATH,
-    TEST_CSV_FILE_PATH,
     CSV_HASH_TABLE,
     CSV_TABLE_MAP,
+    DB_HOST,
+    DB_NAME,
+    DB_PASSWORD,
+    DB_PORT,
+    DB_USER,
+    TEST_CSV_FILE_PATH,
+    TRAIN_CSV_FILE_PATH,
+    VALIDATION_CSV_FILE_PATH,
 )
 
 
@@ -39,7 +41,8 @@ def get_db_row_count(conn, table_name):
 def has_been_imported(conn, filename, file_hash):
     """Check if the file with this hash was already imported."""
     with conn.cursor() as cur:
-        cur.execute(f"""
+        cur.execute(
+            f"""
             CREATE TABLE IF NOT EXISTS {CSV_HASH_TABLE} (
                 filename TEXT PRIMARY KEY,
                 file_hash TEXT NOT NULL,
@@ -47,19 +50,23 @@ def has_been_imported(conn, filename, file_hash):
                 db_row_count INTEGER NOT NULL,
                 imported_date TIMESTAMP DEFAULT NOW()
             );
-        """)
-        cur.execute(f"""
+        """
+        )
+        cur.execute(
+            f"""
             SELECT 1 FROM {CSV_HASH_TABLE} WHERE filename = %s
             AND file_hash = %s;",
             (filename, file_hash))
-        """)
+        """
+        )
         return cur.fetchone() is not None
 
 
 def log_import(conn, filename, file_hash, csv_rows, db_rows):
     """Insert or update import log for the file."""
     with conn.cursor() as cur:
-        cur.execute(f"""
+        cur.execute(
+            f"""
             INSERT INTO {CSV_HASH_TABLE} (filename, file_hash, csv_row_count, imported_at)
             VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (filename) DO UPDATE
@@ -67,13 +74,15 @@ def log_import(conn, filename, file_hash, csv_rows, db_rows):
                 csv_row_count = EXCLUDED.csv_row_count,
                 db_row_count = EXCLUDED.db_row_count,
                 imported_date = EXCLUDED.imported_date;
-        """, (filename, file_hash, csv_rows, db_rows, datetime.now()))       
+        """,
+            (filename, file_hash, csv_rows, db_rows, datetime.now()),
+        )
     conn.commit()
 
 
 def import_csv(conn, csv_file, table_name):
     """Import CSV file into the specified PostgreSQL table."""
-    with conn.cursor() as cur, open(csv_file, 'r') as f:
+    with conn.cursor() as cur, open(csv_file, "r") as f:
         reader = csv.reader(f)
         header = next(reader)
         placeholders = ", ".join(["%s"] * len(header))
@@ -99,19 +108,21 @@ def main():
 
         if has_been_imported(conn, csv_path, file_hash) is True:
             print(f"Already imported this version of {csv_path}.")
-        
+
         else:
             db_rows_before = get_db_row_count(conn, table_name)
             print(f"DB rows before import: {db_rows_before}")
 
             # Write CSV riles to the database
             import_csv(conn, csv_path, table_name)
-            
+
             # Fetch and save table metadata
             db_rows_after = get_db_row_count(conn, table_name)
             log_import(con, csv_path, file_hash, csv_rows, db_rows_after)
-            print("Imported logged: {csv_path} ({csv_rows} rows) → {table_name} ({db_rows_after} rows)")
-    
+            print(
+                "Imported logged: {csv_path} ({csv_rows} rows) → {table_name} ({db_rows_after} rows)"
+            )
+
     conn.close()
 
 
