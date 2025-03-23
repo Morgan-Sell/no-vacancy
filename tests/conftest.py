@@ -496,7 +496,7 @@ def setup_test_tables(test_db_conn):
     """
 
     with test_db_conn.cursor() as cur:
-        # Setup: create empty test table + clear log table
+        # Create test table if it doesn't exist
         cur.execute(
             f"""
             CREATE TABLE IF NOT EXISTS {TEST_TABLE} (
@@ -506,6 +506,19 @@ def setup_test_tables(test_db_conn):
             );
         """
         )
+
+        # Create data_import_log table if it doesn't exist
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {HASH_TABLE} (
+                filename TEXT PRIMARY KEY,
+                file_hash TEXT NOT NULL,
+                csv_row_count INTEGER NOT NULL,
+                db_row_count INTEGER NOT NULL,
+                imported_date TIMESTAMP DEFAULT NOW()
+            );
+        """)
+
+        # Clear both tables
         cur.execute(f"DELETE FROM {TEST_TABLE};")
         cur.execute(f"DELETE FROM {HASH_TABLE};")
         test_db_conn.commit()
@@ -515,5 +528,5 @@ def setup_test_tables(test_db_conn):
     with test_db_conn.cursor() as cur:
         # Teardown: drop test table + clean up log entries from test file
         cur.execute(f"DROP TABLE IF EXISTS {TEST_TABLE};")
-        cur.execute(f"DELTE FROM {HASH_TABLE} WHERE filename LIKE '%test_%';")
+        cur.execute(f"DROP TABLE IF EXISTS {HASH_TABLE};")
         test_db_conn.commit()

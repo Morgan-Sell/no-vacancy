@@ -46,7 +46,7 @@ def get_logger(*, logger_name):
     return logger
 
 # -- Postgres Config --
-DB_HOST = os.getenv("POSTGRES_HOST", "db")
+DB_HOST = os.getenv("POSTGRES_HOST", "postgres")
 DB_PORT = os.getenv("POSTGRES_PORT", "5432")
 DB_NAME = os.getenv("POSTGRES_DB", "novacancy")
 DB_USER = os.getenv("POSTGRES_USER", "novacancy_user")

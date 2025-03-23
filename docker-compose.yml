@@ -1,6 +1,6 @@
 version: '3.9'
 services:
-  db:
+  postgres:
     image: postgres:latest
     container_name: postgres
     environment:
@@ -12,17 +12,26 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
+  test-db:
+    image: postgres:latest
+    container_name: test-postgres
+    ports:
+      - "5433:5432" # Host 5433 -> Container 5432 to  avoid conflict with the main db
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: test_db
 
-app:
+  app:
     build: .
     container_name: novacancy-app
     depends_on:
-      - db
+      - postgres
     environment:
       POSTGRES_USER: novacancy_user
       POSTGRES_PASSWORD: penthousesuite
       POSTGRES_DB: novacancy
-      POSTGRES_HOST: db
+      POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       DATA_DIR: ./data/raw
       TRAIN_TABLE: train_table
