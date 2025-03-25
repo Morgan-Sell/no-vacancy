@@ -3,7 +3,13 @@ import os
 import sys
 from logging.handlers import TimedRotatingFileHandler
 from os.path import abspath, dirname, join
+from dotenv import load_dotenv
 
+
+# Load environment variables from .env file
+load_dotenv()
+
+# -- Logging Config --
 PACKAGE_ROOT = abspath(dirname(__file__))
 
 FORMATTER = logging.Formatter(
@@ -45,23 +51,24 @@ def get_logger(*, logger_name):
     logger.propagate = False
     return logger
 
-# -- Postgres Config --
-DB_HOST = os.getenv("POSTGRES_HOST", "postgres")
-DB_PORT = os.getenv("POSTGRES_PORT", "5432")
-DB_NAME = os.getenv("POSTGRES_DB", "novacancy")
-DB_USER = os.getenv("POSTGRES_USER", "novacancy_user")
-DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "penthousesuite")
+
+# -- Postgres Config (Production) --
+DB_HOST = os.getenv("POSTGRES_HOST")
+DB_PORT = os.getenv("POSTGRES_PORT")
+DB_NAME = os.getenv("POSTGRES_DB")
+DB_USER = os.getenv("POSTGRES_USER")
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 
 # CSV File Paths
-DATA_DIR = os.getenv("DATA_DIR", "./data/raw")
+DATA_DIR = "./data/raw"
 TRAIN_CSV_FILE_PATH = os.path.join(DATA_DIR, "train.csv")
 VALIDATION_CSV_FILE_PATH = os.path.join(DATA_DIR, "validation.csv")
 TEST_CSV_FILE_PATH = os.path.join(DATA_DIR, "test.csv")
 
 # Table Mappings: CSV -> Table Name
 CSV_TABLE_MAP = {
-    TRAIN_CSV_FILE_PATH: os.getenv("TRAIN_TABLE", "train_table"),
-    VALIDATION_CSV_FILE_PATH: os.getenv("VALIDATION_TABLE", "validation_table"),
-    TEST_CSV_FILE_PATH: os.getenv("TEST_TABLE", "test_table"),
+    TRAIN_CSV_FILE_PATH: "train_table",
+    VALIDATION_CSV_FILE_PATH: "validation_table",
+    TEST_CSV_FILE_PATH: "test_table",
 }
 CSV_HASH_TABLE = "data_import_log"
