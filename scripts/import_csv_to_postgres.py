@@ -8,6 +8,7 @@ import psycopg2
 from app.config import (
     CSV_HASH_TABLE,
     CSV_TABLE_MAP,
+    DB_CONNECT_TIMEOUT,
     DB_HOST,
     DB_NAME,
     DB_PASSWORD,
@@ -55,9 +56,9 @@ def has_been_imported(conn, filename, file_hash):
         cur.execute(
             f"""
             SELECT 1 FROM {CSV_HASH_TABLE} WHERE filename = %s
-            AND file_hash = %s;",
-            (filename, file_hash))
-        """
+            AND file_hash = %s;
+            """,
+            (filename, file_hash)
         )
         return cur.fetchone() is not None
 
@@ -67,7 +68,7 @@ def log_import(conn, filename, file_hash, csv_rows, db_rows):
     with conn.cursor() as cur:
         cur.execute(
             f"""
-            INSERT INTO {CSV_HASH_TABLE} (filename, file_hash, csv_row_count, imported_at)
+            INSERT INTO {CSV_HASH_TABLE} (filename, file_hash, csv_row_count, imported_date)
             VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (filename) DO UPDATE
             SET file_hash = EXCLUDED.file_hash,
@@ -99,6 +100,7 @@ def main():
         dbname=DB_NAME,
         user=DB_USER,
         password=DB_PASSWORD,
+        connect_timeout=DB_CONNECT_TIMEOUT,
     )
 
     for csv_path, table_name in CSV_TABLE_MAP.items():
@@ -118,7 +120,7 @@ def main():
 
             # Fetch and save table metadata
             db_rows_after = get_db_row_count(conn, table_name)
-            log_import(con, csv_path, file_hash, csv_rows, db_rows_after)
+            log_import(conn, csv_path, file_hash, csv_rows, db_rows_after)
             print(
                 "Imported logged: {csv_path} ({csv_rows} rows) → {table_name} ({db_rows_after} rows)"
             )

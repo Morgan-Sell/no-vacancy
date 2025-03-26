@@ -58,6 +58,7 @@ DB_PORT = os.getenv("POSTGRES_PORT")
 DB_NAME = os.getenv("POSTGRES_DB")
 DB_USER = os.getenv("POSTGRES_USER")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+DB_CONNECT_TIMEOUT = 120  # in seconds
 
 # CSV File Paths
 DATA_DIR = "./data/raw"

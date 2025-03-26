@@ -3,6 +3,7 @@ import os
 import tempfile
 import time
 from unittest.mock import MagicMock, patch
+from dotenv import load_dotenv
 
 import pandas as pd
 import psycopg2
@@ -25,11 +26,22 @@ from sklearn.ensemble import RandomForestClassifier
 
 # 'app' is not required because pytest automatically adds the root directory to sys.path
 # This capability is configured in pyproject.toml.
-from app.config import CSV_HASH_TABLE, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
+from app.config import (
+    CSV_HASH_TABLE,
+    DB_CONNECT_TIMEOUT,
+    DB_HOST,
+    DB_NAME,
+    DB_PASSWORD,
+    DB_PORT,
+    DB_USER,
+)
 
 # Constants
 TEST_TABLE = "test_import_table"
 HASH_TABLE = CSV_HASH_TABLE
+
+# Load environment variables
+load_dotenv()
 
 
 @pytest.fixture(scope="function")
@@ -479,11 +491,12 @@ def pm(temp_pipeline_path):
 def test_db_conn():
     """Connect to Postgres test DB."""
     conn = psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASSWORD,
+        host=os.getenv("TEST_POSTGRES_HOST"),
+        port=int(os.getenv("TEST_POSTGRES_PORT")),
+        dbname=os.getenv("TEST_POSTGRES_DB"),
+        user=os.getenv("TEST_POSTGRES_USER"),
+        password=os.getenv("TEST_POSTGRES_PASSWORD"),
+        connect_timeout=DB_CONNECT_TIMEOUT,
     )
     yield conn
     conn.close()
@@ -508,7 +521,8 @@ def setup_test_tables(test_db_conn):
         )
 
         # Create data_import_log table if it doesn't exist
-        cur.execute(f"""
+        cur.execute(
+            f"""
             CREATE TABLE IF NOT EXISTS {HASH_TABLE} (
                 filename TEXT PRIMARY KEY,
                 file_hash TEXT NOT NULL,
@@ -516,11 +530,14 @@ def setup_test_tables(test_db_conn):
                 db_row_count INTEGER NOT NULL,
                 imported_date TIMESTAMP DEFAULT NOW()
             );
-        """)
+        """
+        )
 
         # Clear both tables
-        cur.execute(f"DELETE FROM {TEST_TABLE};")
-        cur.execute(f"DELETE FROM {HASH_TABLE};")
+        # Use TRUNCATE RESTART IDENTITY to reset the SERIAL id
+        # TRUNCATE is faster than DELETE for large tables
+        cur.execute(f"TRUNCATE {TEST_TABLE} RESTART IDENTITY CASCADE;")
+        cur.execute(f"TRUNCATE {HASH_TABLE} RESTART IDENTITY CASCADE;")
         test_db_conn.commit()
 
     yield  # Run test
