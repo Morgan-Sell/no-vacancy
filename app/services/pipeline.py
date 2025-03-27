@@ -4,12 +4,11 @@ from typing import Union
 import pandas as pd
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
+from services import RSCV_PARAMS
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
-
-from services import RSCV_PARAMS
 
 _logger = logging.getLogger(__name__)
 
@@ -34,11 +33,9 @@ class NoVacancyPipeline:
         self.pipe = None  # Placeholder fo the constructed pipeline
         self.rscv = None  # Placeholder for the RandomizedSearchCV object
 
-
-
     def fit(self, X, y, search_space):
         """Fit imputer and encoder separately, then train the model using transformed data."""
-        
+
         # Fit imputer and transform X
         self.imputer.fit(X)
         X_imputed = self.imputer.transform(X)
@@ -66,14 +63,12 @@ class NoVacancyPipeline:
 
         return self
 
-
     def predict(self, X):
         """Predict class using the final pipeline (with imputer and encoder)."""
         if self.pipe is None:
             raise AttributeError("Pipeline is not trained. Call 'fit' method first.")
-        
-        return self.pipe.predict(X)
 
+        return self.pipe.predict(X)
 
     def predict_proba(self, X):
         """Predict probabilities using the final pipeline (with imputer and encoder)."""

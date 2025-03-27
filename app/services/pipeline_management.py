@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any, Tuple
 
 import joblib
-
 from config import PIPELINE_DIR, PIPELINE_SAVE_FILE, get_logger
 from services import DATA_PATHS
 from services.pipeline import NoVacancyPipeline

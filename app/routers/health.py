@@ -1,7 +1,6 @@
+from config import get_logger
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-
-from config import get_logger
 
 router = APIRouter(
     prefix="/health",

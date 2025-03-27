@@ -3,8 +3,8 @@ import os
 import sys
 from logging.handlers import TimedRotatingFileHandler
 from os.path import abspath, dirname, join
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()

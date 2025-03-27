@@ -58,7 +58,7 @@ def has_been_imported(conn, filename, file_hash):
             SELECT 1 FROM {CSV_HASH_TABLE} WHERE filename = %s
             AND file_hash = %s;
             """,
-            (filename, file_hash)
+            (filename, file_hash),
         )
         return cur.fetchone() is not None
 
@@ -68,7 +68,7 @@ def log_import(conn, filename, file_hash, csv_rows, db_rows):
     with conn.cursor() as cur:
         cur.execute(
             f"""
-            INSERT INTO {CSV_HASH_TABLE} (filename, file_hash, csv_row_count, imported_date)
+            INSERT INTO {CSV_HASH_TABLE} (filename, file_hash, csv_row_count, db_row_count, imported_date)
             VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (filename) DO UPDATE
             SET file_hash = EXCLUDED.file_hash,
@@ -85,10 +85,16 @@ def import_csv(conn, csv_file, table_name):
     """Import CSV file into the specified PostgreSQL table."""
     with conn.cursor() as cur, open(csv_file, "r") as f:
         reader = csv.reader(f)
-        header = next(reader)
+        header = next(reader)  # extracs header from CSV
         placeholders = ", ".join(["%s"] * len(header))
+        columns = ", ".join(header)
+
         for row in reader:
-            cur.execute(f"INSERT INTO {table_name} VALUES ({placeholders});", row)
+            # Ensures that values are only inserted into the columns that are
+            # present in the CSV file
+            cur.execute(
+                f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders});", row
+            )
     conn.commit()
     print(f"✅ Imported data from {csv_file} into {table_name}")
 

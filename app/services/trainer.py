@@ -2,13 +2,9 @@ import logging
 import warnings
 
 import pandas as pd
+from config import __model_version__
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
-
-from config import __model_version__
 from services import (
     BOOKING_MAP,
     DATA_PATHS,
@@ -22,9 +18,12 @@ from services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from services.pipeline_management import PipelineManagement
 from services.pipeline import NoVacancyPipeline
+from services.pipeline_management import PipelineManagement
 from services.preprocessing import NoVacancyDataProcessing
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
 
 logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")
@@ -55,12 +54,13 @@ def train_pipeline():
     X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
 
     # Define pipeline components
-    imputer = CategoricalImputer(imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE)
+    imputer = CategoricalImputer(
+        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
+    )
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
     clsfr = RandomForestClassifier()
 
-
-    # print("[DEBUG] X_train_prcsd columns: ", X_train_prcsd.columns)   
+    # print("[DEBUG] X_train_prcsd columns: ", X_train_prcsd.columns)
     # print("\n[DEBUG] X_test_prcsd columns: ", X_test_prcsd.columns)
 
     # Train, finetune & test pipeline

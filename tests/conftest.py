@@ -3,11 +3,11 @@ import os
 import tempfile
 import time
 from unittest.mock import MagicMock, patch
-from dotenv import load_dotenv
 
 import pandas as pd
 import psycopg2
 import pytest
+from dotenv import load_dotenv
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
 from services import (
