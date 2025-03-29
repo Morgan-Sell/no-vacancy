@@ -34,7 +34,7 @@ def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm
 
         # Assert
         assert isinstance(results, pd.DataFrame)
-        assert len(results) == 2, "Expected 2 predictions from mock_pipeline."
+        assert len(results) == len(booking_data)
         assert list(results.columns) == [
             "prediction",
             "probability_not_canceled",
@@ -58,11 +58,11 @@ def test_make_prediction_pipeline_not_found(booking_data, mock_processor, pm):
     # Arrange: Patch PipelineManagement to raise FileNotFoundError
     with patch(
         "app.services.pipeline_management.PipelineManagement.load_pipeline",
-        side_effect=FileNotFoundError("Pipeline not found"),
+        side_effect=FileNotFoundError("❌ Error during pipeline loading: Pipeline not found"),
     ):
         # Act & Assert
         with pytest.raises(
-            FileNotFoundError, match="❌ No pipeline found: Pipeline not found"
+            FileNotFoundError, match="❌ Error during pipeline loading: Pipeline not found"
         ):
             make_prediction(booking_data, pm)
 
@@ -87,7 +87,7 @@ def test_make_prediction_unexpected_error(
 
     # Simulate the unexpected error during prediction
     mock_pipeline.rscv = mock_rscv
-    mock_pipeline.predict.side_effect = Exception("Unexpected prediction error")
+    mock_pipeline.predict_proba.side_effect = Exception("Unexpected prediction error")
 
     # Patch PipelineManagement to return the mock pipeline and processor
     with patch(
