@@ -4,7 +4,7 @@ import sys
 from logging.handlers import TimedRotatingFileHandler
 from unittest.mock import Mock, patch
 
-from app.api.config import FORMATTER, LOG_FILE, get_console_handler, get_file_handler
+from app.config import FORMATTER, LOG_FILE, get_console_handler, get_file_handler
 
 
 def test_get_console_handler():
