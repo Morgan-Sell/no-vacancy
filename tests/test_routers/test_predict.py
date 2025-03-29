@@ -20,7 +20,11 @@ def test_predict_endpoint(booking_data):
     response_json = response.json()
 
     # Assert
-    assert response.status_code == 200, f"Failed with status code {response.status_code}"
+    assert (
+        response.status_code == 200
+    ), f"Failed with status code {response.status_code}"
     assert "predictions" in response_json, "Response does not contain 'predictions'"
     assert "version" in response_json, "Response does not contain 'version'"
-    assert isinstance(response_json["predictions"], list), "'predictions' should be a list"
+    assert isinstance(
+        response_json["predictions"], list
+    ), "'predictions' should be a list"

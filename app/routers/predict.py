@@ -1,10 +1,8 @@
 # import simplejson
-from fastapi import APIRouter, HTTPException, Request
 import pandas as pd
-from pydantic import BaseModel
-
-
 from config import __model_version__, get_logger
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from services.pipeline_management import PipelineManagement
 from services.predictor import make_prediction
 
@@ -19,10 +17,12 @@ _logger = get_logger(logger_name=__name__)
 class PredictionRequest(BaseModel):
     data: list[dict]
 
+
 # Pydantic model for output validation
 class PredictionResponse(BaseModel):
     predictions: list[float]
     version: str
+
 
 @router.post("/", response_model=PredictionResponse)
 def predict(request_data: PredictionRequest):
@@ -45,8 +45,10 @@ def predict(request_data: PredictionRequest):
         return {
             "predictions": predictions,
             "version": __model_version__,
-        } 
-    
+        }
+
     except Exception as exc:
         _logger.error(f"Unexpected error during prediction: {exc}")
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}")
+        raise HTTPException(
+            status_code=500, detail=f"Prediction failed: {exc}"
+        ) from exc

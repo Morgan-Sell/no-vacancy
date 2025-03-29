@@ -4,12 +4,6 @@ from typing import Dict, List, Tuple
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from services import (
-    BOOKING_MAP,
-    MONTH_ABBREVIATION_MAP,
-    VARIABLE_RENAME_MAP,
-)
-
 
 class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
     """

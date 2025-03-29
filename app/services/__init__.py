@@ -47,14 +47,13 @@ VARS_TO_OHE = [
 
 # -- Pipeline (pipeline.py) --
 RSCV_PARAMS = {
-    "n_iter": 20, # TODO: Update to 50 after debugging
+    "n_iter": 20,  # TODO: Update to 50 after debugging
     "scoring": "roc_auc",
     "n_jobs": -1,
-    "cv": 3, # TODO: Update to 5 after debugging
+    "cv": 3,  # TODO: Update to 5 after debugging
     "verbose": 1,
     "return_train_score": False,
 }
-
 
 
 # -- Model Training (trainer.py) --

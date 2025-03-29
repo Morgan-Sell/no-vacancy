@@ -333,7 +333,9 @@ def mock_read_csv(mocker, booking_data):
 @pytest.fixture(scope="function")
 def sample_pipeline():
     """Provide a valid sample NoVacancyPipeline instance."""
-    imputer = CategoricalImputer(imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE)
+    imputer = CategoricalImputer(
+        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
+    )
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
     estimator = RandomForestClassifier()
 
@@ -345,8 +347,10 @@ def sample_pipeline():
 @pytest.fixture(scope="function")
 def mock_pipeline(sample_pipeline):
     """Mock the training and prediction behavior of NoVacancyPipeline."""
-    assert isinstance(sample_pipeline, NoVacancyPipeline), "❌ sample_pipeline is not an instance of NoVacancyPipeline"
-    
+    assert isinstance(
+        sample_pipeline, NoVacancyPipeline
+    ), "❌ sample_pipeline is not an instance of NoVacancyPipeline"
+
     sample_pipeline.fit = MagicMock(return_value=None)
     sample_pipeline.predict = MagicMock(return_value=[1, 0])
     sample_pipeline.predict_proba = MagicMock(return_value=[[0.1, 0.9], [0.8, 0.2]])

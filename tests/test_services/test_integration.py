@@ -79,7 +79,6 @@ def test_end_to_end_pipeline(booking_data, pm, temp_pipeline_path):
         loaded_processor, "transform"
     ), "Loaded processor missing transform method."
 
-
     # Step 5: Preprocess and align test data
     # X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
     # expected_columns = loaded_pipeline.rscv.best_estimator_.named_steps[

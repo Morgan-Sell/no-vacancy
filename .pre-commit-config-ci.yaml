@@ -1,27 +1,25 @@
-# .pre-commit-config.yaml
-# Use for local development
-# This file performs autofixes
+# .pre-commit-config-ci.yaml
+# Used in CI pipeline to run pre-commit without autofixes
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.2
     hooks:
       - id: ruff
-        args: ["--fix", "--config=pyproject.toml"]
-
+        args: ["--config=pyproject.toml"]
+  
   - repo: https://github.com/psf/black
-    rev: 25.1.0
+    rev: 24.10.0
     hooks:
       - id: black
         language_version: python3.11
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+    rev: v1.8.0
     hooks:
       - id: mypy
-
-  # Check YAML and YML files for syntax errors
+  
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v4.4.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
