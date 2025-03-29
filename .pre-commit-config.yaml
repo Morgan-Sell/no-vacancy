@@ -9,8 +9,17 @@ repos:
     rev: 24.10.0
     hooks:
       - id: black
-        lanaguage_version: python3.11
+        language_version: python3.11
   
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
-    hooks
+    hooks:
+      - id: mypy
+
+  # Check YAML and YML files for syntax errors
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
