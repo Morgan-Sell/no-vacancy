@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 import warnings
 
 import pandas as pd
@@ -29,7 +30,10 @@ logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")
 
 
-def train_pipeline():
+def train_pipeline(model_save_path: Optional[str] = None) -> None:
+    # If no pipeline path is set, default to DATA_PATHS["model_save_path"]
+    pipeline_path = model_save_path or DATA_PATHS["model_save_path"]
+    
     # Load data
     data = pd.read_csv(
         DATA_PATHS["raw_data"]
@@ -68,7 +72,7 @@ def train_pipeline():
     pipe.fit(X_train_prcsd, y_train_prcsd, search_space=SEARCH_SPACE)
 
     # Save the pipeline and processor
-    pm = PipelineManagement()
+    pm = PipelineManagement(pipeline_path=pipeline_path)
     pm.save_pipeline(pipe, processor)
 
     # Perform predictions and evaluate performance

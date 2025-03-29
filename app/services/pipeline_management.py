@@ -19,9 +19,9 @@ class PipelineManagement:
     Handles saving, loading, and managing the pipeline.
     """
 
-    def __init__(self):
+    def __init__(self, pipeline_path: str = DATA_PATHS["model_save_path"]) -> None:
         self.logger = get_logger(logger_name=__name__)
-        self.pipeline_path = Path(DATA_PATHS["model_save_path"])
+        self.pipeline_path = Path(pipeline_path)
 
     def save_pipeline(
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
@@ -29,6 +29,9 @@ class PipelineManagement:
         self.__validate_pipeline_and_processor(pipeline, processor)
 
         try:
+            # Ensure the directory exists before saving
+            self.pipeline_path.parent.mkdir(parents=True, exist_ok=True)
+  
             # Save both pipeline and processor as a dictionary
             joblib.dump(
                 {"pipeline": pipeline, "processor": processor},
