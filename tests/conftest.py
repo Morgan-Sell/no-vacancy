@@ -340,7 +340,6 @@ def sample_pipeline():
     estimator = RandomForestClassifier()
 
     pipeline = NoVacancyPipeline(imputer, encoder, estimator)
-    pipeline.pipeline({})  # Pass empty search space for simplicity
     return pipeline
 
 
