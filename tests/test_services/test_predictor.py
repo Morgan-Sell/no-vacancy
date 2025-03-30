@@ -56,9 +56,10 @@ def test_make_prediction_with_empty_data():
 
 def test_make_prediction_pipeline_not_found(booking_data, mock_processor, pm):
     # Arrange: Patch PipelineManagement to raise FileNotFoundError
-    with patch.object(pm, "load_pipeline", side_effect=FileNotFoundError(
-            "❌ No pipeline found: Pipeline not found"
-        ),
+    with patch.object(
+        pm,
+        "load_pipeline",
+        side_effect=FileNotFoundError("❌ No pipeline found: Pipeline not found"),
     ):
         # Act & Assert
         with pytest.raises(
@@ -90,9 +91,10 @@ def test_make_prediction_unexpected_error(
     mock_pipeline.predict_proba.side_effect = Exception("Unexpected prediction error")
 
     # Patch PipelineManagement to return the mock pipeline and processor
-    with patch.object(pm, "load_pipeline", return_value=(
-        mock_pipeline, mock_processor
-        ),
+    with patch.object(
+        pm,
+        "load_pipeline",
+        return_value=(mock_pipeline, mock_processor),
     ):
         # Act & Assert
         with pytest.raises(

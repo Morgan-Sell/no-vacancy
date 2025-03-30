@@ -1,5 +1,6 @@
 import glob
 import os
+import shutil
 import tempfile
 import time
 from unittest.mock import MagicMock, patch
@@ -8,6 +9,7 @@ import pandas as pd
 import pytest
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
+
 # 'app' is not required because pytest automatically adds the root directory to sys.path
 # This capability is configured in pyproject.toml.
 from app.services import DATA_PATHS
@@ -497,9 +499,14 @@ def trained_pipeline_and_processor(booking_data, tmp_path):
     pipe.fit(X_train_prcsd, y_train_prcsd, search_space)
 
     # Save the trained pipeline and processor
-    pipeline_path = tmp_path / DATA_PATHS["model_save_path"]
-    pm = PipelineManagement(pipeline_path=pipeline_path)
+    temp_pipeline_path = tmp_path / DATA_PATHS["model_save_path"]
+    pm = PipelineManagement(pipeline_path=temp_pipeline_path)
     pm.save_pipeline(pipe, processor)
+
+    # Move the model artifacts to the app path
+    app_path = DATA_PATHS["model_save_path"]
+    app_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(temp_pipeline_path, app_path)
 
     # In case there's a need to return the variables
     return pipe, processor, pm

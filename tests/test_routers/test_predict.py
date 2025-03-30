@@ -12,7 +12,7 @@ def test_predict_endpoint(booking_data, trained_pipeline_and_processor):
     Pipeline file must exist at app/models/no_vacancy_pipeline.pkl to run this test.
     """
     _, _, pm = trained_pipeline_and_processor
-    
+
     # Arrange
     sample_obs = pd.DataFrame(booking_data.iloc[[0]].copy())
     payload = {"data": sample_obs.to_dict(orient="records")}

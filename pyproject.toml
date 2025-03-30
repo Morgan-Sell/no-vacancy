@@ -50,9 +50,9 @@ select = [
   "B", # Runs flake8-bugbear for finding potential bugs.
   "PL", # pylint
   "I", # isort
-] 
+]
 # E501: ignore line length (handled by black)
-ignore = ["E501"] 
+ignore = ["E501"]
 
 
 [tool.black]
