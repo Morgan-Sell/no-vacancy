@@ -31,7 +31,7 @@ class PipelineManagement:
         try:
             # Ensure the directory exists before saving
             self.pipeline_path.parent.mkdir(parents=True, exist_ok=True)
-  
+
             # Save both pipeline and processor as a dictionary
             joblib.dump(
                 {"pipeline": pipeline, "processor": processor},
@@ -47,6 +47,7 @@ class PipelineManagement:
 
     def load_pipeline(self) -> Tuple[NoVacancyPipeline, NoVacancyDataProcessing]:
         try:
+            # Generate a comprehensive error message if the pipeline path is not found
             if not self.pipeline_path.exists():
                 raise FileNotFoundError(
                     f"Pipeline file not found at {self.pipeline_path}"
@@ -64,8 +65,21 @@ class PipelineManagement:
             )
             return pipeline, processor
 
+        except FileNotFoundError as e:
+            handle_error_dm(self.logger, FileExistsError, "❌ Pipeline not found", e)
+
+        except (ValueError, AttributeError, TypeError) as e:
+            handle_error_dm(
+                self.logger, type(e), "❌ Invalid pipeline or processor format", e
+            )
+
         except Exception as e:
-            handle_error_dm(self.logger, type(e), "❌ Error during pipeline loading", e)
+            handle_error_dm(
+                self.logger,
+                RuntimeError,
+                "❌ Unexpected error during pipeline loading",
+                e,
+            )
 
     def delete_pipeline(self) -> None:
         try:

@@ -1,8 +1,8 @@
-from fastapi.testclient import TestClient
-from app.main import app
 import pandas as pd
 import pytest
+from fastapi.testclient import TestClient
 
+from app.main import app
 
 client = TestClient(app)
 

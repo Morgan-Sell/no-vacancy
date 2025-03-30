@@ -1,6 +1,6 @@
 import logging
-from typing import Optional
 import warnings
+from typing import Optional
 
 import pandas as pd
 from config import __model_version__
@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore")
 def train_pipeline(model_save_path: Optional[str] = None) -> None:
     # If no pipeline path is set, default to DATA_PATHS["model_save_path"]
     pipeline_path = model_save_path or DATA_PATHS["model_save_path"]
-    
+
     # Load data
     data = pd.read_csv(
         DATA_PATHS["raw_data"]

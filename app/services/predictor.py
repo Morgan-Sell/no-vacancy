@@ -2,9 +2,7 @@ import logging
 
 import numpy as np
 import pandas as pd
-from services import (
-    DEPENDENT_VAR_NAME,
-)
+from services import DEPENDENT_VAR_NAME
 from services.pipeline_management import PipelineManagement
 
 logger = logging.getLogger(__name__)

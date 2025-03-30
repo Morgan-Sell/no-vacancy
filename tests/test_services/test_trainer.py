@@ -10,9 +10,14 @@ from app.services.trainer import train_pipeline
 
 
 # TODO: Need to update once data source changes, i.e., csv -> Postgres
-def test_train_pipeline_end_to_end(temp_booking_data_csv, mock_logger, temp_pipeline_path):
+def test_train_pipeline_end_to_end(
+    temp_booking_data_csv, mock_logger, temp_pipeline_path
+):
     # Arrange
-    with patch("app.services.trainer.DATA_PATHS", {"raw_data": temp_booking_data_csv, "model_save_path": str(temp_pipeline_path)}):
+    with patch(
+        "app.services.trainer.DATA_PATHS",
+        {"raw_data": temp_booking_data_csv, "model_save_path": str(temp_pipeline_path)},
+    ):
         # Act
         train_pipeline(model_save_path=str(temp_pipeline_path))
         assert temp_pipeline_path.exists()

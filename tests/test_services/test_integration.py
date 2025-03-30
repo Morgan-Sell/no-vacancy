@@ -15,8 +15,8 @@ from app.services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from app.services.pipeline_management import PipelineManagement
 from app.services.pipeline import NoVacancyPipeline
+from app.services.pipeline_management import PipelineManagement
 from app.services.predictor import make_prediction
 from app.services.preprocessing import NoVacancyDataProcessing
 

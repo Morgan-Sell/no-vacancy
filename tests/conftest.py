@@ -8,8 +8,6 @@ import pandas as pd
 import pytest
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-from sklearn.ensemble import RandomForestClassifier
-
 # 'app' is not required because pytest automatically adds the root directory to sys.path
 # This capability is configured in pyproject.toml.
 from services import (
@@ -21,9 +19,10 @@ from services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from services.pipeline_management import PipelineManagement
 from services.pipeline import NoVacancyPipeline
+from services.pipeline_management import PipelineManagement
 from services.preprocessing import NoVacancyDataProcessing
+from sklearn.ensemble import RandomForestClassifier
 
 
 @pytest.fixture(scope="function")
