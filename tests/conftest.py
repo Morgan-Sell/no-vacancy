@@ -1,5 +1,6 @@
 import glob
 import os
+from pathlib import Path
 import shutil
 import tempfile
 import time
@@ -504,7 +505,7 @@ def trained_pipeline_and_processor(booking_data, tmp_path):
     pm.save_pipeline(pipe, processor)
 
     # Move the model artifacts to the app path
-    app_path = DATA_PATHS["model_save_path"]
+    app_path = Path(DATA_PATHS["model_save_path"])
     app_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(temp_pipeline_path, app_path)
 
