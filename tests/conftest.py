@@ -10,6 +10,7 @@ from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
 # 'app' is not required because pytest automatically adds the root directory to sys.path
 # This capability is configured in pyproject.toml.
+from app.services import DATA_PATHS
 from services import (
     BOOKING_MAP,
     IMPUTATION_METHOD,
@@ -465,3 +466,40 @@ def pm(temp_pipeline_path):
         clear=False,  # Ensures other DATA_PATHS keys are not impacted
     ):
         return PipelineManagement()
+
+
+@pytest.fixture(scope="function")
+def trained_pipeline_and_processor(booking_data, tmp_path):
+    # Preprocessing
+    processor = NoVacancyDataProcessing(
+        variable_rename=VARIABLE_RENAME_MAP,
+        month_abbreviation=MONTH_ABBREVIATION_MAP,
+        vars_to_drop=VARS_TO_DROP,
+        booking_map=BOOKING_MAP,
+    )
+    X = booking_data.drop(columns=["booking status"])
+    y = booking_data["booking status"]
+    X_train_prcsd, y_train_prcsd = processor.fit_transform(X, y)
+
+    # Build + train pipeline
+    imputer = CategoricalImputer(
+        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
+    )
+    encoder = OneHotEncoder(variables=VARS_TO_OHE)
+    clsfr = RandomForestClassifier()
+    search_space = {
+        "n_estimators": [20, 50, 100, 200],
+        "max_features": ["log2", "sqrt"],
+        "max_depth": [1, 3, 5],
+        "min_samples_split": [2, 5, 10],
+    }
+    pipe = NoVacancyPipeline(imputer, encoder, clsfr)
+    pipe.fit(X_train_prcsd, y_train_prcsd, search_space)
+
+    # Save the trained pipeline and processor
+    pipeline_path = tmp_path / DATA_PATHS["model_save_path"]
+    pm = PipelineManagement(pipeline_path=pipeline_path)
+    pm.save_pipeline(pipe, processor)
+
+    # In case there's a need to return the variables
+    return pipe, processor, pm
