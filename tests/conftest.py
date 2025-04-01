@@ -463,12 +463,12 @@ def pm(temp_pipeline_path):
     # Mock DATA_PATHS["model_save_path"] b/c (1) tests should rely on hardcoded
     # global paths that may interfere with the application and (2) if DATA_PATHS
     # structure changes, the tests will seamlessly adapt.
-    with patch.dict(
-        "app.services.DATA_PATHS",
-        {"model_save_path": str(temp_pipeline_path)},
-        clear=False,  # Ensures other DATA_PATHS keys are not impacted
-    ):
-        return PipelineManagement()
+    # with patch.dict(
+    #     "app.services.DATA_PATHS",
+    #     {"model_save_path": str(temp_pipeline_path)},
+    #     clear=False,  # Ensures other DATA_PATHS keys are not impacted
+    # ):
+    return PipelineManagement(pipeline_path=str(temp_pipeline_path))
 
 
 @pytest.fixture(scope="function")

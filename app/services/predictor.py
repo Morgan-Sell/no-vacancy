@@ -13,13 +13,13 @@ def handle_error(error_type, message, exception):
     raise error_type(f"{message}: {exception}")  # from exception
 
 
-def make_prediction(test_data: pd.DataFrame, pm: PipelineManagement = None):
+def make_prediction(X_test: pd.DataFrame, pm: PipelineManagement = None):
 
     try:
-        if not isinstance(test_data, pd.DataFrame):
+        if not isinstance(X_test, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame.")
 
-        if test_data.empty:
+        if X_test.empty:
             raise ValueError(
                 "Input data is empty. Cannot make predictions on an empty DataFrame."
             )
@@ -30,9 +30,7 @@ def make_prediction(test_data: pd.DataFrame, pm: PipelineManagement = None):
         pipeline, processor = pm.load_pipeline()
 
         # Process test data using loaded processor
-        X_test = test_data.drop(columns=[DEPENDENT_VAR_NAME])
-        y_test = test_data[DEPENDENT_VAR_NAME]
-        X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
+        X_test_prcsd, _ = processor.transform(X_test)#, y_test)
 
         # Generate the predictions using the pipeline
         predictions = pipeline.predict(X_test_prcsd)

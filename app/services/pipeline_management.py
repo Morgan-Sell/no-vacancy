@@ -1,11 +1,11 @@
 from pathlib import Path
-from typing import NoReturn, Tuple
+from typing import NoReturn, Tuple, Union
 
 import joblib
 from config import get_logger
 from services import DATA_PATHS
-from services.pipeline import NoVacancyPipeline
-from services.preprocessing import NoVacancyDataProcessing
+from app.services.pipeline import NoVacancyPipeline
+from app.services.preprocessing import NoVacancyDataProcessing
 
 
 def handle_error_dm(logger, error_type, message, exception) -> NoReturn:
@@ -19,14 +19,14 @@ class PipelineManagement:
     Handles saving, loading, and managing the pipeline.
     """
 
-    def __init__(self, pipeline_path: str = DATA_PATHS["model_save_path"]) -> None:
+    def __init__(self, pipeline_path: Union[str, Path]) -> None:
         self.logger = get_logger(logger_name=__name__)
         self.pipeline_path = Path(pipeline_path)
 
     def save_pipeline(
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
     ) -> None:
-        self.__validate_pipeline_and_processor(pipeline, processor)
+        self._validate_pipeline_and_processor(pipeline, processor)
 
         try:
             # Ensure the directory exists before saving
@@ -58,7 +58,7 @@ class PipelineManagement:
             pipeline = artifacts.get("pipeline")
             processor = artifacts.get("processor")
 
-            self.__validate_pipeline_and_processor(pipeline, processor)
+            self._validate_pipeline_and_processor(pipeline, processor)
 
             self.logger.info(
                 f"✅ Pipeline and processor successfully loaded from {self.pipeline_path}"
@@ -99,7 +99,7 @@ class PipelineManagement:
                 self.logger, type(e), "❌ Error during pipeline deletion", e
             )
 
-    def __validate_pipeline_and_processor(
+    def _validate_pipeline_and_processor(
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
     ) -> None:
         if not isinstance(pipeline, NoVacancyPipeline):

@@ -51,14 +51,14 @@ def test_end_to_end_pipeline(booking_data, pm, temp_pipeline_path):
     estimator = RandomForestClassifier()
 
     pipeline = NoVacancyPipeline(imputer, encoder, estimator)
-    pipeline.pipeline(SEARCH_SPACE)
-    pipeline.fit(X_train_prcsd, y_train_prcsd)
+    pipeline.fit(X_train_prcsd, y_train_prcsd, SEARCH_SPACE)
 
     # Asserts: Pipeline training
     assert hasattr(pipeline, "rscv"), "Pipeline does not have rscv attribute."
     assert pipeline.rscv.best_estimator_ is not None, "Best estimator is None."
 
     # Step 4: Save pipeline using the dm pytest fixture
+    print("Pipeline type: ", type(pipeline))
     pm.save_pipeline(pipeline, processor)
 
     # Assertions: Pipeline saving
@@ -78,13 +78,6 @@ def test_end_to_end_pipeline(booking_data, pm, temp_pipeline_path):
     assert hasattr(
         loaded_processor, "transform"
     ), "Loaded processor missing transform method."
-
-    # Step 5: Preprocess and align test data
-    # X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
-    # expected_columns = loaded_pipeline.rscv.best_estimator_.named_steps[
-    #     "encoding_step"
-    # ].get_feature_names_out()
-    # X_test_prcsd = X_test_prcsd.reindex(columns=expected_columns, fill_value=0)
 
     # Step 6: Prediction
     predictions = make_prediction(X_test, pm)
