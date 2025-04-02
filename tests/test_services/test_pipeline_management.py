@@ -87,7 +87,7 @@ def test_load_pipeline_not_found(pm):
     with patch.object(Path, "exists", return_value=False):
         with pytest.raises(
             FileNotFoundError,
-            match="❌ Error during pipeline loading: Pipeline file not found at",
+            match="❌ Pipeline not found: Pipeline file not found at",
         ):
             pm.load_pipeline()
 
@@ -99,7 +99,7 @@ def test_load_pipeline_invalid_artifacts(pm):
         ):
             with pytest.raises(
                 TypeError,
-                match="❌ Error during pipeline loading: Loaded pipeline is not an instance of NoVacancyPipeline",
+                match="❌ Error during pipeline validation: The pipeline must be an instance of NoVacancyPipeline",
             ):
                 pm.load_pipeline()
 
@@ -109,7 +109,7 @@ def test_load_pipeline_exception(pm):
     with patch.object(Path, "exists", return_value=True):
         with patch("joblib.load", side_effect=Exception("Explode!")):
             with pytest.raises(
-                Exception, match="❌ Error during pipeline loading: Explode!"
+                Exception, match="Explode!"
             ):
                 pm.load_pipeline()
 
@@ -166,7 +166,7 @@ def test_validate_pipeline_and_processor_invalid_processor(pm, sample_pipeline):
     """Test validation with an invalid processor."""
     with pytest.raises(
         TypeError,
-        match="❌ Error during pipeline validation: The processor must be an instance of NoVacancyDataProcessing",
+        match="❌ Error during processor validation: The processor must be an instance of NoVacancyDataProcessing",
     ):
         pm._validate_pipeline_and_processor(sample_pipeline, "Invalid Processor")
 
@@ -187,16 +187,15 @@ def test_pipeline_processor_integration(booking_data, sample_processor):
 
     # Define the search space for RCSV
     search_space = {
-        "model__n_estimators": [100, 200, 300],
-        "model__max_depth": [3, 5, 7],
+        "n_estimators": [100, 200, 300],
+        "max_depth": [3, 5, 7],
     }
 
     # Initialize the pipeline
     pipeline = NoVacancyPipeline(imputer, encoder, clsfr)
-    pipeline.pipeline(search_space)
 
     # Fit pipeline
-    pipeline.fit(X_prcsd, y_prcsd)
+    pipeline.fit(X_prcsd, y_prcsd, search_space)
 
     # Predict
     predictions = pipeline.predict(X_prcsd)

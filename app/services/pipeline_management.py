@@ -66,19 +66,11 @@ class PipelineManagement:
             return pipeline, processor
 
         except FileNotFoundError as e:
-            handle_error_dm(self.logger, FileExistsError, "❌ Pipeline not found", e)
+            handle_error_dm(self.logger, type(e), "❌ Pipeline not found", e)
 
-        except (ValueError, AttributeError, TypeError) as e:
+        except (ValueError, AttributeError) as e:
             handle_error_dm(
                 self.logger, type(e), "❌ Invalid pipeline or processor format", e
-            )
-
-        except Exception as e:
-            handle_error_dm(
-                self.logger,
-                RuntimeError,
-                "❌ Unexpected error during pipeline loading",
-                e,
             )
 
     def delete_pipeline(self) -> None:

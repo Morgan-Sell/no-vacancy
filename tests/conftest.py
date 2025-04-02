@@ -23,9 +23,9 @@ from services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from services.pipeline import NoVacancyPipeline
-from services.pipeline_management import PipelineManagement
-from services.preprocessing import NoVacancyDataProcessing
+from app.services.pipeline import NoVacancyPipeline
+from app.services.pipeline_management import PipelineManagement
+from app.services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 
 
