@@ -1,5 +1,6 @@
 # import simplejson
 import pandas as pd
+from app.services import DATA_PATHS
 from config import __model_version__, get_logger
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -34,8 +35,8 @@ def predict(request_data: PredictionRequest):
         test_data = pd.DataFrame(request_data.data)
 
         # Ensure predictions can be made
-        dm = PipelineManagement()
-        results = make_prediction(test_data, dm)
+        pm = PipelineManagement(DATA_PATHS["model_save_path"])
+        results = make_prediction(test_data, pm)
 
         # Extract predictions and version
         predictions = results["prediction"].to_list()

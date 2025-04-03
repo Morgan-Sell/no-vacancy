@@ -10,6 +10,8 @@ def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm
     # Arrange: Create mock rscv and best_estimator_
     mock_rscv = MagicMock()
     mock_best_estimator = MagicMock()
+    # Only use 2 observation because mock_pipeline returns 2 rows for predict & predict_proba
+    test_data = booking_data[:2]
 
     # Mock the named_steps of the best estimator
     mock_best_estimator.named_steps = {
@@ -30,11 +32,11 @@ def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm
         return_value=(mock_pipeline, mock_processor),
     ):
         # Act
-        results = make_prediction(booking_data, pm)
+        results = make_prediction(test_data, pm)
 
         # Assert
         assert isinstance(results, pd.DataFrame)
-        assert len(results) == len(booking_data)
+        assert len(results) == len(test_data)
         assert list(results.columns) == [
             "prediction",
             "probability_not_canceled",
