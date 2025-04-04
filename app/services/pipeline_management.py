@@ -3,7 +3,7 @@ from typing import NoReturn, Tuple, Union
 
 import joblib
 from config import get_logger
-from services import DATA_PATHS
+
 from app.services.pipeline import NoVacancyPipeline
 from app.services.preprocessing import NoVacancyDataProcessing
 

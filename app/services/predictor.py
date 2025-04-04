@@ -2,7 +2,8 @@ import logging
 
 import numpy as np
 import pandas as pd
-from services import DEPENDENT_VAR_NAME
+
+from app.services import DATA_PATHS
 from app.services.pipeline_management import PipelineManagement
 
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ def handle_error(error_type, message, exception):
     raise error_type(f"{message}: {exception}")  # from exception
 
 
-def make_prediction(X_test: pd.DataFrame, pm: PipelineManagement = None):
+def make_prediction(X_test: pd.DataFrame, pm: PipelineManagement):
 
     try:
         if not isinstance(X_test, pd.DataFrame):
@@ -30,7 +31,7 @@ def make_prediction(X_test: pd.DataFrame, pm: PipelineManagement = None):
         pipeline, processor = pm.load_pipeline()
 
         # Process test data using loaded processor
-        X_test_prcsd, _ = processor.transform(X_test)#, y_test)
+        X_test_prcsd, _ = processor.transform(X_test)  # , y_test)
 
         # Generate the predictions using the pipeline
         predictions = pipeline.predict(X_test_prcsd)
@@ -60,6 +61,6 @@ def make_prediction(X_test: pd.DataFrame, pm: PipelineManagement = None):
 if __name__ == "__main__":
     # Load data
     data = pd.read_csv("data/raw/validation.csv")
-    pm = PipelineManagement()
+    pm = PipelineManagement(pipeline_path=DATA_PATHS["model_save_path"])
     results = make_prediction(data, pm)
     print(results)

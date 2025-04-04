@@ -108,9 +108,7 @@ def test_load_pipeline_exception(pm):
     # Mock dm.pipeline_path.exists() so FileNotFoundError is not raised.
     with patch.object(Path, "exists", return_value=True):
         with patch("joblib.load", side_effect=Exception("Explode!")):
-            with pytest.raises(
-                Exception, match="Explode!"
-            ):
+            with pytest.raises(Exception, match="Explode!"):
                 pm.load_pipeline()
 
 

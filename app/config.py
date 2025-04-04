@@ -40,11 +40,11 @@ def get_logger(*, logger_name):
 
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
-  
+
     # Only add handlers if they are not already present
     if not logger.handlers:
         logger.addHandler(get_console_handler())
         logger.addHandler(get_file_handler())
-  
+
     logger.propagate = False
     return logger

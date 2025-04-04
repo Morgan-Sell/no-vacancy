@@ -1,11 +1,12 @@
 # import simplejson
 import pandas as pd
-from app.services import DATA_PATHS
 from config import __model_version__, get_logger
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from services.pipeline_management import PipelineManagement
 from services.predictor import make_prediction
+
+from app.services import DATA_PATHS
 
 # Define the router
 router = APIRouter(prefix="/predict", tags=["predict"])
