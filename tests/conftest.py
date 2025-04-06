@@ -1,15 +1,19 @@
 import glob
 import os
+from pathlib import Path
+import shutil
 import tempfile
 import time
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-import psycopg2
 import pytest
-from dotenv import load_dotenv
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
+
+# 'app' is not required because pytest automatically adds the root directory to sys.path
+# This capability is configured in pyproject.toml.
+from app.services import DATA_PATHS
 from services import (
     BOOKING_MAP,
     IMPUTATION_METHOD,
@@ -19,29 +23,11 @@ from services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from services.pipeline import NoVacancyPipeline
-from services.pipeline_management import PipelineManagement
-from services.preprocessing import NoVacancyDataProcessing
+
+from app.services.pipeline import NoVacancyPipeline
+from app.services.pipeline_management import PipelineManagement
+from app.services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
-
-# 'app' is not required because pytest automatically adds the root directory to sys.path
-# This capability is configured in pyproject.toml.
-from app.config import (
-    CSV_HASH_TABLE,
-    DB_CONNECT_TIMEOUT,
-    DB_HOST,
-    DB_NAME,
-    DB_PASSWORD,
-    DB_PORT,
-    DB_USER,
-)
-
-# Constants
-TEST_TABLE = "test_import_table"
-HASH_TABLE = CSV_HASH_TABLE
-
-# Load environment variables
-load_dotenv()
 
 
 @pytest.fixture(scope="function")
@@ -358,7 +344,6 @@ def sample_pipeline():
     estimator = RandomForestClassifier()
 
     pipeline = NoVacancyPipeline(imputer, encoder, estimator)
-    pipeline.pipeline({})  # Pass empty search space for simplicity
     return pipeline
 
 
@@ -479,71 +464,51 @@ def pm(temp_pipeline_path):
     # Mock DATA_PATHS["model_save_path"] b/c (1) tests should rely on hardcoded
     # global paths that may interfere with the application and (2) if DATA_PATHS
     # structure changes, the tests will seamlessly adapt.
-    with patch.dict(
-        "app.services.DATA_PATHS",
-        {"model_save_path": str(temp_pipeline_path)},
-        clear=False,  # Ensures other DATA_PATHS keys are not impacted
-    ):
-        return PipelineManagement()
+    # with patch.dict(
+    #     "app.services.DATA_PATHS",
+    #     {"model_save_path": str(temp_pipeline_path)},
+    #     clear=False,  # Ensures other DATA_PATHS keys are not impacted
+    # ):
+    return PipelineManagement(pipeline_path=str(temp_pipeline_path))
 
 
-@pytest.fixture(scope="module")
-def test_db_conn():
-    """Connect to Postgres test DB."""
-    conn = psycopg2.connect(
-        host=os.getenv("TEST_POSTGRES_HOST"),
-        port=int(os.getenv("TEST_POSTGRES_PORT")),
-        dbname=os.getenv("TEST_POSTGRES_DB"),
-        user=os.getenv("TEST_POSTGRES_USER"),
-        password=os.getenv("TEST_POSTGRES_PASSWORD"),
-        connect_timeout=DB_CONNECT_TIMEOUT,
+@pytest.fixture(scope="function")
+def trained_pipeline_and_processor(booking_data, tmp_path):
+    # Preprocessing
+    processor = NoVacancyDataProcessing(
+        variable_rename=VARIABLE_RENAME_MAP,
+        month_abbreviation=MONTH_ABBREVIATION_MAP,
+        vars_to_drop=VARS_TO_DROP,
+        booking_map=BOOKING_MAP,
     )
-    yield conn
-    conn.close()
+    X = booking_data.drop(columns=["booking status"])
+    y = booking_data["booking status"]
+    X_train_prcsd, y_train_prcsd = processor.fit_transform(X, y)
 
+    # Build + train pipeline
+    imputer = CategoricalImputer(
+        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
+    )
+    encoder = OneHotEncoder(variables=VARS_TO_OHE)
+    clsfr = RandomForestClassifier()
+    search_space = {
+        "n_estimators": [20, 50, 100, 200],
+        "max_features": ["log2", "sqrt"],
+        "max_depth": [1, 3, 5],
+        "min_samples_split": [2, 5, 10],
+    }
+    pipe = NoVacancyPipeline(imputer, encoder, clsfr)
+    pipe.fit(X_train_prcsd, y_train_prcsd, search_space)
 
-@pytest.fixture(scope="function", autouse=True)
-def setup_test_tables(test_db_conn):
-    """
-    Create test table before test, drop both test + log tables after.
-    """
+    # Save the trained pipeline and processor
+    temp_pipeline_path = tmp_path / DATA_PATHS["model_save_path"]
+    pm = PipelineManagement(pipeline_path=temp_pipeline_path)
+    pm.save_pipeline(pipe, processor)
 
-    with test_db_conn.cursor() as cur:
-        # Create test table if it doesn't exist
-        cur.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {TEST_TABLE} (
-                id SERIAL PRIMARY KEY,
-                number_of_adults INTEGER,
-                number_of_weekend_nights INTEGER
-            );
-        """
-        )
+    # Move the model artifacts to the app path
+    app_path = Path(DATA_PATHS["model_save_path"])
+    app_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(temp_pipeline_path, app_path)
 
-        # Create data_import_log table if it doesn't exist
-        cur.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {HASH_TABLE} (
-                filename TEXT PRIMARY KEY,
-                file_hash TEXT NOT NULL,
-                csv_row_count INTEGER NOT NULL,
-                db_row_count INTEGER NOT NULL,
-                imported_date TIMESTAMP DEFAULT NOW()
-            );
-        """
-        )
-
-        # Clear both tables
-        # Use TRUNCATE RESTART IDENTITY to reset the SERIAL id
-        # TRUNCATE is faster than DELETE for large tables
-        cur.execute(f"TRUNCATE {TEST_TABLE} RESTART IDENTITY CASCADE;")
-        cur.execute(f"TRUNCATE {HASH_TABLE} RESTART IDENTITY CASCADE;")
-        test_db_conn.commit()
-
-    yield  # Run test
-
-    with test_db_conn.cursor() as cur:
-        # Teardown: drop test table + clean up log entries from test file
-        cur.execute(f"DROP TABLE IF EXISTS {TEST_TABLE};")
-        cur.execute(f"DROP TABLE IF EXISTS {HASH_TABLE};")
-        test_db_conn.commit()
+    # In case there's a need to return the variables
+    return pipe, processor, pm

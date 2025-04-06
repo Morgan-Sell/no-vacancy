@@ -1,4 +1,4 @@
-from config import __api_version__, __model_version__
+from app.config import __api_version__, __model_version__
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
