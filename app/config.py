@@ -4,6 +4,9 @@ import sys
 from logging.handlers import TimedRotatingFileHandler
 from os.path import abspath, dirname, join
 
+from sqlalchemy import Column, Date, Float, Integer, String, create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -66,10 +69,65 @@ TRAIN_CSV_FILE_PATH = os.path.join(DATA_DIR, "train.csv")
 VALIDATION_CSV_FILE_PATH = os.path.join(DATA_DIR, "validation.csv")
 TEST_CSV_FILE_PATH = os.path.join(DATA_DIR, "test.csv")
 
-# Table Mappings: CSV -> Table Name
-CSV_TABLE_MAP = {
-    TRAIN_CSV_FILE_PATH: "train_table",
-    VALIDATION_CSV_FILE_PATH: "validation_table",
-    TEST_CSV_FILE_PATH: "test_table",
-}
-CSV_HASH_TABLE = "data_import_log"
+# Postgres Data Tables
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"connect_timeout": DB_CONNECT_TIMEOUT}
+)
+
+# autocommit and authoflush set to false to ensure atomicity
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Base class for ORM models
+Base = declarative_base()
+
+
+class Bronze(Base):
+    """
+    Bronze table for raw data storage.
+    """
+    __tablename__ = "bronze"
+
+    booking_id = Column(String, primary_key=True)
+    number_of_adults = Column(Integer, nullable=True)
+    number_of_children = Column(Integer, nullable=True)
+    number_of_weekend_nights = Column(Integer, nullable=True)
+    number_of_weekdays_nights = Column(Integer, nullable=True)
+    type_of_meal = Column(String, nullable=True)
+    car_parking_space = Column(Integer, nullable=True)
+    room_type = Column(String, nullable=True)
+    lead_time = Column(Integer, nullable=True)  # in days
+    market_segment_type = Column(String, nullable=True)
+    is_repeat_guest = Column(Integer, nullable=True)  # 1 if repeat guest, 0 otherwise
+    num_previous_cancellations = Column(Integer, nullable=True)  
+    num_previous_bookings_not_canceled = Column(Integer, nullable=True)
+    average_price = Column(Float, nullable=True)
+    special_requests = Column(Integer, nullable=True)
+    date_of_reservation = Column(Date, nullable=True)
+    booking_stagus = Column(String, nullable=False)
+
+
+class Silver(Base):
+    """
+    Silver table for processed data storage.
+    """
+    __tablename__ = "silver"
+
+    number_of_weekend_nights = Column(Integer, nullable=False)
+    number_of_weekdays_nights = Column(Integer, nullable=False)
+    lead_time = Column(Integer, nullable=False)  # in days
+    type_of_meal = Column(String, nullable=False)
+    car_parking_space = Column(Integer, nullable=False)
+    room_type = Column(String, nullable=False)
+    average_price = Column(Float, nullable=False)
+    is_type_of_meal_meal_plan_1 = Column(Integer, nullable=False)
+    is_type_of_meal_meal_plan_2 = Column(Integer, nullable=False)
+    is_type_of_meal_meal_plan_3 = Column(Integer, nullable=False)
+    is_room_type_room_type_1 = Column(Integer, nullable=False)
+    is_room_type_room_type_2 = Column(Integer, nullable=False)
+    is_room_type_room_type_3 = Column(Integer, nullable=False)
+    is_room_type_room_type_4 = Column(Integer, nullable=False)
+    is_room_type_room_type_5 = Column(Integer, nullable=False)
+    is_room_type_room_type_6 = Column(Integer, nullable=False)
+    is_room_type_room_type_7 = Column(Integer, nullable=False)
