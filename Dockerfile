@@ -14,7 +14,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # Copy whole project
-COPY . /app
+COPY app /app
 
 # Expose API port
 EXPOSE 8000
