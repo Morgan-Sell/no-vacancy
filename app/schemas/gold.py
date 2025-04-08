@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, Date
 from sqlalchemy.orm import declarative_base
+from app.config import __model_version__
 
 Base = declarative_base()
 
@@ -10,8 +11,8 @@ class TrainResults(Base):
     booking_id = Column(String, primary_key=True, nullable=False)
     prediction = Column(Integer, nullable=False)
     probability_not_canceled = Column(Float, nullable=False)
-    probability_canceled = Column(Float, nullable=False)  
-    model_version = Column(String, nullable=False, default=__model_version__)  # Store the model version used for prediction
+    probability_canceled = Column(Float, nullable=False)
+    model_version = Column(String, nullable=False, default=__model_version__)
     created_at = Column(Date, nullable=False)
 
     def __repr__(self):

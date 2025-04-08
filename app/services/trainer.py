@@ -1,3 +1,7 @@
+from app.db.postgres import BronzeSessionLocal, SilverSessionLocal
+from app.schemas.bronze import RawData
+from app.schemas.silver import TrainData, ValidateTestData
+
 import logging
 import warnings
 
@@ -27,6 +31,47 @@ from sklearn.model_selection import train_test_split
 
 logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")
+
+
+def load_raw_data(session: BronzeSessionLocal):
+    """
+    Load raw data from the Bronze database.
+    """
+    records = session.query(RawData).all()
+    # Convert list of SQLAlchemy model instances to a dataframe
+    df = pd.DataFrame([records.__dict__ for record in records])
+    # Remove SQLAchemy metadata
+    df.drop(columns=["_sa_instance_state"], inplace=True)
+    return df
+
+
+def preprocess_data(X, y, processor):
+    """
+    Preprocess the data using the NoVacancyDataProcessing transformer.
+    """
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=1 - TRAIN_RATIO, random_state=33
+    )
+    X_train_prcsd, y_train_prcsd = processor.fit_transform(X_train, y_train)
+    X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
+    return X_train_prcsd, X_test_prcsd, y_train_prcsd, y_test_prcsd
+
+
+def save_to_silver_db(X_train, y_train, X_test, y_test, session: SilverSessionLocal):
+    """
+    Save the preprocessed data to the Silver database.
+    """
+    train_data = TrainData(
+        **X_train.to_dict(orient="records"),
+        target=y_train.tolist(),
+    )
+    validate_test_data = ValidateTestData(
+        **X_test.to_dict(orient="records"),
+        target=y_test.tolist(),
+    )
+    session.add(train_data)
+    session.add(validate_test_data)
+    session.commit()
 
 
 def train_pipeline():
