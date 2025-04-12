@@ -1,5 +1,5 @@
 from app.config import DB_CONNECT_TIMEOUT, DB_HOST, DB_PASSWORD, DB_PORT, DB_USER
-from sqlachemy import create_engine
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # -- Bronze DB --

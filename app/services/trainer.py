@@ -39,7 +39,7 @@ def load_raw_data(session: BronzeSessionLocal):
     """
     records = session.query(RawData).all()
     # Convert list of SQLAlchemy model instances to a dataframe
-    df = pd.DataFrame([records.__dict__ for record in records])
+    df = pd.DataFrame([record.__dict__ for record in records])
     # Remove SQLAchemy metadata
     df.drop(columns=["_sa_instance_state"], inplace=True)
     return df
@@ -80,7 +80,7 @@ def build_pipeline():
         imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
     )
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
-    clsfr =RandomForestClassifier()
+    clsfr = RandomForestClassifier()
     return NoVacancyPipeline(imputer, encoder, clsfr)
 
 

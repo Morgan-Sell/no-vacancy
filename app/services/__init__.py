@@ -32,7 +32,10 @@ BOOKING_MAP = {
     "Canceled": 1,
 }
 
-VARS_TO_DROP = ["booking_id", "date_of_reservation"]
+VARS_TO_DROP = [
+    # "booking_id",
+    "date_of_reservation"
+]
 
 # -- Data Preprocessing (preprocessing.py) --
 VARS_TO_IMPUTE = ["month_of_reservation", "day_of_week"]

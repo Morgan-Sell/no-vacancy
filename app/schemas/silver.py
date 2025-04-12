@@ -8,6 +8,9 @@ Base = declarative_base()
 class TrainData(Base):
     __tablename__ = "train_data"
 
+    booking_id = Column(String, primary_key=True)
+    number_of_adults = Column(Integer, nullable=False)
+    number_of_children = Column(Integer, nullable=False)
     number_of_weekend_nights = Column(Integer, nullable=False)
     number_of_weekdays_nights = Column(Integer, nullable=False)
     lead_time = Column(Integer, nullable=False)  # in days
@@ -51,6 +54,9 @@ class TrainData(Base):
 class ValidateTestData(Base):
     __tablename__ = "validate_test_data"
 
+    booking_id = Column(String, primary_key=True)
+    number_of_adults = Column(Integer, nullable=False)
+    number_of_children = Column(Integer, nullable=False)
     number_of_weekend_nights = Column(Integer, nullable=False)
     number_of_weekdays_nights = Column(Integer, nullable=False)
     lead_time = Column(Integer, nullable=False)  # in days

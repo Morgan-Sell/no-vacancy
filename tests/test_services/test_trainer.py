@@ -4,24 +4,34 @@ import pandas as pd
 import pytest
 from sklearn.metrics import roc_auc_score
 
+from app.schemas.bronze import RawData
 from app.services import DATA_PATHS
-from app.services.trainer import train_pipeline
+from app.services.trainer import load_raw_data, train_pipeline
 
 
-# TODO: Need to update once data source changes, i.e., csv -> Postgres
-def test_train_pipeline_end_to_end(temp_booking_data_csv, mock_logger):
-    # Arrange
-    # Point DATA_PATHS to booking_data fixture
-    with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(
-            "app.services.trainer.DATA_PATHS", {"raw_data": temp_booking_data_csv}
-        )
+def test_load_raw_data_from_bronze(mocker, booking_data):
+    # Arrange: Convert booking_data to list of mocked RawData objects
+    mock_records = []
 
-        # Act
-        train_pipeline()
+    # Iterate through dataframe rows
+    for _, row in booking_data.iterrows():
+        record = RawData()
+
+        for col, val in row.items():
+            # Convert column names to snake_case for SQLAlchemy attributes
+            attr = col.lower().replace(" ", "_")
+            setattr(record, attr, val)
+        mock_records.append(record)
+    
+    # Create a mock BronzeSessionLocal
+    mock_session = mocker.MagicMock()
+    mock_session.query.return_value.all.return_value = mock_records
+
+    # Act
+    df_result = load_raw_data(mock_session)
 
     # Assert
-    # Ensure the logger correctly recorded the AUC score
-    mock_logger.info.assert_called_once()
-    logged_message = mock_logger.info.call_args[0][0]
-    assert "AUC" in logged_message, "AUC score was incorrectly logged."
+    assert isinstance(df_result, pd.DataFrame)
+    assert df_result.shape[0] == booking_data.shape[0]
+    assert "booking_id" in df_result.columns
+    assert "_sa_instance_state" not in df_result.columns
