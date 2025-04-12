@@ -61,32 +61,37 @@ def save_to_silver_db(X_train, y_train, X_test, y_test, session: SilverSessionLo
     """
     Save the preprocessed data to the Silver database.
     """
-    train_data = TrainData(
-        **X_train.to_dict(orient="records"),
-        target=y_train.tolist(),
-    )
-    validate_test_data = ValidateTestData(
-        **X_test.to_dict(orient="records"),
-        target=y_test.tolist(),
-    )
-    session.add(train_data)
-    session.add(validate_test_data)
+    X_train["is_cancellation"] = y_train
+    X_test["is_cancellation"] = y_test
+
+    # Create a list of TrainData instances
+    train_objects = [TrainData(**row._asdict()) for row in X_train.itertuples(index=False)]
+    # Create a list of ValidateTestData instances
+    test_objects = [ValidateTestData(**row._asdict()) for row in X_test.itertuples(index=False)]
+
+    # Insert ORM objects to database w/o primary key updates and relationship handling
+    session.bulk_save_objects(train_objects)
+    session.bulk_save_objects(test_objects)
     session.commit()
 
 
-def train_pipeline():
-    # Load data
-    data = pd.read_csv(
-        DATA_PATHS["raw_data"]
-    )  # TODO: Need to update when data storage is added
-
-    # Split data
-    X = data.drop(columns=[TARGET_VARIABLE])
-    y = data[TARGET_VARIABLE]
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=1 - TRAIN_RATIO, random_state=33
+def build_pipeline():
+    imputer = CategoricalImputer(
+        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
     )
+    encoder = OneHotEncoder(variables=VARS_TO_OHE)
+    clsfr =RandomForestClassifier()
+    return NoVacancyPipeline(imputer, encoder, clsfr)
 
+
+def evaluate_model(pipe, X_test, y_test):
+    y_probs = pipe.predict_proba(X_test)[:, 1]
+    auc = roc_auc_score(y_test, y_probs)
+    logger.info(f"{__model_version__} - AUC: {auc}")
+    print("AUC: ", round(auc, 5))
+
+
+def train_pipeline():
     # Preprocess data separately b/c Pipeline() does not handle target variable transformation
     # Also datetime object needs to be dropped before pipe.fit()
     processor = NoVacancyDataProcessing(
@@ -95,32 +100,27 @@ def train_pipeline():
         vars_to_drop=VARS_TO_DROP,
         booking_map=BOOKING_MAP,
     )
-    X_train_prcsd, y_train_prcsd = processor.fit_transform(X_train, y_train)
-    X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
+    
+    # Load and process raw data
+    with BronzeSessionLocal() as bronze_session:
+        df = load_raw_data(bronze_session)
+    
+    X = df.drop(columns=[TARGET_VARIABLE])
+    y = df[TARGET_VARIABLE]
+    X_train, X_test, y_train, y_test = preprocess_data(X, y, processor)
+    
+    # Save preprocessed data to Silver database
+    with SilverSessionLocal() as silver_session:
+        save_to_silver_db(X_train, y_train, X_test, y_test, silver_session)
+    
 
-    # Define pipeline components
-    imputer = CategoricalImputer(
-        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
-    )
-    encoder = OneHotEncoder(variables=VARS_TO_OHE)
-    clsfr = RandomForestClassifier()
-
-    # print("[DEBUG] X_train_prcsd columns: ", X_train_prcsd.columns)
-    # print("\n[DEBUG] X_test_prcsd columns: ", X_test_prcsd.columns)
-
-    # Train, finetune & test pipeline
-    pipe = NoVacancyPipeline(imputer, encoder, clsfr)
-    pipe.fit(X_train_prcsd, y_train_prcsd, search_space=SEARCH_SPACE)
+    pipe = build_pipeline()
+    pipe.fit(X_train, y_train, search_space=SEARCH_SPACE)
 
     # Save the pipeline and processor
     pm = PipelineManagement()
     pm.save_pipeline(pipe, processor)
-
-    # Perform predictions and evaluate performance
-    y_probs = pipe.predict_proba(X_test_prcsd)[:, 1]
-    auc = roc_auc_score(y_test_prcsd, y_probs)
-    print("AUC: ", round(auc, 5))
-    logger.info(f"{__model_version__} - AUC: {auc}")
+    evaluate_model(pipe, X_test, y_test)
 
 
 if __name__ == "__main__":
