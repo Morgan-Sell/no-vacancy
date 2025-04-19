@@ -6,7 +6,7 @@ from datetime import datetime
 import psycopg2
 
 from app.config import (
-    CSV_HASH_TABLE,
+    RAW_DATA_FILE_PATH,
     CSV_TABLE_MAP,
     DB_CONNECT_TIMEOUT,
     DB_HOST,
@@ -14,9 +14,7 @@ from app.config import (
     DB_PASSWORD,
     DB_PORT,
     DB_USER,
-    TEST_CSV_FILE_PATH,
-    TRAIN_CSV_FILE_PATH,
-    VALIDATION_CSV_FILE_PATH,
+    RAW_DATA_TABLE,
 )
 
 
@@ -39,13 +37,14 @@ def get_db_row_count(conn, table_name):
         return cur.fetchone()[0]
 
 
-def has_been_imported(conn, filename, file_hash):
-    """Check if the file with this hash was already imported."""
+def create_log_table(conn):
+    """Create the CSV hash log table if it doesn't exist."""
     with conn.cursor() as cur:
         cur.execute(
             f"""
             CREATE TABLE IF NOT EXISTS {CSV_HASH_TABLE} (
-                filename TEXT PRIMARY KEY,
+                id SERIAL PRIMARY KEY,
+                filename TEXT NOT NULL,
                 file_hash TEXT NOT NULL,
                 csv_row_count INTEGER NOT NULL,
                 db_row_count INTEGER NOT NULL,
@@ -53,9 +52,16 @@ def has_been_imported(conn, filename, file_hash):
             );
         """
         )
+    conn.commit()
+
+
+def has_been_imported(conn, filename, file_hash):
+    """Check if the file with this hash was already imported."""
+    with conn.cursor() as cur:
         cur.execute(
             f"""
-            SELECT 1 FROM {CSV_HASH_TABLE} WHERE filename = %s
+            SELECT 1 FROM {CSV_HASH_TABLE} 
+            WHERE filename = %s
             AND file_hash = %s;
             """,
             (filename, file_hash),
@@ -64,17 +70,13 @@ def has_been_imported(conn, filename, file_hash):
 
 
 def log_import(conn, filename, file_hash, csv_rows, db_rows):
-    """Insert or update import log for the file."""
+    """Always insert a new import log entry."""
     with conn.cursor() as cur:
         cur.execute(
             f"""
-            INSERT INTO {CSV_HASH_TABLE} (filename, file_hash, csv_row_count, db_row_count, imported_date)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (filename) DO UPDATE
-            SET file_hash = EXCLUDED.file_hash,
-                csv_row_count = EXCLUDED.csv_row_count,
-                db_row_count = EXCLUDED.db_row_count,
-                imported_date = EXCLUDED.imported_date;
+            INSERT INTO {CSV_HASH_TABLE} 
+            (filename, file_hash, csv_row_count, db_row_count, imported_date)
+            VALUES (%s, %s, %s, %s, %s);
         """,
             (filename, file_hash, csv_rows, db_rows, datetime.now()),
         )
@@ -109,30 +111,30 @@ def main():
         connect_timeout=DB_CONNECT_TIMEOUT,
     )
 
-    for csv_path, table_name in CSV_TABLE_MAP.items():
-        print(f"\n Processing {csv_path} → {table_name}")
-        file_hash = hash_csv(csv_path)
-        csv_rows = get_csv_row_count(csv_path)
+    # Only create the log table if it doesn't already exist
+    create_log_table(conn)
 
-        if has_been_imported(conn, csv_path, file_hash) is True:
-            print(f"Already imported this version of {csv_path}.")
+    file_hash = hash_csv(RAW_DATA_FILE_PATH)
+    csv_rows = get_csv_row_count(RAW_DATA_FILE_PATH)
 
-        else:
-            db_rows_before = get_db_row_count(conn, table_name)
-            print(f"DB rows before import: {db_rows_before}")
+    if has_been_imported(conn, RAW_DATA_FILE_PATH, file_hash):
+        db_rows = get_db_row_count(conn, RAW_DATA_TABLE)
+        log_import(conn, RAW_DATA_FILE_PATH, file_hash, csv_rows, db_rows)
+    else:
+        db_row_before_import = get_db_row_count(conn, RAW_DATA_TABLE)
+        import_csv(conn, RAW_DATA_FILE_PATH, RAW_DATA_TABLE)
+        db_row_after_import = get_db_row_count(conn, RAW_DATA_TABLE)
+        log_import(
+            conn,
+            RAW_DATA_FILE_PATH,
+            file_hash,
+            csv_rows,
+            db_row_after_import - db_row_before_import,
+        )
 
-            # Write CSV riles to the database
-            import_csv(conn, csv_path, table_name)
-
-            # Fetch and save table metadata
-            db_rows_after = get_db_row_count(conn, table_name)
-            log_import(conn, csv_path, file_hash, csv_rows, db_rows_after)
-            print(
-                "Imported logged: {csv_path} ({csv_rows} rows) → {table_name} ({db_rows_after} rows)"
-            )
-
+        print(f"✅ Successfully imported {csv_rows} rows from {RAW_DATA_FILE_PATH} into {RAW_DATA_TABLE}")
+    
     conn.close()
-
 
 if __name__ == "__main__":
     main()

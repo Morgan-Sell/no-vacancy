@@ -64,7 +64,10 @@ DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 DB_CONNECT_TIMEOUT = 120  # in seconds
 
 # CSV File Paths
-DATA_DIR = "./data/raw"
-TRAIN_CSV_FILE_PATH = os.path.join(DATA_DIR, "train.csv")
-VALIDATION_CSV_FILE_PATH = os.path.join(DATA_DIR, "validation.csv")
-TEST_CSV_FILE_PATH = os.path.join(DATA_DIR, "test.csv")
+DATA_DIR = "./data"
+RAW_DATA_FILE_PATH = os.path.join(DATA_DIR, "bookings_raw.csv")
+
+
+# Storage
+CSV_HASH_TABLE = "csv_hashes"
+RAW_DATA_TABLE = "raw_data"
