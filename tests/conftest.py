@@ -1,6 +1,8 @@
+from datetime import datetime
 import glob
 import os
 from pathlib import Path
+from random import random
 import shutil
 import tempfile
 import time
@@ -13,7 +15,10 @@ from feature_engine.imputation import CategoricalImputer
 
 # 'app' is not required because pytest automatically adds the root directory to sys.path
 # This capability is configured in pyproject.toml.
-from app.services import DATA_PATHS
+from app.db.postgres import BronzeSessionLocal, SilverSessionLocal, init_all_databases
+from app.schemas.bronze import RawData
+from app.schemas.silver import TrainData, ValidateTestData
+from services import DATA_PATHS
 from services import (
     BOOKING_MAP,
     IMPUTATION_METHOD,
@@ -24,9 +29,9 @@ from services import (
     VARS_TO_OHE,
 )
 
-from app.services.pipeline import NoVacancyPipeline
-from app.services.pipeline_management import PipelineManagement
-from app.services.preprocessing import NoVacancyDataProcessing
+from services.pipeline import NoVacancyPipeline
+from services.pipeline_management import PipelineManagement
+from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 
 
@@ -512,3 +517,113 @@ def trained_pipeline_and_processor(booking_data, tmp_path):
 
     # In case there's a need to return the variables
     return pipe, processor, pm
+
+
+@pytest.fixture(scope="session", autouse=True)
+def seed_all_postgres_layers(booking_data):
+    init_all_databases()
+
+    # Seed Bronze database
+    with BronzeSessionLocal() as session:
+        for _, row in booking_data.iterrows():
+            session.add(RawData(
+                booking_id=row["Booking_ID"],
+                number_of_adults=row["number of adults"],
+                number_of_children=row["number of children"],
+                number_of_weekend_nights=row["number of weekend nights"],
+                number_of_weekdays_nights=row["number of week nights"],
+                type_of_meal=row["type of meal"],
+                car_parking_space=row["car parking space"],
+                room_type=row["room type"],
+                lead_time=row["lead time"],
+                market_segment_type=row["market segment type"],
+                is_repeat_guest=row["repeated"],
+                num_previous_cancellations=row["P-C"],
+                num_previous_bookings_not_canceled=row["P-not-C"],
+                average_price=row["average price"],
+                special_requests=row["special requests"],
+                date_of_reservation=datetime.strptime(row["date of reservation"], "%m/%d/%Y").date(),
+                booking_status=row["booking status"],
+            ))
+        session.commit()
+
+        # Seed Silver database (split half into train, half into validate/test)
+        mid = len(booking_data) // 2
+        silver_train_rows = booking_data.head(mid).copy()
+        silver_test_rows = booking_data.tail(mid).copy()
+
+        # Create dummy binary features
+        def dummy_binary_features(df):
+            for col in [
+                "is_type_of_meal_meal_plan_1", "is_type_of_meal_meal_plan_2", "is_type_of_meal_meal_plan_3",
+                "is_room_type_room_type_1", "is_room_type_room_type_2", "is_room_type_room_type_3",
+                "is_room_type_room_type_4", "is_room_type_room_type_5", "is_room_type_room_type_6",
+                "is_room_type_room_type_7", "is_market_segment_type_online", "is_market_segment_type_corporate",
+                "is_market_segment_type_complementary", "is_market_segment_type_aviation",
+                "is_month_of_reservation_jan", "is_month_of_reservation_feb", "is_month_of_reservation_mar",
+                "is_month_of_reservation_apr", "is_month_of_reservation_may", "is_month_of_reservation_jun",
+                "is_month_of_reservation_aug", "is_month_of_reservation_oct", "is_month_of_reservation_nov",
+                "is_month_of_reservation_dec", "is_day_of_week_monday", "is_day_of_week_tuesday",
+                "is_day_of_week_wednesday", "is_day_of_week_thursday", "is_day_of_week_friday",
+                "is_day_of_week_saturday"
+            ]:
+                df[col] = 0
+            return df
+
+        silver_train_rows = dummy_binary_features(silver_train_rows)
+        silver_test_rows = dummy_binary_features(silver_test_rows)
+
+        with SilverSessionLocal() as session:
+            for _, row in silver_train_rows.iterrows():
+                session.add(TrainData(
+                    booking_id=row["Booking_ID"],
+                    number_of_adults=row["number of adults"],
+                    number_of_children=row["number of children"],
+                    number_of_weekend_nights=row["number of weekend nights"],
+                    number_of_weekdays_nights=row["number of week nights"],
+                    lead_time=row["lead time"],
+                    type_of_meal=row["type of meal"],
+                    car_parking_space=row["car parking space"],
+                    room_type=row["room type"],
+                    average_price=row["average price"],
+                    is_cancellation=int(row["booking status"] == "Canceled"),
+                    **{col: row[col] for col in row.index if col.startswith("is_")}
+            ))
+
+            for _, row in silver_test_rows.iterrows():
+                session.add(ValidateTestData(
+                    booking_id=row["Booking_ID"],
+                    number_of_adults=row["number of adults"],
+                    number_of_children=row["number of children"],
+                    number_of_weekend_nights=row["number of weekend nights"],
+                    number_of_weekdays_nights=row["number of week nights"],
+                    lead_time=row["lead time"],
+                    type_of_meal=row["type of meal"],
+                    car_parking_space=row["car parking space"],
+                    room_type=row["room type"],
+                    average_price=row["average price"],
+                    is_cancellation=int(row["booking status"] == "Canceled"),
+                    **{col: row[col] for col in row.index if col.startswith("is_")}
+            ))
+            session.commit()
+        
+        # Seed Gold database
+        with GoldSessionLocal() as session:
+            for _, row in booking_data.itterrows():
+                is_not_canceled = row["booking status"] == "Not_Canceled"
+                if is_not_canceled:
+                    prob = round(random.uniform(0.70, 0.99), 2)
+                else:
+                    prob = round(random.uniform(0.01, 0.30), 2)
+
+                gold_kwargs = dict(
+                    booking_id=row["Booking_ID"],
+                    prediction=int(is_not_canceled),
+                    probability_not_canceled=prob,
+                    probability_canceled=1 - prob,
+                    created_at=datetime.today().date()
+                )
+                session.add(TrainResult(**gold_kwargs))
+                session.add(ValidationResult(**gold_kwargs))
+                session.add(TestResult(**gold_kwargs))
+            session.commit()
