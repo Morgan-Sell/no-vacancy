@@ -55,12 +55,17 @@ def get_logger(*, logger_name):
 
 
 # -- Postgres Config (Production) --
-DB_HOST = os.getenv("POSTGRES_HOST")
-DB_PORT = os.getenv("POSTGRES_PORT")
-DB_NAME = os.getenv("POSTGRES_DB")
-DB_USER = os.getenv("POSTGRES_USER")
-DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("POSTGRES_PORT") # TODO: What to do with Postgres port (5432)?
+DB_NAME = os.getenv("POSTGRES_DB") # TODO: Do I keep a "master" database?
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_CONNECT_TIMEOUT = 120  # in seconds
+
+# Medallion DBs
+BRONZE_DB_PORT = os.getenv("BRONZE_DB_PORT")
+SILVER_DB_PORT = os.getenv("SILVER_DB_PORT")
+GOLD_DB_PORT = os.getenv("GOLD_DB_PORT")
 
 # CSV File Paths
 DATA_DIR = "./data"

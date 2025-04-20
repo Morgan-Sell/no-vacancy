@@ -51,8 +51,8 @@ class TrainData(Base):
     is_cancellation = Column(Integer, nullable=False)
 
 
-class ValidateTestData(Base):
-    __tablename__ = "validate_test_data"
+class ValidationTestData(Base):
+    __tablename__ = "validation_test_data"
 
     booking_id = Column(String, primary_key=True)
     number_of_adults = Column(Integer, nullable=False)
