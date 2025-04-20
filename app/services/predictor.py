@@ -22,7 +22,6 @@ def handle_error(error_type, message, exception):
 
 
 def make_prediction(test_data: pd.DataFrame, pm: PipelineManagement = None):
-
     try:
         if not isinstance(test_data, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame.")

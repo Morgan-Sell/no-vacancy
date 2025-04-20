@@ -65,9 +65,13 @@ def save_to_silver_db(X_train, y_train, X_test, y_test, session: SilverSessionLo
     X_test["is_cancellation"] = y_test
 
     # Create a list of TrainData instances
-    train_objects = [TrainData(**row._asdict()) for row in X_train.itertuples(index=False)]
+    train_objects = [
+        TrainData(**row._asdict()) for row in X_train.itertuples(index=False)
+    ]
     # Create a list of ValidateTestData instances
-    test_objects = [ValidateTestData(**row._asdict()) for row in X_test.itertuples(index=False)]
+    test_objects = [
+        ValidateTestData(**row._asdict()) for row in X_test.itertuples(index=False)
+    ]
 
     # Insert ORM objects to database w/o primary key updates and relationship handling
     session.bulk_save_objects(train_objects)
@@ -100,19 +104,18 @@ def train_pipeline():
         vars_to_drop=VARS_TO_DROP,
         booking_map=BOOKING_MAP,
     )
-    
+
     # Load and process raw data
     with BronzeSessionLocal() as bronze_session:
         df = load_raw_data(bronze_session)
-    
+
     X = df.drop(columns=[TARGET_VARIABLE])
     y = df[TARGET_VARIABLE]
     X_train, X_test, y_train, y_test = preprocess_data(X, y, processor)
-    
+
     # Save preprocessed data to Silver database
     with SilverSessionLocal() as silver_session:
         save_to_silver_db(X_train, y_train, X_test, y_test, silver_session)
-    
 
     pipe = build_pipeline()
     pipe.fit(X_train, y_train, search_space=SEARCH_SPACE)

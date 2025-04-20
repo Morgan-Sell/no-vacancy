@@ -132,9 +132,12 @@ def main():
             db_row_after_import - db_row_before_import,
         )
 
-        print(f"✅ Successfully imported {csv_rows} rows from {RAW_DATA_FILE_PATH} into {RAW_DATA_TABLE}")
-    
+        print(
+            f"✅ Successfully imported {csv_rows} rows from {RAW_DATA_FILE_PATH} into {RAW_DATA_TABLE}"
+        )
+
     conn.close()
+
 
 if __name__ == "__main__":
     main()

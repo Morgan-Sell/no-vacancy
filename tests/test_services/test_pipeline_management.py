@@ -139,9 +139,7 @@ def test_delete_pipeline_exception(pm, temp_pipeline_path):
     temp_pipeline_path.touch()
 
     with patch.object(Path, "unlink", side_effect=Exception("OH NO!")):
-        with pytest.raises(
-            Exception, match="❌ Error during pipeline deletion: OH NO!"
-        ):
+        with pytest.raises(Exception, match="❌ Error during pipeline deletion: OH NO!"):
             pm.delete_pipeline()
 
 

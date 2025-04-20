@@ -79,9 +79,7 @@ class PipelineManagement:
             )
 
         except Exception as e:
-            handle_error_dm(
-                self.logger, type(e), "❌ Error during pipeline deletion", e
-            )
+            handle_error_dm(self.logger, type(e), "❌ Error during pipeline deletion", e)
 
     def __validate_pipeline_and_processor(
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing

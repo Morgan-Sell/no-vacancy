@@ -9,6 +9,7 @@ class RawData(Base):
     """
     Bronze table for raw data storage.
     """
+
     __tablename__ = "raw_data"
 
     booking_id = Column(String, primary_key=True)
@@ -22,7 +23,7 @@ class RawData(Base):
     lead_time = Column(Integer, nullable=True)  # in days
     market_segment_type = Column(String, nullable=True)
     is_repeat_guest = Column(Integer, nullable=True)  # 1 if repeat guest, 0 otherwise
-    num_previous_cancellations = Column(Integer, nullable=True)  
+    num_previous_cancellations = Column(Integer, nullable=True)
     num_previous_bookings_not_canceled = Column(Integer, nullable=True)
     average_price = Column(Float, nullable=True)
     special_requests = Column(Integer, nullable=True)

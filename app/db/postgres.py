@@ -3,19 +3,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # -- Bronze DB --
-BRONZE_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/bronze"
+BRONZE_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{BRONZE_DB_PORT}/bronze"
 bronze_engine = create_engine(BRONZE_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT})
 # autocommit and authoflush set to false to ensure atomicity
 BronzeSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=bronze_engine)
 
 # -- Silver DB --
-SILVER_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/silver"
+SILVER_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{SILVER_DB_PORT}/silver"
 silver_engine = create_engine(SILVER_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT})
 # autocommit and authoflush set to false to ensure atomicity
 SilverSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=silver_engine)
 
 # -- Gold DB --
-GOLD_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/gold"
+GOLD_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{GOLD_DB_PORT}/gold"
 gold_engine = create_engine(GOLD_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT})
 # autocommit and authoflush set to false to ensure atomicity
 GoldSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=gold_engine)
