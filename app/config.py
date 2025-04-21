@@ -4,10 +4,8 @@ import sys
 from logging.handlers import TimedRotatingFileHandler
 from os.path import abspath, dirname, join
 
-from sqlalchemy import Column, Date, Float, Integer, String, create_engine
-
-
 from dotenv import load_dotenv
+from sqlalchemy import Column, Date, Float, Integer, String, create_engine
 
 # Load environment variables from .env file
 load_dotenv()
@@ -56,8 +54,8 @@ def get_logger(*, logger_name):
 
 # -- Postgres Config (Production) --
 DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("POSTGRES_PORT") # TODO: What to do with Postgres port (5432)?
-DB_NAME = os.getenv("POSTGRES_DB") # TODO: Do I keep a "master" database?
+DB_PORT = os.getenv("POSTGRES_PORT")  # TODO: What to do with Postgres port (5432)?
+DB_NAME = os.getenv("POSTGRES_DB")  # TODO: Do I keep a "master" database?
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_CONNECT_TIMEOUT = 120  # in seconds

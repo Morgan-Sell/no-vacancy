@@ -1,7 +1,3 @@
-from app.db.postgres import BronzeSessionLocal, SilverSessionLocal
-from app.schemas.bronze import RawData
-from app.schemas.silver import TrainData, ValidateTestData
-
 import logging
 import warnings
 
@@ -28,6 +24,10 @@ from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
+
+from app.db.postgres import BronzeSessionLocal, SilverSessionLocal
+from app.schemas.bronze import RawData
+from app.schemas.silver import TrainData, ValidateTestData
 
 logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")

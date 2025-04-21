@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Float, Date
+from sqlalchemy import Column, Date, Float, Integer, String
 from sqlalchemy.orm import declarative_base
+
 from app.config import __model_version__
 
 Base = declarative_base()
@@ -25,7 +26,7 @@ class TrainResults(Base):
         )
 
 
-class ValidationResult(Base):
+class ValidationResults(Base):
     __tablename__ = "validation_results"
 
     booking_id = Column(String, primary_key=True, nullable=False)

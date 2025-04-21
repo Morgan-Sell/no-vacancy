@@ -22,8 +22,8 @@ from db.postgres import (
     init_all_databases,
 )
 from schemas.bronze import RawData
-from schemas.silver import TrainData, ValidateTestData
-from schemas.gold import TrainResult, ValidationResult, TestResult
+from schemas.silver import TrainData, ValidationTestData
+from schemas.gold import TrainResults, ValidationResults, TestResults
 from services import DATA_PATHS
 from services import (
     BOOKING_MAP,
@@ -41,7 +41,7 @@ from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def booking_data():
     data = {
         "Booking_ID": [f"INN0000{i}" for i in range(1, 21)],
@@ -623,7 +623,7 @@ def setup_test_dbs(booking_data):
 
             for _, row in silver_test_rows.iterrows():
                 session.add(
-                    ValidateTestData(
+                    ValidationTestData(
                         booking_id=row["Booking_ID"],
                         number_of_adults=row["number of adults"],
                         number_of_children=row["number of children"],
@@ -642,7 +642,7 @@ def setup_test_dbs(booking_data):
 
         # Seed Gold database
         with GoldSessionLocal() as session:
-            for _, row in booking_data.itterrows():
+            for _, row in booking_data.iterrows():
                 is_not_canceled = row["booking status"] == "Not_Canceled"
                 if is_not_canceled:
                     prob = round(random.uniform(0.70, 0.99), 2)
@@ -656,7 +656,7 @@ def setup_test_dbs(booking_data):
                     probability_canceled=1 - prob,
                     created_at=datetime.today().date(),
                 )
-                session.add(TrainResult(**gold_kwargs))
-                session.add(ValidationResult(**gold_kwargs))
-                session.add(TestResult(**gold_kwargs))
+                session.add(TrainResults(**gold_kwargs))
+                session.add(ValidationResults(**gold_kwargs))
+                session.add(TestResults(**gold_kwargs))
             session.commit()

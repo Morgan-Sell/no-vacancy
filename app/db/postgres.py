@@ -1,29 +1,49 @@
-from app.config import DB_CONNECT_TIMEOUT, DB_HOST, DB_PASSWORD, DB_PORT, DB_USER
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.config import (
+    BRONZE_DB_PORT,
+    DB_CONNECT_TIMEOUT,
+    DB_HOST,
+    DB_PASSWORD,
+    DB_PORT,
+    DB_USER,
+    GOLD_DB_PORT,
+    SILVER_DB_PORT,
+)
+
 # -- Bronze DB --
-BRONZE_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{BRONZE_DB_PORT}/bronze"
-bronze_engine = create_engine(BRONZE_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT})
+BRONZE_DB_URL = (
+    f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{BRONZE_DB_PORT}/bronze"
+)
+bronze_engine = create_engine(
+    BRONZE_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT}
+)
 # autocommit and authoflush set to false to ensure atomicity
 BronzeSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=bronze_engine)
 
 # -- Silver DB --
-SILVER_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{SILVER_DB_PORT}/silver"
-silver_engine = create_engine(SILVER_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT})
+SILVER_DB_URL = (
+    f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{SILVER_DB_PORT}/silver"
+)
+silver_engine = create_engine(
+    SILVER_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT}
+)
 # autocommit and authoflush set to false to ensure atomicity
 SilverSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=silver_engine)
 
 # -- Gold DB --
 GOLD_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{GOLD_DB_PORT}/gold"
-gold_engine = create_engine(GOLD_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT})
+gold_engine = create_engine(
+    GOLD_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT}
+)
 # autocommit and authoflush set to false to ensure atomicity
 GoldSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=gold_engine)
 
 
 ## -- Create all tables if models are defined --
 def init_all_databases():
-    from app.schemas import bronze, silver, gold
+    from app.schemas import bronze, gold, silver
 
     bronze.Base.metadata.create_all(bind=bronze_engine)
     silver.Base.metadata.create_all(bind=silver_engine)
