@@ -52,6 +52,10 @@ def get_logger(*, logger_name):
     return logger
 
 
+# -- General Confg --
+# Determin environment (test, prod)
+ENV = os.getenv("ENV", "PROD").upper()
+
 # -- Postgres Config (Production) --
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("POSTGRES_PORT")  # TODO: What to do with Postgres port (5432)?
