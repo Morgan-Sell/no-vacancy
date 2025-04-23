@@ -3,17 +3,16 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.metrics import roc_auc_score
-
 from schemas.bronze import RawData
 from services.pipeline import NoVacancyPipeline
 from services.trainer import (
     build_pipeline,
+    evaluate_model,
     load_raw_data,
     preprocess_data,
     save_to_silver_db,
-    evaluate_model,
 )
+from sklearn.metrics import roc_auc_score
 
 
 def test_load_raw_data_from_bronze(mocker, booking_data):

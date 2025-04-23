@@ -1,17 +1,16 @@
-from datetime import datetime
 import glob
 import os
-from pathlib import Path
-from random import random
+import random
 import shutil
 import tempfile
 import time
+from datetime import datetime
+from pathlib import Path
+from random import random
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-from feature_engine.encoding import OneHotEncoder
-from feature_engine.imputation import CategoricalImputer
 
 # 'app' is not required because pytest automatically adds the root directory to sys.path
 # This capability is configured in pyproject.toml.
@@ -21,12 +20,14 @@ from db.postgres import (
     SilverSessionLocal,
     init_all_databases,
 )
+from feature_engine.encoding import OneHotEncoder
+from feature_engine.imputation import CategoricalImputer
 from schemas.bronze import RawData
+from schemas.gold import TestResults, TrainResults, ValidationResults
 from schemas.silver import TrainData, ValidationTestData
-from schemas.gold import TrainResults, ValidationResults, TestResults
-from services import DATA_PATHS
 from services import (
     BOOKING_MAP,
+    DATA_PATHS,
     IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
     VARIABLE_RENAME_MAP,
@@ -34,11 +35,40 @@ from services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-
 from services.pipeline import NoVacancyPipeline
 from services.pipeline_management import PipelineManagement
 from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
+
+from tests import BOOKING_DATA_RENAME_MAP, BOOKING_DATA_VARS_TO_DROP, NECESSARY_BINARY_VARIABLES
+
+# -- Helper Functions --
+def get_db_model_column_names(model):
+    return set(col.name for col in model.__table__.columns)
+
+
+def transform_booking_data_to_silver_db_format(df):
+    """
+    Transform booking data to match the Silver DB schema.
+
+    """
+    # Derive month and day columns for binary creation
+    df["month_of_reservation"] = pd.to_datetime(df["date of reservation"]).dt.strftime("%b")
+    df["day_of_week"] = pd.to_datetime(df["date of reservation"]).dt.strftime("%A")
+
+    # Rename columns to match the Silver DB schema
+    df.rename(columns=BOOKING_DATA_RENAME_MAP, inplace=True)
+
+    # Create one-hot encoded columns for categorical variables
+    for feature, values in NECESSARY_BINARY_VARIABLES.items():
+        for val in values:
+            col_name = f"is_{feature.lower()}_{val.lower()}".replace(" ", "_")
+            df[col_name] = (df[feature] == val).astype(int)
+   
+    # Drop original categorical columns
+    df.drop(columns=BOOKING_DATA_VARS_TO_DROP, inplace=True)
+
+    return df
 
 
 @pytest.fixture(scope="session")
@@ -472,14 +502,6 @@ def pm(temp_pipeline_path):
     Use fixture to instantiate DataManagement to follow DRY
     principle and enable easier code changes.
     """
-    # Mock DATA_PATHS["model_save_path"] b/c (1) tests should rely on hardcoded
-    # global paths that may interfere with the application and (2) if DATA_PATHS
-    # structure changes, the tests will seamlessly adapt.
-    # with patch.dict(
-    #     "app.services.DATA_PATHS",
-    #     {"model_save_path": str(temp_pipeline_path)},
-    #     clear=False,  # Ensures other DATA_PATHS keys are not impacted
-    # ):
     return PipelineManagement(pipeline_path=str(temp_pipeline_path))
 
 
@@ -525,12 +547,17 @@ def trained_pipeline_and_processor(booking_data, tmp_path):
     return pipe, processor, pm
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def setup_test_dbs(booking_data):
     init_all_databases()
 
     # Seed Bronze database
     with BronzeSessionLocal() as session:
+        # Ensure the table is empty before seeding
+        session.query(RawData).delete()
+        session.commit()
+
+        # Seed the Bronze database with booking_data
         for _, row in booking_data.iterrows():
             session.add(
                 RawData(
@@ -557,91 +584,43 @@ def setup_test_dbs(booking_data):
             )
         session.commit()
 
-        # Seed Silver database (split half into train, half into validate/test)
-        mid = len(booking_data) // 2
-        silver_train_rows = booking_data.head(mid).copy()
-        silver_test_rows = booking_data.tail(mid).copy()
+        # Prepare booking_data for Silver db (split half into train, half into validate/test)
+        silver_data = transform_booking_data_to_silver_db_format(
+            booking_data.copy()
+        )
+        mid = len(silver_data) // 2
+        silver_train_rows = silver_data.head(mid).copy()
+        silver_test_rows = silver_data.tail(mid).copy()
 
-        # Create dummy binary features
-        def dummy_binary_features(df):
-            for col in [
-                "is_type_of_meal_meal_plan_1",
-                "is_type_of_meal_meal_plan_2",
-                "is_type_of_meal_meal_plan_3",
-                "is_room_type_room_type_1",
-                "is_room_type_room_type_2",
-                "is_room_type_room_type_3",
-                "is_room_type_room_type_4",
-                "is_room_type_room_type_5",
-                "is_room_type_room_type_6",
-                "is_room_type_room_type_7",
-                "is_market_segment_type_online",
-                "is_market_segment_type_corporate",
-                "is_market_segment_type_complementary",
-                "is_market_segment_type_aviation",
-                "is_month_of_reservation_jan",
-                "is_month_of_reservation_feb",
-                "is_month_of_reservation_mar",
-                "is_month_of_reservation_apr",
-                "is_month_of_reservation_may",
-                "is_month_of_reservation_jun",
-                "is_month_of_reservation_aug",
-                "is_month_of_reservation_oct",
-                "is_month_of_reservation_nov",
-                "is_month_of_reservation_dec",
-                "is_day_of_week_monday",
-                "is_day_of_week_tuesday",
-                "is_day_of_week_wednesday",
-                "is_day_of_week_thursday",
-                "is_day_of_week_friday",
-                "is_day_of_week_saturday",
-            ]:
-                df[col] = 0
-            return df
-
-        silver_train_rows = dummy_binary_features(silver_train_rows)
-        silver_test_rows = dummy_binary_features(silver_test_rows)
+        # # Extract only the fields that exist in the Silver table schemas
+        # train_cols = get_db_model_column_names(TrainData)
+        # test_cols = get_db_model_column_names(ValidationTestData)
 
         with SilverSessionLocal() as session:
-            for _, row in silver_train_rows.iterrows():
-                session.add(
-                    TrainData(
-                        booking_id=row["Booking_ID"],
-                        number_of_adults=row["number of adults"],
-                        number_of_children=row["number of children"],
-                        number_of_weekend_nights=row["number of weekend nights"],
-                        number_of_weekdays_nights=row["number of week nights"],
-                        lead_time=row["lead time"],
-                        type_of_meal=row["type of meal"],
-                        car_parking_space=row["car parking space"],
-                        room_type=row["room type"],
-                        average_price=row["average price"],
-                        is_cancellation=int(row["booking status"] == "Canceled"),
-                        **{col: row[col] for col in row.index if col.startswith("is_")},
-                    )
-                )
+            # Ensure the tables are empty before seeding
+            session.query(TrainData).delete()
+            session.query(ValidationTestData).delete()
+            session.commit()
 
-            for _, row in silver_test_rows.iterrows():
-                session.add(
-                    ValidationTestData(
-                        booking_id=row["Booking_ID"],
-                        number_of_adults=row["number of adults"],
-                        number_of_children=row["number of children"],
-                        number_of_weekend_nights=row["number of weekend nights"],
-                        number_of_weekdays_nights=row["number of week nights"],
-                        lead_time=row["lead time"],
-                        type_of_meal=row["type of meal"],
-                        car_parking_space=row["car parking space"],
-                        room_type=row["room type"],
-                        average_price=row["average price"],
-                        is_cancellation=int(row["booking status"] == "Canceled"),
-                        **{col: row[col] for col in row.index if col.startswith("is_")},
-                    )
-                )
+            # Seed the Silver database with transformed booking_data
+            session.bulk_save_objects(
+                [TrainData(**row.to_dict()) for _, row in silver_train_rows.itterows()]
+            )
+
+            session.bulk_save_objects(
+                [ValidationTestData(**row.to_dict()) for _, row in silver_test_rows.iterrows()]
+            )
             session.commit()
 
         # Seed Gold database
         with GoldSessionLocal() as session:
+            # Ensure the tables are empty before seeding
+            session.query(TrainResults).delete()
+            session.query(ValidationResults).delete()
+            session.query(TestResults).delete()
+            session.commit()
+
+            # Seed the Gold database with booking_data
             for _, row in booking_data.iterrows():
                 is_not_canceled = row["booking status"] == "Not_Canceled"
                 if is_not_canceled:

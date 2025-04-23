@@ -87,6 +87,7 @@ class ValidationTestData(Base):
     is_month_of_reservation_aug = Column(Integer, nullable=False)
     is_month_of_reservation_mar = Column(Integer, nullable=False)
     is_month_of_reservation_feb = Column(Integer, nullable=False)
+    is_month_of_reservation_jul = Column(Integer, nullable=False)
     is_day_of_week_monday = Column(Integer, nullable=False)
     is_day_of_week_friday = Column(Integer, nullable=False)
     is_day_of_week_wednesday = Column(Integer, nullable=False)

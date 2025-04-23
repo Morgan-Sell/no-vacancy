@@ -4,31 +4,59 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.config import (
+    BRONZE_DB,
     BRONZE_DB_PORT,
     DB_CONNECT_TIMEOUT,
     DB_HOST,
     DB_PASSWORD,
-    DB_PORT,
     DB_USER,
+    ENV,
+    GOLD_DB,
     GOLD_DB_PORT,
+    SILVER_DB,
     SILVER_DB_PORT,
-    ENV
+    TEST_BRONZE_DB,
+    TEST_BRONZE_DB_PORT,
+    TEST_DB_HOST,
+    TEST_DB_PASSWORD,
+    TEST_DB_USER,
+    TEST_GOLD_DB,
+    TEST_GOLD_DB_PORT,
+    TEST_SILVER_DB,
+    TEST_SILVER_DB_PORT,
 )
 
+IS_PROD = ENV == "PROD"
 
-def build_postgres_url(prefix: str) -> str:
-    return f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv(f'{prefix}_DB_HOST')}:{os.getenv(f'{prefix}_DB_PORT')}/{os.getenv(f'{prefix}_DB')}"
+
+def make_postgres_url(user, password, host, port, db_name):
+    return f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
 
 
 # Create Postgres URLs depending on environment
-if ENV == "TEST":
-    BRONZE_DB_URL = build_postgres_url("TEST_BRONZE")
-    SILVER_DB_URL = build_postgres_url("TEST_SILVER")
-    GOLD_DB_URL = build_postgres_url("TEST_GOLD")
-else:
-    BRONZE_DB_URL = build_postgres_url("BRONZE")
-    SILVER_DB_URL = build_postgres_url("SILVER")
-    GOLD_DB_URL = build_postgres_url("GOLD")
+BRONZE_DB_URL = make_postgres_url(
+    DB_USER if IS_PROD else TEST_DB_USER,
+    DB_PASSWORD if IS_PROD else TEST_DB_PASSWORD,
+    DB_HOST if IS_PROD else TEST_DB_HOST,
+    BRONZE_DB_PORT if IS_PROD else TEST_BRONZE_DB_PORT,
+    BRONZE_DB if IS_PROD else TEST_BRONZE_DB,
+)
+
+SILVER_DB_URL = make_postgres_url(
+    DB_USER if IS_PROD else TEST_DB_USER,
+    DB_PASSWORD if IS_PROD else TEST_DB_PASSWORD,
+    DB_HOST if IS_PROD else TEST_DB_HOST,
+    SILVER_DB_PORT if IS_PROD else TEST_SILVER_DB_PORT,
+    SILVER_DB if IS_PROD else TEST_SILVER_DB,
+)
+
+GOLD_DB_URL = make_postgres_url(
+    DB_USER if IS_PROD else TEST_DB_USER,
+    DB_PASSWORD if IS_PROD else TEST_DB_PASSWORD,
+    DB_HOST if IS_PROD else TEST_DB_HOST,
+    GOLD_DB_PORT if IS_PROD else TEST_GOLD_DB_PORT,
+    GOLD_DB if IS_PROD else TEST_GOLD_DB,
+)
 
 
 # -- Bronze DB --
