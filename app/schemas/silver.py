@@ -11,7 +11,7 @@ class TrainData(Base):
     number_of_adults = Column(Integer, nullable=False)
     number_of_children = Column(Integer, nullable=False)
     number_of_weekend_nights = Column(Integer, nullable=False)
-    number_of_weekdays_nights = Column(Integer, nullable=False)
+    number_of_week_nights = Column(Integer, nullable=False)
     lead_time = Column(Integer, nullable=False)  # in days
     type_of_meal = Column(String, nullable=False)
     car_parking_space = Column(Integer, nullable=False)
@@ -57,7 +57,7 @@ class ValidationTestData(Base):
     number_of_adults = Column(Integer, nullable=False)
     number_of_children = Column(Integer, nullable=False)
     number_of_weekend_nights = Column(Integer, nullable=False)
-    number_of_weekdays_nights = Column(Integer, nullable=False)
+    number_of_week_nights = Column(Integer, nullable=False)
     lead_time = Column(Integer, nullable=False)  # in days
     type_of_meal = Column(String, nullable=False)
     car_parking_space = Column(Integer, nullable=False)

@@ -15,7 +15,7 @@ class RawData(Base):
     number_of_adults = Column(Integer, nullable=True)
     number_of_children = Column(Integer, nullable=True)
     number_of_weekend_nights = Column(Integer, nullable=True)
-    number_of_weekdays_nights = Column(Integer, nullable=True)
+    number_of_week_nights = Column(Integer, nullable=True)
     type_of_meal = Column(String, nullable=True)
     car_parking_space = Column(Integer, nullable=True)
     room_type = Column(String, nullable=True)

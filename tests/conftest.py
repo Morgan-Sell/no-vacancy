@@ -40,7 +40,12 @@ from services.pipeline_management import PipelineManagement
 from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 
-from tests import BOOKING_DATA_RENAME_MAP, BOOKING_DATA_VARS_TO_DROP, NECESSARY_BINARY_VARIABLES
+from tests import (
+    BOOKING_DATA_RENAME_MAP,
+    BOOKING_DATA_VARS_TO_DROP,
+    NECESSARY_BINARY_VARIABLES,
+)
+
 
 # -- Helper Functions --
 def get_db_model_column_names(model):
@@ -53,18 +58,24 @@ def transform_booking_data_to_silver_db_format(df):
 
     """
     # Derive month and day columns for binary creation
-    df["month_of_reservation"] = pd.to_datetime(df["date of reservation"]).dt.strftime("%b")
+    df["month_of_reservation"] = pd.to_datetime(df["date of reservation"]).dt.strftime(
+        "%b"
+    )
     df["day_of_week"] = pd.to_datetime(df["date of reservation"]).dt.strftime("%A")
 
     # Rename columns to match the Silver DB schema
     df.rename(columns=BOOKING_DATA_RENAME_MAP, inplace=True)
+
+    # Convert colum names to snake_case
+    make_snake_case = lambda x: x.lower().replace(" ", "_")
+    df.columns = [make_snake_case(col) for col in df.columns]
 
     # Create one-hot encoded columns for categorical variables
     for feature, values in NECESSARY_BINARY_VARIABLES.items():
         for val in values:
             col_name = f"is_{feature.lower()}_{val.lower()}".replace(" ", "_")
             df[col_name] = (df[feature] == val).astype(int)
-   
+
     # Drop original categorical columns
     df.drop(columns=BOOKING_DATA_VARS_TO_DROP, inplace=True)
 
@@ -565,7 +576,7 @@ def setup_test_dbs(booking_data):
                     number_of_adults=row["number of adults"],
                     number_of_children=row["number of children"],
                     number_of_weekend_nights=row["number of weekend nights"],
-                    number_of_weekdays_nights=row["number of week nights"],
+                    number_of_week_nights=row["number of week nights"],
                     type_of_meal=row["type of meal"],
                     car_parking_space=row["car parking space"],
                     room_type=row["room type"],
@@ -585,9 +596,7 @@ def setup_test_dbs(booking_data):
         session.commit()
 
         # Prepare booking_data for Silver db (split half into train, half into validate/test)
-        silver_data = transform_booking_data_to_silver_db_format(
-            booking_data.copy()
-        )
+        silver_data = transform_booking_data_to_silver_db_format(booking_data.copy())
         mid = len(silver_data) // 2
         silver_train_rows = silver_data.head(mid).copy()
         silver_test_rows = silver_data.tail(mid).copy()
@@ -604,11 +613,14 @@ def setup_test_dbs(booking_data):
 
             # Seed the Silver database with transformed booking_data
             session.bulk_save_objects(
-                [TrainData(**row.to_dict()) for _, row in silver_train_rows.itterows()]
+                [TrainData(**row.to_dict()) for _, row in silver_train_rows.iterrows()]
             )
 
             session.bulk_save_objects(
-                [ValidationTestData(**row.to_dict()) for _, row in silver_test_rows.iterrows()]
+                [
+                    ValidationTestData(**row.to_dict())
+                    for _, row in silver_test_rows.iterrows()
+                ]
             )
             session.commit()
 
