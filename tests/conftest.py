@@ -41,45 +41,15 @@ from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 
 from tests import (
-    BOOKING_DATA_RENAME_MAP,
-    BOOKING_DATA_VARS_TO_DROP,
-    NECESSARY_BINARY_VARIABLES,
+    transform_booking_data_to_bronze_db_format,
+    transform_booking_data_to_silver_db_format,
+    get_db_model_column_names,
 )
 
 
 # -- Helper Functions --
-def get_db_model_column_names(model):
-    return set(col.name for col in model.__table__.columns)
 
 
-def transform_booking_data_to_silver_db_format(df):
-    """
-    Transform booking data to match the Silver DB schema.
-
-    """
-    # Derive month and day columns for binary creation
-    df["month_of_reservation"] = pd.to_datetime(df["date of reservation"]).dt.strftime(
-        "%b"
-    )
-    df["day_of_week"] = pd.to_datetime(df["date of reservation"]).dt.strftime("%A")
-
-    # Rename columns to match the Silver DB schema
-    df.rename(columns=BOOKING_DATA_RENAME_MAP, inplace=True)
-
-    # Convert colum names to snake_case
-    make_snake_case = lambda x: x.lower().replace(" ", "_")
-    df.columns = [make_snake_case(col) for col in df.columns]
-
-    # Create one-hot encoded columns for categorical variables
-    for feature, values in NECESSARY_BINARY_VARIABLES.items():
-        for val in values:
-            col_name = f"is_{feature.lower()}_{val.lower()}".replace(" ", "_")
-            df[col_name] = (df[feature] == val).astype(int)
-
-    # Drop original categorical columns
-    df.drop(columns=BOOKING_DATA_VARS_TO_DROP, inplace=True)
-
-    return df
 
 
 @pytest.fixture(scope="session")
@@ -562,11 +532,19 @@ def trained_pipeline_and_processor(booking_data, tmp_path):
 def setup_test_dbs(booking_data):
     init_all_databases()
 
+    # Prepare booking_data for Bronze db
+
+
+
     # Seed Bronze database
     with BronzeSessionLocal() as session:
         # Ensure the table is empty before seeding
         session.query(RawData).delete()
         session.commit()
+
+        # Transform booking_data to match the Bronze DB schema
+        # bronze_data = transform_booking_data_to_bronze_db_format(booking_data.copy())
+
 
         # Seed the Bronze database with booking_data
         for _, row in booking_data.iterrows():
@@ -601,9 +579,6 @@ def setup_test_dbs(booking_data):
         silver_train_rows = silver_data.head(mid).copy()
         silver_test_rows = silver_data.tail(mid).copy()
 
-        # # Extract only the fields that exist in the Silver table schemas
-        # train_cols = get_db_model_column_names(TrainData)
-        # test_cols = get_db_model_column_names(ValidationTestData)
 
         with SilverSessionLocal() as session:
             # Ensure the tables are empty before seeding
@@ -613,14 +588,11 @@ def setup_test_dbs(booking_data):
 
             # Seed the Silver database with transformed booking_data
             session.bulk_save_objects(
-                [TrainData(**row.to_dict()) for _, row in silver_train_rows.iterrows()]
+                [TrainData(**row) for row in silver_train_rows.to_dict(orient="records")]
             )
 
             session.bulk_save_objects(
-                [
-                    ValidationTestData(**row.to_dict())
-                    for _, row in silver_test_rows.iterrows()
-                ]
+                [ValidationTestData(**row) for row in silver_train_rows.to_dict(orient="records")]
             )
             session.commit()
 

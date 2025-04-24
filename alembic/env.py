@@ -25,33 +25,26 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-
 # Approach is required for Medallion architecture w/ separate databases
+# Target DB defaults to bronze
 target_db = os.environ.get("ALEMBIC_TARGET_DB", "bronze")
 
 df_config_map = {
-    "bronze": (BRONZE_DB_URL, bronze_base.metadata),
-    "silver": (SILVER_DB_URL, silver_base.metadata),
-    "gold": (GOLD_DB_URL, gold_base.metadata),
+    "bronze": (BRONZE_DB_URL, bronze_base.metadata, "alembic/versions_bronze"),
+    "silver": (SILVER_DB_URL, silver_base.metadata, "alembic/versions_silver"),
+    "gold": (GOLD_DB_URL, gold_base.metadata, "alembic/versions_gold"),
 }
 
 try:
-    sqlalchemy_url, target_metadata = df_config_map[target_db]
+    sqlalchemy_url, target_metadata, version_path = df_config_map[target_db]
 except KeyError:
     raise ValueError(
         f"Invalid target database: {target_db}. Must be one of {list(df_config_map.keys())}."
     )
 
+# Set dynamic database URL and version path
 config.set_main_option("sqlalchemy.url", sqlalchemy_url)
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+config.set_main_option("version_locations", version_path)
 
 
 def run_migrations_offline() -> None:
@@ -66,9 +59,8 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=sqlalchemy_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
