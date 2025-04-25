@@ -1,6 +1,7 @@
 # Python image
 FROM python:3.10-slim
 
+
 # Set the working directory
 WORKDIR /app
 
@@ -20,4 +21,5 @@ COPY app /app
 EXPOSE 8000
 
 # Start FastAPI server
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["tail", "-f", "/dev/null"]

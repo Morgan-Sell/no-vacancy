@@ -6,7 +6,6 @@ from datetime import datetime
 import psycopg2
 
 from app.config import (
-    CSV_TABLE_MAP,
     DB_CONNECT_TIMEOUT,
     DB_HOST,
     DB_NAME,

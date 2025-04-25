@@ -129,8 +129,8 @@ services:
       GOLD_VALIDATION_TABLE: validation_results
       GOLD_TEST_TABLE: test_results
 
-    volumes:
-      - .:/app
+    # volumes:
+      # - .:/app
     command: python scripts/import_csv_to_postgres.py
 
 volumes:

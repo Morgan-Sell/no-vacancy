@@ -592,7 +592,7 @@ def setup_test_dbs(booking_data):
             )
 
             session.bulk_save_objects(
-                [ValidationTestData(**row) for row in silver_train_rows.to_dict(orient="records")]
+                [ValidationTestData(**row) for row in silver_test_rows.to_dict(orient="records")]
             )
             session.commit()
 
