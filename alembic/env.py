@@ -1,20 +1,13 @@
 import os
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config, pool, MetaData
+from sqlalchemy import MetaData, engine_from_config, pool
 
 from alembic import context
-
-from app.db.postgres import (
-    BRONZE_DB_URL,
-    SILVER_DB_URL,
-    GOLD_DB_URL,
-)
-
+from app.db.postgres import BRONZE_DB_URL, GOLD_DB_URL, SILVER_DB_URL
 from app.schemas.bronze import Base as bronze_base
-from app.schemas.silver import Base as silver_base
 from app.schemas.gold import Base as gold_base
-
+from app.schemas.silver import Base as silver_base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

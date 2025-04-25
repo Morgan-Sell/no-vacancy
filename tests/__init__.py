@@ -1,7 +1,7 @@
 import re
 
 import pandas as pd
-
+from services import BOOKING_MAP
 
 NECESSARY_BINARY_VARIABLES = {
     # Add only fields defined in TrainData or ValidationTestData
@@ -39,13 +39,13 @@ BOOKING_DATA_VARS_TO_DROP = [
     "month_of_reservation",
     "day_of_week",
     "date_of_reservation",
-    "booking_status",
 ]
 
 BOOKING_DATA_RENAME_MAP = {
     "repeated": "is_repeat_guest",
     "p_c": "num_previous_cancellations",
     "p_not_c": "num_previous_bookings_not_canceled",
+    "booking_status": "is_cancellation",
 }
 
 
@@ -55,21 +55,15 @@ def to_snake_case(name: str) -> str:
     name = name.replace("-", "_")
 
     # Preserve existing underscores and replace spaces or special characters with underscores
-    name = re.sub(
-        r"[^\w\s]", "", name
-    )  # Remove special characters except underscores
-    name = re.sub(
-        r"(?<=[a-z])(?=[A-Z])", "_", name
-    )  # Handle camelCase to snake_case
+    name = re.sub(r"[^\w\s]", "", name)  # Remove special characters except underscores
+    name = re.sub(r"(?<=[a-z])(?=[A-Z])", "_", name)  # Handle camelCase to snake_case
     name = re.sub(r"[\s]+", "_", name)  # Replace spaces with underscores
     return name.lower()
 
 
 def convert_columns_to_snake_case(df: pd.DataFrame) -> pd.DataFrame:
     # Transform column names
-    new_columns = [
-        to_snake_case(col).replace("__", "_") for col in df.columns
-    ]
+    new_columns = [to_snake_case(col).replace("__", "_") for col in df.columns]
     df.columns = new_columns
     return df
 
@@ -103,6 +97,8 @@ def transform_booking_data_to_silver_db_format(df):
         for val in values:
             col_name = f"is_{feature.lower()}_{val.lower()}".replace(" ", "_")
             df[col_name] = (df[feature] == val).astype(int)
+
+    df["is_cancellation"] = df["is_cancellation"].map(BOOKING_MAP)
 
     # Drop original categorical columns
     df.drop(columns=BOOKING_DATA_VARS_TO_DROP, inplace=True)

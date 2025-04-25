@@ -9,7 +9,6 @@ from sqlalchemy import func
 
 
 def test_bronze_db(setup_test_dbs):
-    setup_test_dbs()
 
     with BronzeSessionLocal() as session:
         count = session.query(func.count(RawData.booking_id)).scalar()
@@ -17,7 +16,6 @@ def test_bronze_db(setup_test_dbs):
 
 
 def test_silver_db_split_train_test_counts(setup_test_dbs):
-    setup_test_dbs()
 
     with SilverSessionLocal() as session:
         train_count = session.query(func.count(TrainData.booking_id)).scalar()
@@ -27,7 +25,6 @@ def test_silver_db_split_train_test_counts(setup_test_dbs):
 
 
 def test_gold_db_predictions_are_binary(setup_test_dbs):
-    setup_test_dbs()
 
     with GoldSessionLocal() as session:
         results = session.query(TrainResults.prediction).distinct().all()
@@ -38,7 +35,6 @@ def test_gold_db_predictions_are_binary(setup_test_dbs):
 
 
 def test_gold_db_probabilities_sum_to_one(setup_test_dbs):
-    setup_test_dbs()
 
     with GoldSessionLocal() as session:
         rows = session.query(TrainResults).limit(10).all()

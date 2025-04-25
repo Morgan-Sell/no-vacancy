@@ -3,6 +3,14 @@ import os
 
 import psycopg2
 import pytest
+from scripts.import_csv_to_postgres import (
+    get_csv_row_count,
+    get_db_row_count,
+    has_been_imported,
+    hash_csv,
+    import_csv,
+    log_import,
+)
 
 from app.config import (
     CSV_HASH_TABLE,
@@ -15,14 +23,6 @@ from app.config import (
     TEST_CSV_FILE_PATH,
     TRAIN_CSV_FILE_PATH,
     VALIDATION_CSV_FILE_PATH,
-)
-from scripts.import_csv_to_postgres import (
-    get_csv_row_count,
-    get_db_row_count,
-    has_been_imported,
-    hash_csv,
-    import_csv,
-    log_import,
 )
 from tests.conftest import TEST_TABLE
 

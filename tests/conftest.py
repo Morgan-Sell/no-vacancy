@@ -6,12 +6,10 @@ import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
-from random import random
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-
 # 'app' is not required because pytest automatically adds the root directory to sys.path
 # This capability is configured in pyproject.toml.
 from db.postgres import (
@@ -41,15 +39,12 @@ from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 
 from tests import (
+    get_db_model_column_names,
     transform_booking_data_to_bronze_db_format,
     transform_booking_data_to_silver_db_format,
-    get_db_model_column_names,
 )
 
-
 # -- Helper Functions --
-
-
 
 
 @pytest.fixture(scope="session")
@@ -534,8 +529,6 @@ def setup_test_dbs(booking_data):
 
     # Prepare booking_data for Bronze db
 
-
-
     # Seed Bronze database
     with BronzeSessionLocal() as session:
         # Ensure the table is empty before seeding
@@ -544,7 +537,6 @@ def setup_test_dbs(booking_data):
 
         # Transform booking_data to match the Bronze DB schema
         # bronze_data = transform_booking_data_to_bronze_db_format(booking_data.copy())
-
 
         # Seed the Bronze database with booking_data
         for _, row in booking_data.iterrows():
@@ -579,7 +571,6 @@ def setup_test_dbs(booking_data):
         silver_train_rows = silver_data.head(mid).copy()
         silver_test_rows = silver_data.tail(mid).copy()
 
-
         with SilverSessionLocal() as session:
             # Ensure the tables are empty before seeding
             session.query(TrainData).delete()
@@ -588,11 +579,17 @@ def setup_test_dbs(booking_data):
 
             # Seed the Silver database with transformed booking_data
             session.bulk_save_objects(
-                [TrainData(**row) for row in silver_train_rows.to_dict(orient="records")]
+                [
+                    TrainData(**row)
+                    for row in silver_train_rows.to_dict(orient="records")
+                ]
             )
 
             session.bulk_save_objects(
-                [ValidationTestData(**row) for row in silver_test_rows.to_dict(orient="records")]
+                [
+                    ValidationTestData(**row)
+                    for row in silver_test_rows.to_dict(orient="records")
+                ]
             )
             session.commit()
 
