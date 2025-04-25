@@ -2,10 +2,10 @@ import logging
 import warnings
 
 import pandas as pd
-from config import __model_version__
+from app.config import __model_version__
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-from services import (
+from app.services import (
     BOOKING_MAP,
     DATA_PATHS,
     IMPUTATION_METHOD,
@@ -18,9 +18,9 @@ from services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from services.pipeline import NoVacancyPipeline
-from services.pipeline_management import PipelineManagement
-from services.preprocessing import NoVacancyDataProcessing
+from app.services.pipeline import NoVacancyPipeline
+from app.services.pipeline_management import PipelineManagement
+from app.services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split

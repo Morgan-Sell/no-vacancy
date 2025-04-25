@@ -4,7 +4,7 @@ from typing import Union
 import pandas as pd
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-from services import RSCV_PARAMS
+from app.services import RSCV_PARAMS
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline

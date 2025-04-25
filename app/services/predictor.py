@@ -2,16 +2,16 @@ import logging
 
 import numpy as np
 import pandas as pd
-from config import __model_version__
-from services import (
+from app.config import __model_version__
+from app.services import (
     BOOKING_MAP,
     DEPENDENT_VAR_NAME,
     MONTH_ABBREVIATION_MAP,
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
 )
-from services.pipeline_management import PipelineManagement
-from services.preprocessing import NoVacancyDataProcessing
+from app.services.pipeline_management import PipelineManagement
+from app.services.preprocessing import NoVacancyDataProcessing
 
 logger = logging.getLogger(__name__)
 
