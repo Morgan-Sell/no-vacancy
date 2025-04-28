@@ -44,7 +44,7 @@ def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm
         ], "Unexpected columns in prediction results."
 
 
-def test_make_prediction_with_empty_data():
+def test_make_prediction_with_empty_data(pm):
     # Arrange
     empty_data = pd.DataFrame()
 
@@ -53,10 +53,10 @@ def test_make_prediction_with_empty_data():
         ValueError,
         match="❌ Invalid input: Input data is empty. Cannot make predictions on an empty DataFrame.",
     ):
-        make_prediction(empty_data)
+        make_prediction(empty_data, pm)
 
 
-def test_make_prediction_pipeline_not_found(booking_data, mock_processor, pm):
+def test_make_prediction_pipeline_not_found(booking_data, pm):
     # Arrange: Patch PipelineManagement to raise FileNotFoundError
     with patch.object(
         pm,
@@ -105,14 +105,14 @@ def test_make_prediction_unexpected_error(
             make_prediction(booking_data, pm)
 
 
-def test_make_prediction_invalid_input_type():
+def test_make_prediction_invalid_input_type(pm):
     # Arrange
     invalid_input = {"breakfast": [3, "waffles"]}
 
     with pytest.raises(
         ValueError, match="❌ Invalid input: Input must be a pandas DataFrame"
     ):
-        make_prediction(invalid_input)
+        make_prediction(invalid_input, pm)
 
 
 def test_make_prediction_single_observation(
