@@ -1,16 +1,14 @@
-import os
 from pathlib import Path
-from typing import Any, Tuple
+from typing import NoReturn, Tuple, Union
 
 import joblib
+from config import get_logger
 
-from config import PIPELINE_DIR, PIPELINE_SAVE_FILE, get_logger
-from services import DATA_PATHS
-from services.pipeline import NoVacancyPipeline
-from services.preprocessing import NoVacancyDataProcessing
+from app.services.pipeline import NoVacancyPipeline
+from app.services.preprocessing import NoVacancyDataProcessing
 
 
-def handle_error_dm(logger, error_type, message, exception):
+def handle_error_dm(logger, error_type, message, exception) -> NoReturn:
     logger.error(f"{message}: {exception}")
     raise error_type(f"{message}: {exception}")
 
@@ -21,16 +19,19 @@ class PipelineManagement:
     Handles saving, loading, and managing the pipeline.
     """
 
-    def __init__(self):
+    def __init__(self, pipeline_path: Union[str, Path]) -> None:
         self.logger = get_logger(logger_name=__name__)
-        self.pipeline_path = Path(DATA_PATHS["model_save_path"])
+        self.pipeline_path = Path(pipeline_path)
 
     def save_pipeline(
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
     ) -> None:
-        self.__validate_pipeline_and_processor(pipeline, processor)
+        self._validate_pipeline_and_processor(pipeline, processor)
 
         try:
+            # Ensure the directory exists before saving
+            self.pipeline_path.parent.mkdir(parents=True, exist_ok=True)
+
             # Save both pipeline and processor as a dictionary
             joblib.dump(
                 {"pipeline": pipeline, "processor": processor},
@@ -46,6 +47,7 @@ class PipelineManagement:
 
     def load_pipeline(self) -> Tuple[NoVacancyPipeline, NoVacancyDataProcessing]:
         try:
+            # Generate a comprehensive error message if the pipeline path is not found
             if not self.pipeline_path.exists():
                 raise FileNotFoundError(
                     f"Pipeline file not found at {self.pipeline_path}"
@@ -56,15 +58,20 @@ class PipelineManagement:
             pipeline = artifacts.get("pipeline")
             processor = artifacts.get("processor")
 
-            self.__validate_pipeline_and_processor(pipeline, processor)
+            self._validate_pipeline_and_processor(pipeline, processor)
 
             self.logger.info(
                 f"✅ Pipeline and processor successfully loaded from {self.pipeline_path}"
             )
             return pipeline, processor
 
-        except Exception as e:
-            handle_error_dm(self.logger, type(e), "❌ Error during pipeline loading", e)
+        except FileNotFoundError as e:
+            handle_error_dm(self.logger, type(e), "❌ Pipeline not found", e)
+
+        except (ValueError, AttributeError) as e:
+            handle_error_dm(
+                self.logger, type(e), "❌ Invalid pipeline or processor format", e
+            )
 
     def delete_pipeline(self) -> None:
         try:
@@ -84,7 +91,7 @@ class PipelineManagement:
                 self.logger, type(e), "❌ Error during pipeline deletion", e
             )
 
-    def __validate_pipeline_and_processor(
+    def _validate_pipeline_and_processor(
         self, pipeline: NoVacancyPipeline, processor: NoVacancyDataProcessing
     ) -> None:
         if not isinstance(pipeline, NoVacancyPipeline):

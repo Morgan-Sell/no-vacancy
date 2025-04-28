@@ -25,7 +25,7 @@ The web server is built using FastAPI and is containerized with Docker.
 
 3. Build the Docker image (replace <docker_username> with your Docker Hub username). Make sure Docker is running on your local PC.
    ```
-   docker build -t <docker_username>/no-vacancy:v1 . 
+   docker build -t <docker_username>/no-vacancy:v1 .
    ```
 
 4. Run the container.
@@ -34,7 +34,3 @@ The web server is built using FastAPI and is containerized with Docker.
    ```
 
 5. Test the API by going to `http://0.0.0.0:8000/docs` in your browser.
-
-
-
-

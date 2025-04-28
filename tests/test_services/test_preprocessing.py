@@ -1,11 +1,7 @@
 import pandas as pd
 import pytest
 
-from app.services import (
-    BOOKING_MAP,
-    MONTH_ABBREVIATION_MAP,
-    VARIABLE_RENAME_MAP,
-)
+from app.services import BOOKING_MAP, MONTH_ABBREVIATION_MAP, VARIABLE_RENAME_MAP
 from app.services.preprocessing import NoVacancyDataProcessing
 
 
@@ -37,7 +33,7 @@ def test_to_snake_case(input_str, expected_output):
     )
 
     # Action & Assert
-    assert transformer.__to_snake_case(input_str) == expected_output
+    assert transformer._to_snake_case(input_str) == expected_output
 
 
 def test_convert_columns_to_snake_case(booking_data):
@@ -50,7 +46,7 @@ def test_convert_columns_to_snake_case(booking_data):
     )
 
     # Action
-    result_df = transformer.__convert_columns_to_snake_case(booking_data)
+    result_df = transformer._convert_columns_to_snake_case(booking_data)
 
     # Assert
     expected_columns = [

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
-from config import get_logger
-from routers import health, predict, version
+from app.config import get_logger
+from app.routers import health, predict, version
 
 _logger = get_logger(logger_name=__name__)
 
@@ -11,6 +11,7 @@ app = FastAPI()
 @app.get("/")
 async def root():
     return {"message": "Welcome to the No Vacancy API!"}
+
 
 # Register routers with API instance
 app.include_router(health.router)

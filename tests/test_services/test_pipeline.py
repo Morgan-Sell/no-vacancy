@@ -28,9 +28,9 @@ def test_pipeline_structure(sample_pipeline, booking_data):
     """
     # Arrange
     search_space = {
-        "model__n_estimators": list(range(1, 502, 50)),
-        "model__max_features": ["log2", "sqrt"],
-        "model__max_depth": [3, 5],
+        "n_estimators": list(range(1, 502, 50)),
+        "max_features": ["log2", "sqrt"],
+        "max_depth": [3, 5],
     }
 
     processor = NoVacancyDataProcessing(
@@ -44,8 +44,8 @@ def test_pipeline_structure(sample_pipeline, booking_data):
     X_tr, y_tr = processor.fit_transform(X, y)
 
     # Action
-    sample_pipeline.pipeline(search_space)
-    sample_pipeline.fit(X_tr, y_tr)
+    # sample_pipeline.pipeline(search_space)
+    sample_pipeline.fit(X_tr, y_tr, search_space)
 
     # Assert
     assert isinstance(sample_pipeline.rscv, RandomizedSearchCV)
@@ -61,9 +61,9 @@ def test_pipeline_fit(sample_pipeline, booking_data):
     """
     # Arrange
     search_space = {
-        "model__n_estimators": [100, 200],
-        "model__max_depth": [3, 5, 7],
-        "model__max_features": ["sqrt", "log2"],
+        "n_estimators": [100, 200],
+        "max_depth": [3, 5, 7],
+        "max_features": ["sqrt", "log2"],
     }
 
     processor = NoVacancyDataProcessing(
@@ -77,8 +77,7 @@ def test_pipeline_fit(sample_pipeline, booking_data):
     X_tr, y_tr = processor.fit_transform(X, y)
 
     # Action
-    sample_pipeline.pipeline(search_space)
-    sample_pipeline.fit(X_tr, y_tr)
+    sample_pipeline.fit(X_tr, y_tr, search_space)
 
     # Assert
     # Verify RandomSearchCV is successfully fitted

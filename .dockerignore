@@ -1,4 +1,57 @@
+# Byte-compiled / cache
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*.so
+*.pyd
+
+# Virtual environments
 venv/
+.venv/
+ENV/
+env/
+
+# Jupyter notebooks
+*.ipynb
+
+# Git and other VCS
+.git/
+.gitignore
+
+# Editor settings
+.vscode/
+.idea/
+*.swp
+
+# Testing
+tests/
+coverage/
+htmlcov/
+.tox/
+.nox/
+pytest_cache/
+.coverage
+
+# Data files
+*.db
+*.sqlite
+*.log
+*.csv
+*.tsv
+*.parquet
+*.feather
+*.h5
+*.hdf5
+
+# Docker-specific
+Dockerfile
+.dockerignore
+
+# Env/config
+.env
+.env.*
+*.secret
+*.bak
+
+# Documentation
+README.md
+LICENSE

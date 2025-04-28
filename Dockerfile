@@ -13,7 +13,7 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install -r requirements.txt
 
-# Copy the application code
+# Copy whole project
 COPY app /app
 
 # Expose API port
