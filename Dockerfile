@@ -10,8 +10,10 @@ ENV PYTHONPATH="/app"
 
 # Copy dependencies
 COPY requirements.txt .
+COPY pyproject.toml .
 
 # Install dependencies
+RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 # Copy the application code

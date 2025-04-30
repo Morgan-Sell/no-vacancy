@@ -1,11 +1,10 @@
 import pandas as pd
-import pytest
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
-from app.services import (
+from services import (
     BOOKING_MAP,
     DATA_PATHS,
     MONTH_ABBREVIATION_MAP,
@@ -15,10 +14,10 @@ from app.services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from app.services.pipeline import NoVacancyPipeline
-from app.services.pipeline_management import PipelineManagement
-from app.services.predictor import make_prediction
-from app.services.preprocessing import NoVacancyDataProcessing
+from services.pipeline import NoVacancyPipeline
+from services.pipeline_management import PipelineManagement
+from services.predictor import make_prediction
+from services.preprocessing import NoVacancyDataProcessing
 
 
 def test_end_to_end_pipeline(booking_data, pm, temp_pipeline_path):

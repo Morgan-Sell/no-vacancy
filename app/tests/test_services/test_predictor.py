@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from app.services.predictor import make_prediction
+from services.predictor import make_prediction
 
 
 def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm):

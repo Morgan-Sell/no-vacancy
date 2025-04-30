@@ -5,7 +5,6 @@ from logging.handlers import TimedRotatingFileHandler
 from os.path import abspath, dirname, join
 
 from dotenv import load_dotenv
-from sqlalchemy import Column, Date, Float, Integer, String, create_engine
 
 # Load environment variables from .env file
 load_dotenv()
@@ -58,38 +57,43 @@ ENV = os.getenv("ENV", "PROD").upper()
 
 # -- Postgres Config (Production) --
 # General DB config
-DB_HOST = os.getenv("DB_HOST")
+
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_CONNECT_TIMEOUT = 120  # in seconds
 
 # Bronze DB config
+BRONZE_DB_HOST = os.getenv("BRONZE_DB_HOST")
 BRONZE_DB = os.getenv("BRONZE_DB")
 BRONZE_DB_PORT = os.getenv("BRONZE_DB_PORT")
 
 # Silver DB config
+SILVER_DB_HOST = os.getenv("SILVER_DB_HOST")
 SILVER_DB = os.getenv("SILVER_DB")
 SILVER_DB_PORT = os.getenv("SILVER_DB_PORT")
 
 
 # Gold DB config
+GOLD_DB_HOST = os.getenv("GOLD_DB_HOST")
 GOLD_DB = os.getenv("GOLD_DB")
 GOLD_DB_PORT = os.getenv("GOLD_DB_PORT")
 
 # Test DB config
-TEST_DB_HOST = os.getenv("TEST_DB_HOST")
 TEST_DB_USER = os.getenv("TEST_DB_USER")
 TEST_DB_PASSWORD = os.getenv("TEST_DB_PASSWORD")
 
 # Test Bronze DB config
+TEST_BRONZE_DB_HOST = os.getenv("TEST_BRONZE_DB_HOST")
 TEST_BRONZE_DB = os.getenv("TEST_BRONZE_DB")
 TEST_BRONZE_DB_PORT = os.getenv("TEST_BRONZE_DB_PORT")
 
 # Test Silver DB config
+TEST_SILVER_DB_HOST = os.getenv("TEST_SILVER_DB_HOST")
 TEST_SILVER_DB = os.getenv("TEST_SILVER_DB")
 TEST_SILVER_DB_PORT = os.getenv("TEST_SILVER_DB_PORT")
 
 # Test Gold DB config
+TEST_GOLD_DB_HOST = os.getenv("TEST_GOLD_DB_HOST")
 TEST_GOLD_DB = os.getenv("TEST_GOLD_DB")
 TEST_GOLD_DB_PORT = os.getenv("TEST_GOLD_DB_PORT")
 

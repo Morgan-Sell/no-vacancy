@@ -5,15 +5,16 @@ from datetime import datetime
 
 import psycopg2
 
-from app.config import (
+from config import (
+    BRONZE_DB,
+    BRONZE_DB_HOST,
     DB_CONNECT_TIMEOUT,
-    DB_HOST,
-    DB_NAME,
     DB_PASSWORD,
-    DB_PORT,
+    BRONZE_DB_PORT,
     DB_USER,
     RAW_DATA_FILE_PATH,
     RAW_DATA_TABLE,
+    CSV_HASH_TABLE
 )
 
 
@@ -101,30 +102,31 @@ def import_csv(conn, csv_file, table_name):
 
 
 def main():
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        dbname=DB_NAME,
+    # Connect the Bronze DB 
+    conn_bronze = psycopg2.connect(
+        host=BRONZE_DB_HOST,
+        port=BRONZE_DB_PORT,
+        dbname=BRONZE_DB,
         user=DB_USER,
         password=DB_PASSWORD,
         connect_timeout=DB_CONNECT_TIMEOUT,
     )
 
     # Only create the log table if it doesn't already exist
-    create_log_table(conn)
+    create_log_table(conn_bronze)
 
     file_hash = hash_csv(RAW_DATA_FILE_PATH)
     csv_rows = get_csv_row_count(RAW_DATA_FILE_PATH)
 
-    if has_been_imported(conn, RAW_DATA_FILE_PATH, file_hash):
-        db_rows = get_db_row_count(conn, RAW_DATA_TABLE)
-        log_import(conn, RAW_DATA_FILE_PATH, file_hash, csv_rows, db_rows)
+    if has_been_imported(conn_bronze, RAW_DATA_FILE_PATH, file_hash):
+        db_rows = get_db_row_count(conn_bronze, RAW_DATA_TABLE)
+        log_import(conn_bronze, RAW_DATA_FILE_PATH, file_hash, csv_rows, db_rows)
     else:
-        db_row_before_import = get_db_row_count(conn, RAW_DATA_TABLE)
-        import_csv(conn, RAW_DATA_FILE_PATH, RAW_DATA_TABLE)
-        db_row_after_import = get_db_row_count(conn, RAW_DATA_TABLE)
+        db_row_before_import = get_db_row_count(conn_bronze, RAW_DATA_TABLE)
+        import_csv(conn_bronze, RAW_DATA_FILE_PATH, RAW_DATA_TABLE)
+        db_row_after_import = get_db_row_count(conn_bronze, RAW_DATA_TABLE)
         log_import(
-            conn,
+            conn_bronze,
             RAW_DATA_FILE_PATH,
             file_hash,
             csv_rows,
@@ -135,7 +137,7 @@ def main():
             f"✅ Successfully imported {csv_rows} rows from {RAW_DATA_FILE_PATH} into {RAW_DATA_TABLE}"
         )
 
-    conn.close()
+    conn_bronze.close()
 
 
 if __name__ == "__main__":

@@ -3,10 +3,10 @@ from pathlib import Path
 from typing import Any, Tuple
 
 import joblib
-from app.config import PIPELINE_DIR, PIPELINE_SAVE_FILE, get_logger
-from app.services import DATA_PATHS
-from app.services.pipeline import NoVacancyPipeline
-from app.services.preprocessing import NoVacancyDataProcessing
+from config import PIPELINE_DIR, PIPELINE_SAVE_FILE, get_logger
+from services import DATA_PATHS
+from services.pipeline import NoVacancyPipeline
+from services.preprocessing import NoVacancyDataProcessing
 
 
 def handle_error_dm(logger, error_type, message, exception):

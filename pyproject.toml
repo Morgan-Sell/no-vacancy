@@ -21,8 +21,8 @@ classifiers = [
 
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["app", "tests"]
+testpaths = ["app/tests"]
+pythonpath = ["app"]
 addopts = [
     "--cov=app",
     "--cov-report=term-missing"

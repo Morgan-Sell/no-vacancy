@@ -3,6 +3,8 @@ import re
 import pandas as pd
 from services import BOOKING_MAP
 
+TEST_TABLE = "test_table"
+
 NECESSARY_BINARY_VARIABLES = {
     # Add only fields defined in TrainData or ValidationTestData
     "type_of_meal": ["Meal Plan 1", "Meal Plan 2", "Meal Plan 3"],

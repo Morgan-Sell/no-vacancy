@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Date, Float, Integer, String
 from sqlalchemy.orm import declarative_base
 
-from app.config import __model_version__
+from config import __model_version__
 
 Base = declarative_base()
 

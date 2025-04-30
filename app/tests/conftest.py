@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-# 'app' is not required because pytest automatically adds the root directory to sys.path
-# This capability is configured in pyproject.toml.
+import psycopg2
+
 from db.postgres import (
     BronzeSessionLocal,
     GoldSessionLocal,
@@ -42,8 +42,16 @@ from tests import (
     get_db_model_column_names,
     transform_booking_data_to_bronze_db_format,
     transform_booking_data_to_silver_db_format,
+    TEST_TABLE
 )
 
+from config import (
+    TEST_BRONZE_DB_HOST,
+    TEST_DB_PASSWORD,
+    TEST_BRONZE_DB_PORT,
+    TEST_DB_USER,
+    TEST_BRONZE_DB,
+)
 # -- Helper Functions --
 
 
@@ -620,3 +628,36 @@ def setup_test_dbs(booking_data):
                 session.add(ValidationResults(**gold_kwargs))
                 session.add(TestResults(**gold_kwargs))
             session.commit()
+
+
+@pytest.fixture(scope="function")
+def test_db_conn():
+    """
+    Fixture for test_bronze DB connection and test table setup.
+    """
+    conn = psycopg2.connect(
+        host=TEST_BRONZE_DB_HOST,
+        port=TEST_BRONZE_DB_PORT,
+        dbname=TEST_BRONZE_DB,
+        user=TEST_DB_USER,
+        password=TEST_DB_PASSWORD,
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute(f"""
+        DROP TABLE IF EXISTS {TEST_TABLE};
+        CREATE TABLE {TEST_TABLE} (
+            number_of_adults INTEGER,
+            number_of_weekend_nights INTEGER
+        );
+    """)
+    conn.commit()
+
+    # Allow the test to access the connection
+    yield conn
+
+    cursor.execute(f"DROP TABLE IF EXISTS {TEST_TABLE};")
+    conn.commit()
+    cursor.close()
+    conn.close()

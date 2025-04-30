@@ -7,13 +7,13 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 
-from app.services import (
+from services import (
     BOOKING_MAP,
     MONTH_ABBREVIATION_MAP,
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
 )
-from app.services.preprocessing import NoVacancyDataProcessing
+from services.preprocessing import NoVacancyDataProcessing
 
 
 def test_pipeline_initization(sample_pipeline):

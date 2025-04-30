@@ -12,19 +12,7 @@ from scripts.import_csv_to_postgres import (
     log_import,
 )
 
-from app.config import (
-    CSV_HASH_TABLE,
-    CSV_TABLE_MAP,
-    DB_HOST,
-    DB_NAME,
-    DB_PASSWORD,
-    DB_PORT,
-    DB_USER,
-    TEST_CSV_FILE_PATH,
-    TRAIN_CSV_FILE_PATH,
-    VALIDATION_CSV_FILE_PATH,
-)
-from tests.conftest import TEST_TABLE
+from tests import TEST_TABLE
 
 
 def test_hash_csv_and_row_count(temp_booking_data_csv):

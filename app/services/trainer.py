@@ -2,10 +2,10 @@ import logging
 import warnings
 
 import pandas as pd
-from app.config import __model_version__
+from config import __model_version__
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-from app.services import (
+from services import (
     BOOKING_MAP,
     DATA_PATHS,
     IMPUTATION_METHOD,
@@ -18,16 +18,16 @@ from app.services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from app.services.pipeline import NoVacancyPipeline
-from app.services.pipeline_management import PipelineManagement
-from app.services.preprocessing import NoVacancyDataProcessing
+from services.pipeline import NoVacancyPipeline
+from services.pipeline_management import PipelineManagement
+from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 
-from app.db.postgres import BronzeSessionLocal, SilverSessionLocal
-from app.schemas.bronze import RawData
-from app.schemas.silver import TrainData, ValidateTestData
+from db.postgres import BronzeSessionLocal, SilverSessionLocal
+from schemas.bronze import RawData
+from schemas.silver import TrainData, ValidationTestData
 
 logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")
@@ -68,9 +68,9 @@ def save_to_silver_db(X_train, y_train, X_test, y_test, session: SilverSessionLo
     train_objects = [
         TrainData(**row._asdict()) for row in X_train.itertuples(index=False)
     ]
-    # Create a list of ValidateTestData instances
+    # Create a list of ValidationTestData instances
     test_objects = [
-        ValidateTestData(**row._asdict()) for row in X_test.itertuples(index=False)
+        ValidationTestData(**row._asdict()) for row in X_test.itertuples(index=False)
     ]
 
     # Insert ORM objects to database w/o primary key updates and relationship handling

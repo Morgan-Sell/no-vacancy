@@ -3,11 +3,13 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.config import (
+from config import (
     BRONZE_DB,
     BRONZE_DB_PORT,
     DB_CONNECT_TIMEOUT,
-    DB_HOST,
+    BRONZE_DB_HOST,
+    SILVER_DB_HOST,
+    GOLD_DB_HOST,
     DB_PASSWORD,
     DB_USER,
     ENV,
@@ -17,7 +19,9 @@ from app.config import (
     SILVER_DB_PORT,
     TEST_BRONZE_DB,
     TEST_BRONZE_DB_PORT,
-    TEST_DB_HOST,
+    TEST_BRONZE_DB_HOST,
+    TEST_SILVER_DB_HOST,
+    TEST_GOLD_DB_HOST,
     TEST_DB_PASSWORD,
     TEST_DB_USER,
     TEST_GOLD_DB,
@@ -37,7 +41,7 @@ def make_postgres_url(user, password, host, port, db_name):
 BRONZE_DB_URL = make_postgres_url(
     DB_USER if IS_PROD else TEST_DB_USER,
     DB_PASSWORD if IS_PROD else TEST_DB_PASSWORD,
-    DB_HOST if IS_PROD else TEST_DB_HOST,
+    BRONZE_DB_HOST if IS_PROD else TEST_BRONZE_DB_HOST,
     BRONZE_DB_PORT if IS_PROD else TEST_BRONZE_DB_PORT,
     BRONZE_DB if IS_PROD else TEST_BRONZE_DB,
 )
@@ -45,7 +49,7 @@ BRONZE_DB_URL = make_postgres_url(
 SILVER_DB_URL = make_postgres_url(
     DB_USER if IS_PROD else TEST_DB_USER,
     DB_PASSWORD if IS_PROD else TEST_DB_PASSWORD,
-    DB_HOST if IS_PROD else TEST_DB_HOST,
+    SILVER_DB_HOST if IS_PROD else TEST_SILVER_DB_HOST,
     SILVER_DB_PORT if IS_PROD else TEST_SILVER_DB_PORT,
     SILVER_DB if IS_PROD else TEST_SILVER_DB,
 )
@@ -53,16 +57,13 @@ SILVER_DB_URL = make_postgres_url(
 GOLD_DB_URL = make_postgres_url(
     DB_USER if IS_PROD else TEST_DB_USER,
     DB_PASSWORD if IS_PROD else TEST_DB_PASSWORD,
-    DB_HOST if IS_PROD else TEST_DB_HOST,
+    GOLD_DB_HOST if IS_PROD else TEST_GOLD_DB_HOST,
     GOLD_DB_PORT if IS_PROD else TEST_GOLD_DB_PORT,
     GOLD_DB if IS_PROD else TEST_GOLD_DB,
 )
 
 
 # -- Bronze DB --
-# BRONZE_DB_URL = (
-#     f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{BRONZE_DB_PORT}/bronze"
-# )
 bronze_engine = create_engine(
     BRONZE_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT}
 )
@@ -70,9 +71,6 @@ bronze_engine = create_engine(
 BronzeSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=bronze_engine)
 
 # -- Silver DB --
-# SILVER_DB_URL = (
-#     f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{SILVER_DB_PORT}/silver"
-# )
 silver_engine = create_engine(
     SILVER_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT}
 )
@@ -80,7 +78,6 @@ silver_engine = create_engine(
 SilverSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=silver_engine)
 
 # -- Gold DB --
-# GOLD_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{GOLD_DB_PORT}/gold"
 gold_engine = create_engine(
     GOLD_DB_URL, connect_args={"connect_timeout": DB_CONNECT_TIMEOUT}
 )

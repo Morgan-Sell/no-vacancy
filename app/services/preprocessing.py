@@ -2,7 +2,7 @@ import re
 from typing import Dict, List, Tuple
 
 import pandas as pd
-from app.services import BOOKING_MAP, MONTH_ABBREVIATION_MAP, VARIABLE_RENAME_MAP
+from services import BOOKING_MAP, MONTH_ABBREVIATION_MAP, VARIABLE_RENAME_MAP
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
