@@ -45,7 +45,7 @@ services:
 
 # Test databases for CI  
   test-bronze-db:
-    image: postgres:15
+    image: postgres:latest
     container_name: test-bronze-db
     profiles: [test]
     env_file:
@@ -60,7 +60,7 @@ services:
       - test_bronze_data:/var/lib/postgresql/data
 
   test-silver-db:
-    image: postgres:15
+    image: postgres:latest
     container_name: test-silver-db
     profiles: [test]
     env_file:
@@ -75,7 +75,7 @@ services:
       - test_silver_data:/var/lib/postgresql/data
 
   test-gold-db:
-    image: postgres:15
+    image: postgres:latest
     container_name: test-gold-db
     profiles: [test]
     env_file:
@@ -88,6 +88,22 @@ services:
       - "6435:5432"
     volumes:
       - test_gold_data:/var/lib/postgresql/data
+    
+  test-runner:
+    image: morganpsell/no-vacancy:v1
+    container_name: test-runner
+    profiles: [test]
+    depends_on:
+      - test-bronze-db
+      - test-silver-db
+      - test-gold-db
+    env_file:
+      - .env
+    entrypoint: ["pytest"] # allows specifying pytest options
+    # Updaate container with local code base without rebuilding
+    volumes:
+      - .:/app
+    working_dir: /app
 
   app:
     build: .
