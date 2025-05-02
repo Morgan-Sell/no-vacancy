@@ -42,72 +42,11 @@ services:
     volumes:
       - gold_data:/var/lib/postgresql/data
 
-
-# Test databases for CI  
-  test-bronze-db:
-    image: postgres:latest
-    container_name: test-bronze-db
-    profiles: [test]
-    env_file:
-      - .env
-    environment:
-      POSTGRES_USER: ${TEST_DB_USER}
-      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD}
-      POSTGRES_DB: ${TEST_BRONZE_DB}
-    ports:
-      - "6433:5432"
-    volumes:
-      - test_bronze_data:/var/lib/postgresql/data
-
-  test-silver-db:
-    image: postgres:latest
-    container_name: test-silver-db
-    profiles: [test]
-    env_file:
-      - .env
-    environment:
-      POSTGRES_USER: ${TEST_DB_USER}
-      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD}
-      POSTGRES_DB: ${TEST_SILVER_DB}
-    ports:
-      - "6434:5432"
-    volumes:
-      - test_silver_data:/var/lib/postgresql/data
-
-  test-gold-db:
-    image: postgres:latest
-    container_name: test-gold-db
-    profiles: [test]
-    env_file:
-      - .env
-    environment:
-      POSTGRES_USER: ${TEST_DB_USER}
-      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD}
-      POSTGRES_DB: ${TEST_GOLD_DB}
-    ports:
-      - "6435:5432"
-    volumes:
-      - test_gold_data:/var/lib/postgresql/data
-    
-  test-runner:
-    image: morganpsell/no-vacancy:v1
-    container_name: test-runner
-    profiles: [test]
-    depends_on:
-      - test-bronze-db
-      - test-silver-db
-      - test-gold-db
-    env_file:
-      - .env
-    entrypoint: ["pytest"] # allows specifying pytest options
-    # Updaate container with local code base without rebuilding
-    volumes:
-      - .:/app
-    working_dir: /app
-
   app:
     build: .
     container_name: novacancy-app
+    ports:
+      - "8000:8000"
     depends_on:
       - bronze-db
       - silver-db
@@ -145,14 +84,10 @@ services:
       GOLD_VALIDATION_TABLE: validation_results
       GOLD_TEST_TABLE: test_results
 
-    # volumes:
-      # - .:/app
-    command: python scripts/import_csv_to_postgres.py
+    # command: python scripts/import_csv_to_postgres.py
 
 volumes:
   bronze_data:
   silver_data:
   gold_data:
-  test_bronze_data:
-  test_silver_data:
-  test_gold_data:
+
