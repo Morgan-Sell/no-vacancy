@@ -3,10 +3,6 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.pipeline import Pipeline
-
 from services import (
     BOOKING_MAP,
     MONTH_ABBREVIATION_MAP,
@@ -14,6 +10,9 @@ from services import (
     VARS_TO_DROP,
 )
 from services.preprocessing import NoVacancyDataProcessing
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.pipeline import Pipeline
 
 
 def test_pipeline_initization(sample_pipeline):

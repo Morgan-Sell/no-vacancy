@@ -4,17 +4,16 @@ import os
 from datetime import datetime
 
 import psycopg2
-
 from config import (
     BRONZE_DB,
     BRONZE_DB_HOST,
+    BRONZE_DB_PORT,
+    CSV_HASH_TABLE,
     DB_CONNECT_TIMEOUT,
     DB_PASSWORD,
-    BRONZE_DB_PORT,
     DB_USER,
     RAW_DATA_FILE_PATH,
     RAW_DATA_TABLE,
-    CSV_HASH_TABLE
 )
 
 
@@ -102,7 +101,7 @@ def import_csv(conn, csv_file, table_name):
 
 
 def main():
-    # Connect the Bronze DB 
+    # Connect the Bronze DB
     conn_bronze = psycopg2.connect(
         host=BRONZE_DB_HOST,
         port=BRONZE_DB_PORT,

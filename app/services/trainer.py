@@ -3,8 +3,11 @@ import warnings
 
 import pandas as pd
 from config import __model_version__
+from db.postgres import BronzeSessionLocal, SilverSessionLocal
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
+from schemas.bronze import RawData
+from schemas.silver import TrainData, ValidationTestData
 from services import (
     BOOKING_MAP,
     DATA_PATHS,
@@ -24,10 +27,6 @@ from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
-
-from db.postgres import BronzeSessionLocal, SilverSessionLocal
-from schemas.bronze import RawData
-from schemas.silver import TrainData, ValidationTestData
 
 logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")

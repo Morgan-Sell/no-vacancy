@@ -1,7 +1,6 @@
+from config import __api_version__, __model_version__
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-
-from config import __api_version__, __model_version__
 
 # Define the router
 router = APIRouter(prefix="/version", tags=["version"])

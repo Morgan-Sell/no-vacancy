@@ -1,6 +1,5 @@
 import pandas as pd
 import pytest
-
 from services import BOOKING_MAP, MONTH_ABBREVIATION_MAP, VARIABLE_RENAME_MAP
 from services.preprocessing import NoVacancyDataProcessing
 

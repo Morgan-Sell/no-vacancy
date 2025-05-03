@@ -7,11 +7,10 @@ import numpy as np
 import pytest
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-from sklearn.ensemble import RandomForestClassifier
-
 from services import VARS_TO_IMPUTE, VARS_TO_OHE
 from services.pipeline import NoVacancyPipeline
 from services.preprocessing import NoVacancyDataProcessing
+from sklearn.ensemble import RandomForestClassifier
 
 
 # -----------------------------

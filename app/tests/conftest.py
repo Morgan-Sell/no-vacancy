@@ -9,20 +9,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-import pytest
 import psycopg2
-
-from db.postgres import (
-    BronzeSessionLocal,
-    GoldSessionLocal,
-    SilverSessionLocal,
-    init_all_databases,
-)
+import pytest
+from config import TEST_DB, TEST_DB_HOST, TEST_DB_PASSWORD, TEST_DB_PORT, TEST_DB_USER
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-from schemas.bronze import RawData
-from schemas.gold import TestResults, TrainResults, ValidationResults
-from schemas.silver import TrainData, ValidationTestData
 from services import (
     BOOKING_MAP,
     DATA_PATHS,
@@ -37,21 +28,8 @@ from services.pipeline import NoVacancyPipeline
 from services.pipeline_management import PipelineManagement
 from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
+from tests import TEST_TABLE
 
-from tests import (
-    get_db_model_column_names,
-    transform_booking_data_to_bronze_db_format,
-    transform_booking_data_to_silver_db_format,
-    TEST_TABLE
-)
-
-from config import (
-    TEST_BRONZE_DB_HOST,
-    TEST_DB_PASSWORD,
-    TEST_BRONZE_DB_PORT,
-    TEST_DB_USER,
-    TEST_BRONZE_DB,
-)
 # -- Helper Functions --
 
 
@@ -531,127 +509,30 @@ def trained_pipeline_and_processor(booking_data, tmp_path):
     return pipe, processor, pm
 
 
-@pytest.fixture(scope="session")
-def setup_test_dbs(booking_data):
-    init_all_databases()
-
-    # Prepare booking_data for Bronze db
-
-    # Seed Bronze database
-    with BronzeSessionLocal() as session:
-        # Ensure the table is empty before seeding
-        session.query(RawData).delete()
-        session.commit()
-
-        # Transform booking_data to match the Bronze DB schema
-        # bronze_data = transform_booking_data_to_bronze_db_format(booking_data.copy())
-
-        # Seed the Bronze database with booking_data
-        for _, row in booking_data.iterrows():
-            session.add(
-                RawData(
-                    booking_id=row["Booking_ID"],
-                    number_of_adults=row["number of adults"],
-                    number_of_children=row["number of children"],
-                    number_of_weekend_nights=row["number of weekend nights"],
-                    number_of_week_nights=row["number of week nights"],
-                    type_of_meal=row["type of meal"],
-                    car_parking_space=row["car parking space"],
-                    room_type=row["room type"],
-                    lead_time=row["lead time"],
-                    market_segment_type=row["market segment type"],
-                    is_repeat_guest=row["repeated"],
-                    num_previous_cancellations=row["P-C"],
-                    num_previous_bookings_not_canceled=row["P-not-C"],
-                    average_price=row["average price"],
-                    special_requests=row["special requests"],
-                    date_of_reservation=datetime.strptime(
-                        row["date of reservation"], "%m/%d/%Y"
-                    ).date(),
-                    booking_status=row["booking status"],
-                )
-            )
-        session.commit()
-
-        # Prepare booking_data for Silver db (split half into train, half into validate/test)
-        silver_data = transform_booking_data_to_silver_db_format(booking_data.copy())
-        mid = len(silver_data) // 2
-        silver_train_rows = silver_data.head(mid).copy()
-        silver_test_rows = silver_data.tail(mid).copy()
-
-        with SilverSessionLocal() as session:
-            # Ensure the tables are empty before seeding
-            session.query(TrainData).delete()
-            session.query(ValidationTestData).delete()
-            session.commit()
-
-            # Seed the Silver database with transformed booking_data
-            session.bulk_save_objects(
-                [
-                    TrainData(**row)
-                    for row in silver_train_rows.to_dict(orient="records")
-                ]
-            )
-
-            session.bulk_save_objects(
-                [
-                    ValidationTestData(**row)
-                    for row in silver_test_rows.to_dict(orient="records")
-                ]
-            )
-            session.commit()
-
-        # Seed Gold database
-        with GoldSessionLocal() as session:
-            # Ensure the tables are empty before seeding
-            session.query(TrainResults).delete()
-            session.query(ValidationResults).delete()
-            session.query(TestResults).delete()
-            session.commit()
-
-            # Seed the Gold database with booking_data
-            for _, row in booking_data.iterrows():
-                is_not_canceled = row["booking status"] == "Not_Canceled"
-                if is_not_canceled:
-                    prob = round(random.uniform(0.70, 0.99), 2)
-                else:
-                    prob = round(random.uniform(0.01, 0.30), 2)
-
-                gold_kwargs = dict(
-                    booking_id=row["Booking_ID"],
-                    prediction=int(is_not_canceled),
-                    probability_not_canceled=prob,
-                    probability_canceled=1 - prob,
-                    created_at=datetime.today().date(),
-                )
-                session.add(TrainResults(**gold_kwargs))
-                session.add(ValidationResults(**gold_kwargs))
-                session.add(TestResults(**gold_kwargs))
-            session.commit()
-
-
 @pytest.fixture(scope="function")
 def test_db_conn():
     """
-    Fixture for test_bronze DB connection and test table setup.
+    Fixture for test DB connection and test table setup.
     """
     conn = psycopg2.connect(
-        host=TEST_BRONZE_DB_HOST,
-        port=TEST_BRONZE_DB_PORT,
-        dbname=TEST_BRONZE_DB,
+        host=TEST_DB_HOST,
+        port=TEST_DB_PORT,
+        dbname=TEST_DB,
         user=TEST_DB_USER,
         password=TEST_DB_PASSWORD,
     )
 
     cursor = conn.cursor()
 
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         DROP TABLE IF EXISTS {TEST_TABLE};
         CREATE TABLE {TEST_TABLE} (
             number_of_adults INTEGER,
             number_of_weekend_nights INTEGER
         );
-    """)
+    """
+    )
     conn.commit()
 
     # Allow the test to access the connection

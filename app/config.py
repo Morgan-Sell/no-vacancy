@@ -81,21 +81,9 @@ GOLD_DB_PORT = os.getenv("GOLD_DB_PORT")
 # Test DB config
 TEST_DB_USER = os.getenv("TEST_DB_USER")
 TEST_DB_PASSWORD = os.getenv("TEST_DB_PASSWORD")
-
-# Test Bronze DB config
-TEST_BRONZE_DB_HOST = os.getenv("TEST_BRONZE_DB_HOST")
-TEST_BRONZE_DB = os.getenv("TEST_BRONZE_DB")
-TEST_BRONZE_DB_PORT = os.getenv("TEST_BRONZE_DB_PORT")
-
-# Test Silver DB config
-TEST_SILVER_DB_HOST = os.getenv("TEST_SILVER_DB_HOST")
-TEST_SILVER_DB = os.getenv("TEST_SILVER_DB")
-TEST_SILVER_DB_PORT = os.getenv("TEST_SILVER_DB_PORT")
-
-# Test Gold DB config
-TEST_GOLD_DB_HOST = os.getenv("TEST_GOLD_DB_HOST")
-TEST_GOLD_DB = os.getenv("TEST_GOLD_DB")
-TEST_GOLD_DB_PORT = os.getenv("TEST_GOLD_DB_PORT")
+TEST_DB_HOST = os.getenv("TEST_DB_HOST")
+TEST_DB = os.getenv("TEST_DB")
+TEST_DB_PORT = os.getenv("TEST_DB_PORT")
 
 
 # CSV File Paths

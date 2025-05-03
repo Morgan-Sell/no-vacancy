@@ -11,7 +11,6 @@ from scripts.import_csv_to_postgres import (
     import_csv,
     log_import,
 )
-
 from tests import TEST_TABLE
 
 

@@ -19,9 +19,11 @@ RUN pip install -r requirements.txt
 # Copy the application code
 COPY app /app
 
+# Ensure stale code is not preserved
+RUN find /app -name "__pycache__" -exec rm -rf {} + || true
+
 # Expose API port
 EXPOSE 8000
 
 # Start FastAPI server
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-# ENTRYPOINT ["tail", "-f", "/dev/null"]
