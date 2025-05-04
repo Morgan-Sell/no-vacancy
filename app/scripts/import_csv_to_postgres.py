@@ -1,16 +1,18 @@
 import csv
 import hashlib
 import os
+import socket
+import time
 from datetime import datetime
 
 import psycopg2
 from config import (
     BRONZE_DB,
     BRONZE_DB_HOST,
-    BRONZE_DB_PORT,
     CSV_HASH_TABLE,
     DB_CONNECT_TIMEOUT,
     DB_PASSWORD,
+    DB_PORT,
     DB_USER,
     RAW_DATA_FILE_PATH,
     RAW_DATA_TABLE,
@@ -100,11 +102,30 @@ def import_csv(conn, csv_file, table_name):
     print(f"✅ Imported data from {csv_file} into {table_name}")
 
 
+def wait_for_db(host, port, timeout=30):
+    """Wait for the PostgreSQL database to be available."""
+    start = time.time()
+
+    while time.time() - start < timeout:
+        try:
+            with socket.create_connection((host, port), timeout=3):
+                print(f"✅ {host}:{port} is available.")
+                return
+        except OSError:
+            print(f"Waiting for {host}:{port} to be available...")
+            time.sleep(3)
+
+    raise TimeoutError(f"❌ Timed out waiting for {host}:{port}")
+
+
 def main():
+    # Wait for the Bronze DB to be available
+    wait_for_db(BRONZE_DB_HOST, DB_PORT)
+
     # Connect the Bronze DB
     conn_bronze = psycopg2.connect(
         host=BRONZE_DB_HOST,
-        port=BRONZE_DB_PORT,
+        port=DB_PORT,
         dbname=BRONZE_DB,
         user=DB_USER,
         password=DB_PASSWORD,

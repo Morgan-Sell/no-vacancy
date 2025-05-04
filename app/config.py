@@ -61,6 +61,7 @@ ENV = os.getenv("ENV", "PROD").upper()
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_CONNECT_TIMEOUT = 120  # in seconds
+DB_PORT = os.getenv("DB_PORT")
 
 # Bronze DB config
 BRONZE_DB_HOST = os.getenv("BRONZE_DB_HOST")
