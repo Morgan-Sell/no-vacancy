@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import os
+import re
 import socket
 import time
 from datetime import datetime
@@ -14,9 +15,13 @@ from config import (
     DB_PASSWORD,
     DB_PORT,
     DB_USER,
+    GOLD_DB_HOST,
     RAW_DATA_FILE_PATH,
     RAW_DATA_TABLE,
+    SILVER_DB_HOST,
+    TEST_DB_HOST,
 )
+from db.db_init import init_all_databases
 
 
 def hash_csv(file_path):
@@ -84,11 +89,18 @@ def log_import(conn, filename, file_hash, csv_rows, db_rows):
     conn.commit()
 
 
+def normalize_column_names(name):
+    """Normalize column names to lowercase and replace spaces with underscores."""
+    return re.sub(r"[^a-z0-9_]", "_", name.strip().lower())
+
+
 def import_csv(conn, csv_file, table_name):
     """Import CSV file into the specified PostgreSQL table."""
     with conn.cursor() as cur, open(csv_file, "r") as f:
         reader = csv.reader(f)
-        header = next(reader)  # extracs header from CSV
+        raw_header = next(reader)  # extracs header from CSV
+        header = [normalize_column_names(col) for col in raw_header]
+
         placeholders = ", ".join(["%s"] * len(header))
         columns = ", ".join(header)
 
@@ -119,10 +131,16 @@ def wait_for_db(host, port, timeout=30):
 
 
 def main():
-    # Wait for the Bronze DB to be available
+    # Wait for all DBs to be available
     wait_for_db(BRONZE_DB_HOST, DB_PORT)
+    wait_for_db(SILVER_DB_HOST, DB_PORT)
+    wait_for_db(GOLD_DB_HOST, DB_PORT)
+    wait_for_db(TEST_DB_HOST, DB_PORT)
 
-    # Connect the Bronze DB
+    # Create tables if needed
+    init_all_databases()
+
+    # Connect the Bronze DB to perform SQL operations
     conn_bronze = psycopg2.connect(
         host=BRONZE_DB_HOST,
         port=DB_PORT,

@@ -13,7 +13,7 @@ from config import (
     TEST_DB_PASSWORD,
     TEST_DB_USER,
 )
-from postgres import PostgresDB
+from db.postgres import PostgresDB
 
 # Initiate the database connections
 bronze_db = PostgresDB(

@@ -1,5 +1,3 @@
-import os
-
 from config import DB_CONNECT_TIMEOUT
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
