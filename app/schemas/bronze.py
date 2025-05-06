@@ -26,5 +26,5 @@ class RawData(Base):
     num_previous_bookings_not_canceled = Column(Integer, nullable=True)
     average_price = Column(Float, nullable=True)
     special_requests = Column(Integer, nullable=True)
-    date_of_reservation = Column(Date, nullable=True)
+    date_of_reservation = Column(String, nullable=True)
     booking_status = Column(String, nullable=False)

@@ -1,9 +1,11 @@
 import logging
 import warnings
 
+
+from sqlalchemy.orm import Session
 import pandas as pd
 from config import __model_version__
-from db.postgres import BronzeSessionLocal, SilverSessionLocal
+from db.db_init import bronze_db, silver_db
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
 from schemas.bronze import RawData
@@ -32,7 +34,7 @@ logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")
 
 
-def load_raw_data(session: BronzeSessionLocal):
+def load_raw_data(session: Session):
     """
     Load raw data from the Bronze database.
     """
@@ -56,7 +58,7 @@ def preprocess_data(X, y, processor):
     return X_train_prcsd, X_test_prcsd, y_train_prcsd, y_test_prcsd
 
 
-def save_to_silver_db(X_train, y_train, X_test, y_test, session: SilverSessionLocal):
+def save_to_silver_db(X_train, y_train, X_test, y_test, session: Session):
     """
     Save the preprocessed data to the Silver database.
     """
@@ -105,7 +107,7 @@ def train_pipeline():
     )
 
     # Load and process raw data
-    with BronzeSessionLocal() as bronze_session:
+    with bronze_db.SessionLocal as bronze_session:
         df = load_raw_data(bronze_session)
 
     X = df.drop(columns=[TARGET_VARIABLE])
@@ -113,7 +115,7 @@ def train_pipeline():
     X_train, X_test, y_train, y_test = preprocess_data(X, y, processor)
 
     # Save preprocessed data to Silver database
-    with SilverSessionLocal() as silver_session:
+    with silver_db.SessionLocal as silver_session:
         save_to_silver_db(X_train, y_train, X_test, y_test, silver_session)
 
     pipe = build_pipeline()

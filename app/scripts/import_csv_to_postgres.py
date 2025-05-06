@@ -7,6 +7,7 @@ import time
 from datetime import datetime
 
 import psycopg2
+from services import VARIABLE_RENAME_MAP
 from config import (
     BRONZE_DB,
     BRONZE_DB_HOST,
@@ -89,9 +90,14 @@ def log_import(conn, filename, file_hash, csv_rows, db_rows):
     conn.commit()
 
 
-def normalize_column_names(name):
-    """Normalize column names to lowercase and replace spaces with underscores."""
-    return re.sub(r"[^a-z0-9_]", "_", name.strip().lower())
+def normalize_column_name(name: str) -> str:
+    """Normalize a raw column name to snake_case and apply any custom renames."""
+    name = name.strip().replace("-", "_")
+    name = re.sub(r"[^\w\s]", "", name)  # remove special characters
+    name = re.sub(r"(?<=[a-z])(?=[A-Z])", "_", name)  # camelCase → snake_case
+    name = re.sub(r"\s+", "_", name)  # spaces → underscores
+    name = name.lower()
+    return VARIABLE_RENAME_MAP.get(name, name)
 
 
 def import_csv(conn, csv_file, table_name):
@@ -99,7 +105,7 @@ def import_csv(conn, csv_file, table_name):
     with conn.cursor() as cur, open(csv_file, "r") as f:
         reader = csv.reader(f)
         raw_header = next(reader)  # extracs header from CSV
-        header = [normalize_column_names(col) for col in raw_header]
+        header = [normalize_column_name(col) for col in raw_header]
 
         placeholders = ", ".join(["%s"] * len(header))
         columns = ", ".join(header)

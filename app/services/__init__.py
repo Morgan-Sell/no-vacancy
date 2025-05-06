@@ -8,8 +8,8 @@ DEPENDENT_VAR_NAME = "booking status"
 
 VARIABLE_RENAME_MAP = {
     "repeated": "is_repeat_guest",
-    "pc": "num_previous_cancellations",
-    "pnot_c": "num_previous_bookings_not_canceled",
+    "p_c": "num_previous_cancellations",
+    "p_not_c": "num_previous_bookings_not_canceled",
 }
 
 MONTH_ABBREVIATION_MAP = {

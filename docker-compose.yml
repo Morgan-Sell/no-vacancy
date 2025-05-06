@@ -101,7 +101,8 @@ services:
       GOLD_VALIDATION_TABLE: validation_results
       GOLD_TEST_TABLE: test_results
 
-    command: python scripts/import_csv_to_postgres.py
+    command: /bin/bash -c "python scripts/import_csv_to_postgres.py && \
+                          uvicorn main:app --host 0.0.0.0 --port 8000"
 
 volumes:
   bronze_data:
