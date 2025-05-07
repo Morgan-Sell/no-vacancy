@@ -5,6 +5,7 @@ import re
 import socket
 import time
 from datetime import datetime
+import asyncio
 
 import psycopg2
 from services import VARIABLE_RENAME_MAP
@@ -144,7 +145,7 @@ def main():
     wait_for_db(TEST_DB_HOST, DB_PORT)
 
     # Create tables if needed
-    init_all_databases()
+    asyncio.run(init_all_databases())
 
     # Connect the Bronze DB to perform SQL operations
     conn_bronze = psycopg2.connect(

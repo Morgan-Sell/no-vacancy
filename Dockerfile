@@ -12,15 +12,13 @@ ENV PYTHONPATH="/app"
 COPY requirements.txt .
 COPY pyproject.toml .
 
-# Install dependencies
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Install dependencies and clean stale cache
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    find /app -name "__pycache__" -exec rm -rf {} + || true
 
 # Copy the application code
 COPY app /app
-
-# Ensure stale code is not preserved
-RUN find /app -name "__pycache__" -exec rm -rf {} + || true
 
 # Expose API port
 EXPOSE 8000

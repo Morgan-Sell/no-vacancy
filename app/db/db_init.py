@@ -13,10 +13,12 @@ from config import (
     TEST_DB_PASSWORD,
     TEST_DB_USER,
 )
-from db.postgres import PostgresDB
+from db.postgres import AsyncPostgresDB
+from schemas import bronze, gold, silver
+
 
 # Initiate the database connections
-bronze_db = PostgresDB(
+bronze_db = AsyncPostgresDB(
     user=DB_USER,
     password=DB_PASSWORD,
     host=BRONZE_DB_HOST,
@@ -24,7 +26,7 @@ bronze_db = PostgresDB(
     db_name=BRONZE_DB,
 )
 
-silver_db = PostgresDB(
+silver_db = AsyncPostgresDB(
     user=DB_USER,
     password=DB_PASSWORD,
     host=SILVER_DB_HOST,
@@ -32,7 +34,7 @@ silver_db = PostgresDB(
     db_name=SILVER_DB,
 )
 
-gold_db = PostgresDB(
+gold_db = AsyncPostgresDB(
     user=DB_USER,
     password=DB_PASSWORD,
     host=GOLD_DB_HOST,
@@ -40,7 +42,7 @@ gold_db = PostgresDB(
     db_name=GOLD_DB,
 )
 
-test_db = PostgresDB(
+test_db = AsyncPostgresDB(
     user=TEST_DB_USER,
     password=TEST_DB_PASSWORD,
     host=TEST_DB_HOST,
@@ -50,13 +52,15 @@ test_db = PostgresDB(
 
 
 # Create all tables if models are defined
-def init_all_databases():
-    from schemas import bronze, gold, silver
-
-    # Production databases
-    bronze.Base.metadata.create_all(bind=bronze_db.engine)
-    silver.Base.metadata.create_all(bind=silver_db.engine)
-    gold.Base.metadata.create_all(bind=gold_db.engine)
-
-    # Use for testing
-    bronze.Base.metadata.create_all(bind=test_db.engine)
+async def init_all_databases():
+    async with bronze_db.engine.begin() as conn:
+        await conn.run_sync(bronze.Base.metadata.create_all)
+  
+    async with silver_db.engine.begin() as conn:
+        await conn.run_sync(silver.Base.metadata.create_all)
+    
+    async with gold_db.engine.begin() as conn:
+        await conn.run_sync(gold.Base.metadata.create_all)
+    
+    async with test_db.engine.begin() as conn:
+        await conn.run_sync(bronze.Base.metadata.create_all)
