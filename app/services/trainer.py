@@ -1,18 +1,16 @@
+import asyncio
 import logging
 import warnings
 
-
-from sqlalchemy.orm import Session
 import pandas as pd
 from config import __model_version__
 from db.db_init import bronze_db, silver_db
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
 from schemas.bronze import RawData
-from schemas.silver import TrainData, ValidationTestData
+from schemas.silver import TestData, TrainValidationData
 from services import (
     BOOKING_MAP,
-    DATA_PATHS,
     IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
     SEARCH_SPACE,
@@ -29,16 +27,21 @@ from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")
 
 
-def load_raw_data(session: Session):
+async def load_raw_data(session: AsyncSession, table: RawData):
     """
     Load raw data from the Bronze database.
     """
-    records = session.query(RawData).all()
+    result = await session.execute(select(table))
+    records = result.scalars().all()
+    if not records:
+        raise ValueError("No data found in the Bronze database.")
     # Convert list of SQLAlchemy model instances to a dataframe
     df = pd.DataFrame([record.__dict__ for record in records])
     # Remove SQLAchemy metadata
@@ -58,7 +61,7 @@ def preprocess_data(X, y, processor):
     return X_train_prcsd, X_test_prcsd, y_train_prcsd, y_test_prcsd
 
 
-def save_to_silver_db(X_train, y_train, X_test, y_test, session: Session):
+async def save_to_silver_db(X_train, y_train, X_test, y_test, session: AsyncSession):
     """
     Save the preprocessed data to the Silver database.
     """
@@ -67,17 +70,15 @@ def save_to_silver_db(X_train, y_train, X_test, y_test, session: Session):
 
     # Create a list of TrainData instances
     train_objects = [
-        TrainData(**row._asdict()) for row in X_train.itertuples(index=False)
+        TrainValidationData(**row._asdict()) for row in X_train.itertuples(index=False)
     ]
     # Create a list of ValidationTestData instances
-    test_objects = [
-        ValidationTestData(**row._asdict()) for row in X_test.itertuples(index=False)
-    ]
+    test_objects = [TestData(**row._asdict()) for row in X_test.itertuples(index=False)]
 
     # Insert ORM objects to database w/o primary key updates and relationship handling
-    session.bulk_save_objects(train_objects)
-    session.bulk_save_objects(test_objects)
-    session.commit()
+    session.add_all(train_objects)
+    session.add_all(test_objects)
+    await session.commit()
 
 
 def build_pipeline():
@@ -96,7 +97,7 @@ def evaluate_model(pipe, X_test, y_test):
     print("AUC: ", round(auc, 5))
 
 
-def train_pipeline():
+async def train_pipeline():
     # Preprocess data separately b/c Pipeline() does not handle target variable transformation
     # Also datetime object needs to be dropped before pipe.fit()
     processor = NoVacancyDataProcessing(
@@ -107,17 +108,22 @@ def train_pipeline():
     )
 
     # Load and process raw data
-    with bronze_db.SessionLocal as bronze_session:
-        df = load_raw_data(bronze_session)
+    async with bronze_db.SessionLocal() as bronze_session:
+        df = await load_raw_data(bronze_session, RawData)
+
+    logger.info("✅ Loaded raw data")
 
     X = df.drop(columns=[TARGET_VARIABLE])
     y = df[TARGET_VARIABLE]
     X_train, X_test, y_train, y_test = preprocess_data(X, y, processor)
 
     # Save preprocessed data to Silver database
-    with silver_db.SessionLocal as silver_session:
-        save_to_silver_db(X_train, y_train, X_test, y_test, silver_session)
+    async with silver_db.SessionLocal() as silver_session:
+        await save_to_silver_db(X_train, y_train, X_test, y_test, silver_session)
 
+    logger.info("✅ Saved preprocessed data to Silver database")
+
+    # Build and train the pipeline
     pipe = build_pipeline()
     pipe.fit(X_train, y_train, search_space=SEARCH_SPACE)
 
@@ -126,6 +132,8 @@ def train_pipeline():
     pm.save_pipeline(pipe, processor)
     evaluate_model(pipe, X_test, y_test)
 
+    logger.info("✅ Model trained and saved")
+
 
 if __name__ == "__main__":
-    train_pipeline()
+    asyncio.run(train_pipeline())

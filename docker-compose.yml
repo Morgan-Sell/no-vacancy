@@ -65,7 +65,6 @@ services:
       - gold-db
     env_file:
       - .env
-    # Ensure Docker uses the live code base, not cached code
     volumes:
     #   - .:/app
       - ./data:/app/data # Mount data directory to read data into Bronze DB

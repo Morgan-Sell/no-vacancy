@@ -1,6 +1,6 @@
 from config import DB_CONNECT_TIMEOUT
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
 
 class AsyncPostgresDB:
@@ -21,9 +21,7 @@ class AsyncPostgresDB:
 
     def _create_engine(self):
         return create_async_engine(
-            self.url,
-            echo=False,
-            connect_args={"timeout": DB_CONNECT_TIMEOUT}
+            self.url, echo=False, connect_args={"timeout": DB_CONNECT_TIMEOUT}
         )
 
     def _create_session(self):

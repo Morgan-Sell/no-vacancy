@@ -4,8 +4,8 @@ from sqlalchemy.orm import declarative_base
 Base = declarative_base()
 
 
-class TrainData(Base):
-    __tablename__ = "train_data"
+class TrainValidationData(Base):
+    __tablename__ = "train_validation_data"
 
     booking_id = Column(String, primary_key=True)
     number_of_adults = Column(Integer, nullable=False)
@@ -53,8 +53,8 @@ class TrainData(Base):
     is_cancellation = Column(Integer, nullable=False)
 
 
-class ValidationTestData(Base):
-    __tablename__ = "validation_test_data"
+class TestData(Base):
+    __tablename__ = "test_data"
 
     booking_id = Column(String, primary_key=True)
     number_of_adults = Column(Integer, nullable=False)

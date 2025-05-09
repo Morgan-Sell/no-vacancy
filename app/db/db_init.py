@@ -16,7 +16,6 @@ from config import (
 from db.postgres import AsyncPostgresDB
 from schemas import bronze, gold, silver
 
-
 # Initiate the database connections
 bronze_db = AsyncPostgresDB(
     user=DB_USER,
@@ -55,12 +54,12 @@ test_db = AsyncPostgresDB(
 async def init_all_databases():
     async with bronze_db.engine.begin() as conn:
         await conn.run_sync(bronze.Base.metadata.create_all)
-  
+
     async with silver_db.engine.begin() as conn:
         await conn.run_sync(silver.Base.metadata.create_all)
-    
+
     async with gold_db.engine.begin() as conn:
         await conn.run_sync(gold.Base.metadata.create_all)
-    
+
     async with test_db.engine.begin() as conn:
         await conn.run_sync(bronze.Base.metadata.create_all)

@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import hashlib
 import os
@@ -5,10 +6,8 @@ import re
 import socket
 import time
 from datetime import datetime
-import asyncio
 
 import psycopg2
-from services import VARIABLE_RENAME_MAP
 from config import (
     BRONZE_DB,
     BRONZE_DB_HOST,
@@ -24,6 +23,7 @@ from config import (
     TEST_DB_HOST,
 )
 from db.db_init import init_all_databases
+from services import VARIABLE_RENAME_MAP
 
 
 def hash_csv(file_path):
