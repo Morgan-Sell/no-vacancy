@@ -14,7 +14,7 @@ from services import (
     IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
     SEARCH_SPACE,
-    TARGET_VARIABLE,
+    RAW_TARGET_VARIABLE,
     TRAIN_RATIO,
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
@@ -83,7 +83,8 @@ async def save_to_silver_db(X_train, y_train, X_test, y_test, session: AsyncSess
 
 def build_pipeline():
     imputer = CategoricalImputer(
-        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
+        imputation_method=IMPUTATION_METHOD,
+        variables=VARS_TO_IMPUTE,
     )
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
     clsfr = RandomForestClassifier()
@@ -113,8 +114,8 @@ async def train_pipeline():
 
     logger.info("✅ Loaded raw data")
 
-    X = df.drop(columns=[TARGET_VARIABLE])
-    y = df[TARGET_VARIABLE]
+    X = df.drop(columns=[RAW_TARGET_VARIABLE])
+    y = df[RAW_TARGET_VARIABLE]
     X_train, X_test, y_train, y_test = preprocess_data(X, y, processor)
 
     # Save preprocessed data to Silver database

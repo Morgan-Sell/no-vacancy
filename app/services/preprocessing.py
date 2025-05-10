@@ -70,6 +70,9 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
         # Make select column names more intuitive
         X_tr.rename(columns=self.variable_rename, inplace=True)
 
+        # Transform NaN to None to avoid errors when writing to Postgres DB
+        X_tr = X_tr.astype(object).where(pd.notnull(X_tr), None)
+
         # Transform the target variable
         if y_tr is not None and self.booking_map is not None:
             y_tr = y_tr.map(self.booking_map)

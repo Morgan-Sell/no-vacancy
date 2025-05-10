@@ -3,7 +3,7 @@
 # ------------------------------------------
 
 # -- Data Processing --
-DEPENDENT_VAR_NAME = "booking status"
+DEPENDENT_VAR_NAME = "booking_status"
 
 
 VARIABLE_RENAME_MAP = {
@@ -74,7 +74,7 @@ TRAIN_RATIO = 0.7
 
 IMPUTATION_METHOD = "frequent"
 
-TARGET_VARIABLE = "booking status"
+RAW_TARGET_VARIABLE = "booking_status"
 
 # TODO: Update paths
 DATA_PATHS = {
