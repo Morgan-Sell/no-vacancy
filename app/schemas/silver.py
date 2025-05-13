@@ -110,4 +110,3 @@ class TestData(Base):
     # is_day_of_week_saturday = Column(Integer, nullable=False)
     # is_day_of_week_tuesday = Column(Integer, nullable=False)
     is_cancellation = Column(Integer, nullable=False)
-

@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import List, Union
 
 import pandas as pd
 from feature_engine.encoding import OneHotEncoder
@@ -26,15 +26,19 @@ class NoVacancyPipeline:
         imputer: CategoricalImputer,
         encoder: OneHotEncoder,
         clsfr: Union[BaseEstimator, XGBClassifier],
+        vars_to_drop: List[str],
     ):
         self.imputer = imputer
         self.encoder = encoder
         self.estimator = clsfr
+        self.vars_to_drop = vars_to_drop
         self.pipe = None  # Placeholder fo the constructed pipeline
         self.rscv = None  # Placeholder for the RandomizedSearchCV object
 
     def fit(self, X, y, search_space):
         """Fit imputer and encoder separately, then train the model using transformed data."""
+        # Drop unnecessary columns
+        X.drop(columns=self.vars_to_drop, inplace=True, errors="ignore")
 
         # Fit imputer and transform X
         self.imputer.fit(X)

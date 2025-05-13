@@ -49,6 +49,9 @@ VARS_TO_OHE = [
 ]
 
 # -- Pipeline (pipeline.py) --
+PRIMARY_KEY = "booking_id"
+
+
 RSCV_PARAMS = {
     "n_iter": 20,  # TODO: Update to 50 after debugging
     "scoring": "roc_auc",

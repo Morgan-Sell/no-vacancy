@@ -13,8 +13,9 @@ from services import (
     BOOKING_MAP,
     IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
-    SEARCH_SPACE,
+    PRIMARY_KEY,
     RAW_TARGET_VARIABLE,
+    SEARCH_SPACE,
     TRAIN_RATIO,
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
@@ -88,7 +89,7 @@ def build_pipeline():
     )
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
     clsfr = RandomForestClassifier()
-    return NoVacancyPipeline(imputer, encoder, clsfr)
+    return NoVacancyPipeline(imputer, encoder, clsfr, [PRIMARY_KEY])
 
 
 def evaluate_model(pipe, X_test, y_test):
@@ -131,6 +132,7 @@ async def train_pipeline():
     # Save the pipeline and processor
     pm = PipelineManagement()
     pm.save_pipeline(pipe, processor)
+    X_test.drop(columns=[PRIMARY_KEY], inplace=True, errors="ignore")
     evaluate_model(pipe, X_test, y_test)
 
     logger.info("✅ Model trained and saved")
