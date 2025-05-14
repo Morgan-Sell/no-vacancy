@@ -68,6 +68,19 @@ Implements medallion architecture and reads `/data/bookings_raw.csv` into the `r
     SELECT * FROM raw_data LIMIT 10;
     ```
     
+10. Since the `raw_data` table has been populated, you can process the data and save the data to `novacancy-silver` database and train the model using the `NoVacancyPipeline` class. Once you're inside the Docker container (by following instruction #8), execute the following code:
+    ```
+    python services/trainer.py
+    ```
+   
+   If the application successfully runs, you should see some like the following:
+   ```
+   2025-05-14 00:43:16,688 - __main__ - INFO -train_pipeline:116 - ✅ Loaded raw data
+   2025-05-14 00:43:19,010 - __main__ - INFO -train_pipeline:126 - ✅ Saved preprocessed data to Silver database
+   Fitting 3 folds for each of 20 candidates, totalling 60 fits
+   2025-05-14 00:43:34,575 - services.pipeline_management - INFO -save_pipeline:39 - ✅ Pipeline and processor successfully saved at models/no_vacancy_pipeline.pkl
+   2025-05-14 00:43:34,740 - __main__ - INFO -evaluate_model:98 - 0.0.3 - AUC: 1.0
+   ```
 
 
 ### `web-server`

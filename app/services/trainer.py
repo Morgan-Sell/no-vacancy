@@ -3,7 +3,7 @@ import logging
 import warnings
 
 import pandas as pd
-from config import __model_version__
+from config import __model_version__, get_logger
 from db.db_init import bronze_db, silver_db
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
@@ -31,7 +31,7 @@ from sklearn.model_selection import train_test_split
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-logger = logging.getLogger(__name__)
+logger = get_logger(logger_name=__name__)
 warnings.filterwarnings("ignore")
 
 
@@ -119,6 +119,23 @@ async def train_pipeline():
     y = df[RAW_TARGET_VARIABLE]
     X_train, X_test, y_train, y_test = preprocess_data(X, y, processor)
 
+    # Debugging
+    print("DEBUG:")
+    print("---------------------")
+    X_train["split"] = "train"
+    X_test["split"] = "test"
+
+    combined = pd.concat([X_train, X_test])
+    dupes = combined[combined.duplicated(keep=False)]
+    print(f"Collapsed (post-transform) duplicates across train/test: {len(dupes)}")
+    print(dupes.head(10))
+
+    X_train.to_csv("data/X_train_debug.csv", index=False)
+    X_test.to_csv("data/X_test_debug.csv", index=False)
+
+    X_train.drop(columns="split", inplace=True, errors="ignore")
+    X_test.drop(columns="split", inplace=True, errors="ignore")
+
     # Save preprocessed data to Silver database
     async with silver_db.SessionLocal() as silver_session:
         await save_to_silver_db(X_train, y_train, X_test, y_test, silver_session)
@@ -134,6 +151,23 @@ async def train_pipeline():
     pm.save_pipeline(pipe, processor)
     X_test.drop(columns=[PRIMARY_KEY], inplace=True, errors="ignore")
     evaluate_model(pipe, X_test, y_test)
+    
+    # DEBUGGING
+    print("DEBUG:")
+    print("---------------------")
+    
+    overlap = pd.merge(X_train, X_test, how="inner")
+    print(f"Overlap rows: {len(overlap)}")
+
+    # Visualization
+    import matplotlib.pyplot as plt
+    plt.hist(pipe.predict_proba(X_test)[:, 1], bins=20)
+    plt.title("Predicted Probabilities")
+    plt.show()
+
+    # Y-Test Distribution
+    print("Y-Test Distribution:\n", y_test.value_counts())
+
 
     logger.info("✅ Model trained and saved")
 
