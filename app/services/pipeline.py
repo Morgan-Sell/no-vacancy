@@ -93,7 +93,7 @@ class NoVacancyPipeline:
             "encoder_type": self.encoder.__class__.__name__,
             "encoder_vars": getattr(self.encoder, "variables", None),
 
-            "modle_type": self.estimator.__class__.__name__,
+            "model": self.estimator.__class__.__name__,
             **{f"model_param_{k}": v for k, v in self.rscv.best_params_.items()},
             "best_model_val_score": round(self.rscv.best_score_, 5),
 

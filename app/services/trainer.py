@@ -145,8 +145,13 @@ async def train_pipeline():
     # MLflow logging
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     logged_params = pipe.get_logged_params()
-    logged_params["test_score"] = test_score
     logged_params["model_version"] = __model_version__
+
+    with mlflow.start_run():
+        mlflow.log_params(logged_params)
+        mlflow.sklearn.log_model(logged_params["model"], "model")
+        mlflow.log_metric("val_auc", logged_params["best_model_val_score"])
+        mlflow.log_metric("test_auc", test_score)
 
 if __name__ == "__main__":
     asyncio.run(train_pipeline())
