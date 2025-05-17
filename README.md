@@ -1,4 +1,4 @@
-# NoVacancy - WebServer Feature Branch
+# NoVacancy Feature Branch History
 A ML application that predicts whether someone will cancel their hotel reservation.
 
 ## Overview
