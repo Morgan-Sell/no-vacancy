@@ -79,3 +79,22 @@ class NoVacancyPipeline:
         if self.pipe is None:
             raise AttributeError("Pipeline is not trained. Call 'fit' method first.")
         return self.pipe.predict_proba(X)
+
+    def get_logged_params(self):
+        """Get selected parameters to be logged."""
+        if self.rcsv is None:
+            raise AttributeError("Model is not trained. Call 'fit' before retrieving parameters.")
+        
+        return {
+            "imputer_type": self.imputer.__class__.__name__,
+            "imputation_method": getattr(self.imputer, "imputation_method", None),
+            "imputer_vars": getattr(self.imputer, "variables", None),
+
+            "encoder_type": self.encoder.__class__.__name__,
+            "encoder_vars": getattr(self.encoder, "variables", None),
+
+            "modle_type": self.estimator.__class__.__name__,
+            **{f"model_param_{k}": v for k, v in self.rscv.best_params_.items()},
+            "best_model_val_score": round(self.rscv.best_score_, 5),
+
+        }

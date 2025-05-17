@@ -12,6 +12,7 @@ from schemas.silver import TestData, TrainValidationData
 from services import (
     BOOKING_MAP,
     IMPUTATION_METHOD,
+    MLFLOW_TRACKING_URI,
     MONTH_ABBREVIATION_MAP,
     PRIMARY_KEY,
     RAW_TARGET_VARIABLE,
@@ -30,6 +31,9 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+
+import mlflow
+import mlflow.sklearn
 
 logger = get_logger(logger_name=__name__)
 warnings.filterwarnings("ignore")
@@ -97,6 +101,7 @@ def evaluate_model(pipe, X_test, y_test):
     auc = roc_auc_score(y_test, y_probs)
     logger.info(f"{__model_version__} - AUC: {auc}")
     print("AUC: ", round(auc, 5))
+    return auc
 
 
 async def train_pipeline():
@@ -119,23 +124,6 @@ async def train_pipeline():
     y = df[RAW_TARGET_VARIABLE]
     X_train, X_test, y_train, y_test = preprocess_data(X, y, processor)
 
-    # Debugging
-    print("DEBUG:")
-    print("---------------------")
-    X_train["split"] = "train"
-    X_test["split"] = "test"
-
-    combined = pd.concat([X_train, X_test])
-    dupes = combined[combined.duplicated(keep=False)]
-    print(f"Collapsed (post-transform) duplicates across train/test: {len(dupes)}")
-    print(dupes.head(10))
-
-    X_train.to_csv("data/X_train_debug.csv", index=False)
-    X_test.to_csv("data/X_test_debug.csv", index=False)
-
-    X_train.drop(columns="split", inplace=True, errors="ignore")
-    X_test.drop(columns="split", inplace=True, errors="ignore")
-
     # Save preprocessed data to Silver database
     async with silver_db.SessionLocal() as silver_session:
         await save_to_silver_db(X_train, y_train, X_test, y_test, silver_session)
@@ -150,27 +138,15 @@ async def train_pipeline():
     pm = PipelineManagement()
     pm.save_pipeline(pipe, processor)
     X_test.drop(columns=[PRIMARY_KEY], inplace=True, errors="ignore")
-    evaluate_model(pipe, X_test, y_test)
-    
-    # DEBUGGING
-    print("DEBUG:")
-    print("---------------------")
-    
-    overlap = pd.merge(X_train, X_test, how="inner")
-    print(f"Overlap rows: {len(overlap)}")
-
-    # Visualization
-    import matplotlib.pyplot as plt
-    plt.hist(pipe.predict_proba(X_test)[:, 1], bins=20)
-    plt.title("Predicted Probabilities")
-    plt.show()
-
-    # Y-Test Distribution
-    print("Y-Test Distribution:\n", y_test.value_counts())
-
+    test_score = evaluate_model(pipe, X_test, y_test)
 
     logger.info("✅ Model trained and saved")
 
+    # MLflow logging
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    logged_params = pipe.get_logged_params()
+    logged_params["test_score"] = test_score
+    logged_params["model_version"] = __model_version__
 
 if __name__ == "__main__":
     asyncio.run(train_pipeline())
