@@ -1,19 +1,22 @@
 import glob
 import os
+import random
+import shutil
 import tempfile
 import time
+from datetime import datetime
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import psycopg2
 import pytest
+from config import TEST_DB, TEST_DB_HOST, TEST_DB_PASSWORD, TEST_DB_PORT, TEST_DB_USER
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
-from sklearn.ensemble import RandomForestClassifier
-
-# 'app' is not required because pytest automatically adds the root directory to sys.path
-# This capability is configured in pyproject.toml.
 from services import (
     BOOKING_MAP,
+    DATA_PATHS,
     IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
     VARIABLE_RENAME_MAP,
@@ -21,12 +24,16 @@ from services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from services.pipeline_management import PipelineManagement
 from services.pipeline import NoVacancyPipeline
+from services.pipeline_management import PipelineManagement
 from services.preprocessing import NoVacancyDataProcessing
+from sklearn.ensemble import RandomForestClassifier
+from tests import TEST_TABLE
+
+# -- Helper Functions --
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def booking_data():
     data = {
         "Booking_ID": [f"INN0000{i}" for i in range(1, 21)],
@@ -333,20 +340,23 @@ def mock_read_csv(mocker, booking_data):
 @pytest.fixture(scope="function")
 def sample_pipeline():
     """Provide a valid sample NoVacancyPipeline instance."""
-    imputer = CategoricalImputer(imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE)
+    imputer = CategoricalImputer(
+        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
+    )
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
     estimator = RandomForestClassifier()
 
     pipeline = NoVacancyPipeline(imputer, encoder, estimator)
-    pipeline.pipeline({})  # Pass empty search space for simplicity
     return pipeline
 
 
 @pytest.fixture(scope="function")
 def mock_pipeline(sample_pipeline):
     """Mock the training and prediction behavior of NoVacancyPipeline."""
-    assert isinstance(sample_pipeline, NoVacancyPipeline), "❌ sample_pipeline is not an instance of NoVacancyPipeline"
-    
+    assert isinstance(
+        sample_pipeline, NoVacancyPipeline
+    ), "❌ sample_pipeline is not an instance of NoVacancyPipeline"
+
     sample_pipeline.fit = MagicMock(return_value=None)
     sample_pipeline.predict = MagicMock(return_value=[1, 0])
     sample_pipeline.predict_proba = MagicMock(return_value=[[0.1, 0.9], [0.8, 0.2]])
@@ -454,12 +464,81 @@ def pm(temp_pipeline_path):
     Use fixture to instantiate DataManagement to follow DRY
     principle and enable easier code changes.
     """
-    # Mock DATA_PATHS["model_save_path"] b/c (1) tests should rely on hardcoded
-    # global paths that may interfere with the application and (2) if DATA_PATHS
-    # structure changes, the tests will seamlessly adapt.
-    with patch.dict(
-        "app.services.DATA_PATHS",
-        {"model_save_path": str(temp_pipeline_path)},
-        clear=False,  # Ensures other DATA_PATHS keys are not impacted
-    ):
-        return PipelineManagement()
+    return PipelineManagement(pipeline_path=str(temp_pipeline_path))
+
+
+@pytest.fixture(scope="function")
+def trained_pipeline_and_processor(booking_data, tmp_path):
+    # Preprocessing
+    processor = NoVacancyDataProcessing(
+        variable_rename=VARIABLE_RENAME_MAP,
+        month_abbreviation=MONTH_ABBREVIATION_MAP,
+        vars_to_drop=VARS_TO_DROP,
+        booking_map=BOOKING_MAP,
+    )
+    X = booking_data.drop(columns=["booking status"])
+    y = booking_data["booking status"]
+    X_train_prcsd, y_train_prcsd = processor.fit_transform(X, y)
+
+    # Build + train pipeline
+    imputer = CategoricalImputer(
+        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
+    )
+    encoder = OneHotEncoder(variables=VARS_TO_OHE)
+    clsfr = RandomForestClassifier()
+    search_space = {
+        "n_estimators": [20, 50, 100, 200],
+        "max_features": ["log2", "sqrt"],
+        "max_depth": [1, 3, 5],
+        "min_samples_split": [2, 5, 10],
+    }
+    pipe = NoVacancyPipeline(imputer, encoder, clsfr)
+    pipe.fit(X_train_prcsd, y_train_prcsd, search_space)
+
+    # Save the trained pipeline and processor
+    temp_pipeline_path = tmp_path / DATA_PATHS["model_save_path"]
+    pm = PipelineManagement(pipeline_path=temp_pipeline_path)
+    pm.save_pipeline(pipe, processor)
+
+    # Move the model artifacts to the app path
+    app_path = Path(DATA_PATHS["model_save_path"])
+    app_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(temp_pipeline_path, app_path)
+
+    # In case there's a need to return the variables
+    return pipe, processor, pm
+
+
+@pytest.fixture(scope="function")
+def test_db_conn():
+    """
+    Fixture for test DB connection and test table setup.
+    """
+    conn = psycopg2.connect(
+        host=TEST_DB_HOST,
+        port=TEST_DB_PORT,
+        dbname=TEST_DB,
+        user=TEST_DB_USER,
+        password=TEST_DB_PASSWORD,
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute(
+        f"""
+        DROP TABLE IF EXISTS {TEST_TABLE};
+        CREATE TABLE {TEST_TABLE} (
+            number_of_adults INTEGER,
+            number_of_weekend_nights INTEGER
+        );
+    """
+    )
+    conn.commit()
+
+    # Allow the test to access the connection
+    yield conn
+
+    cursor.execute(f"DROP TABLE IF EXISTS {TEST_TABLE};")
+    conn.commit()
+    cursor.close()
+    conn.close()

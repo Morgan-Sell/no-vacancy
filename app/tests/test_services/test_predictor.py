@@ -2,8 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-
-from app.services.predictor import make_prediction
+from services.predictor import make_prediction
 
 
 def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm):
@@ -14,7 +13,9 @@ def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm
     # Mock the named_steps of the best estimator
     mock_best_estimator.named_steps = {
         "imputation_step": MagicMock(),
-        "encoding_step": MagicMock(get_feature_names_out=MagicMock(return_value=["col1", "col2"])),
+        "encoding_step": MagicMock(
+            get_feature_names_out=MagicMock(return_value=["col1", "col2"])
+        ),
     }
 
     # Assign best_estimator_ to mock_rscv
@@ -22,10 +23,10 @@ def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm
 
     # Attach rscv to mock_pipeline
     mock_pipeline.rscv = mock_rscv
-    
+
     with patch(
         "app.services.pipeline_management.PipelineManagement.load_pipeline",
-        return_value=(mock_pipeline, mock_processor)
+        return_value=(mock_pipeline, mock_processor),
     ):
         # Act
         results = make_prediction(booking_data, pm)
@@ -65,7 +66,9 @@ def test_make_prediction_pipeline_not_found(booking_data, mock_processor, pm):
             make_prediction(booking_data, pm)
 
 
-def test_make_prediction_unexpected_error(booking_data, mock_pipeline, mock_processor, pm):
+def test_make_prediction_unexpected_error(
+    booking_data, mock_pipeline, mock_processor, pm
+):
     # Arrange: Create a mock RandomizedSearchCV with best_estimator_
     mock_rscv = MagicMock()
     mock_best_estimator = MagicMock()
@@ -73,7 +76,9 @@ def test_make_prediction_unexpected_error(booking_data, mock_pipeline, mock_proc
     # Mock named_steps in best_estimator_ to avoid AttributeError
     mock_best_estimator.named_steps = {
         "imputation_step": MagicMock(),
-        "encoding_step": MagicMock(get_feature_names_out=MagicMock(return_value=["col1", "col2"])),
+        "encoding_step": MagicMock(
+            get_feature_names_out=MagicMock(return_value=["col1", "col2"])
+        ),
     }
 
     # Attach the best_estimator_ to mock_rscv
@@ -82,7 +87,6 @@ def test_make_prediction_unexpected_error(booking_data, mock_pipeline, mock_proc
     # Simulate the unexpected error during prediction
     mock_pipeline.rscv = mock_rscv
     mock_pipeline.predict.side_effect = Exception("Unexpected prediction error")
-
 
     # Patch PipelineManagement to return the mock pipeline and processor
     with patch(
@@ -106,7 +110,9 @@ def test_make_prediction_invalid_input_type():
         make_prediction(invalid_input)
 
 
-def test_make_prediction_single_observation(booking_data, mock_pipeline, mock_processor, pm):
+def test_make_prediction_single_observation(
+    booking_data, mock_pipeline, mock_processor, pm
+):
     # Use a single observation
     single_observation = booking_data.iloc[0].to_frame().T.copy()
 
@@ -117,7 +123,9 @@ def test_make_prediction_single_observation(booking_data, mock_pipeline, mock_pr
     # Simulate named_steps for best_estimator_
     mock_best_estimator.named_steps = {
         "imputation_step": MagicMock(),
-        "encoding_step": MagicMock(get_feature_names_out=MagicMock(return_value=["col1", "col2"])),
+        "encoding_step": MagicMock(
+            get_feature_names_out=MagicMock(return_value=["col1", "col2"])
+        ),
     }
 
     # Attach mocks
@@ -130,7 +138,7 @@ def test_make_prediction_single_observation(booking_data, mock_pipeline, mock_pr
 
     with patch(
         "app.services.pipeline_management.PipelineManagement.load_pipeline",
-        return_value=(mock_pipeline, mock_processor)
+        return_value=(mock_pipeline, mock_processor),
     ):
         # Act
         results = make_prediction(single_observation, pm)

@@ -1,15 +1,14 @@
 import logging
-from typing import Union
+from typing import List, Union
 
 import pandas as pd
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
+from services import RSCV_PARAMS
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
-
-from services import RSCV_PARAMS
 
 _logger = logging.getLogger(__name__)
 
@@ -27,18 +26,20 @@ class NoVacancyPipeline:
         imputer: CategoricalImputer,
         encoder: OneHotEncoder,
         clsfr: Union[BaseEstimator, XGBClassifier],
+        vars_to_drop: List[str],
     ):
         self.imputer = imputer
         self.encoder = encoder
         self.estimator = clsfr
+        self.vars_to_drop = vars_to_drop
         self.pipe = None  # Placeholder fo the constructed pipeline
         self.rscv = None  # Placeholder for the RandomizedSearchCV object
 
-
-
     def fit(self, X, y, search_space):
         """Fit imputer and encoder separately, then train the model using transformed data."""
-        
+        # Drop unnecessary columns
+        X.drop(columns=self.vars_to_drop, inplace=True, errors="ignore")
+
         # Fit imputer and transform X
         self.imputer.fit(X)
         X_imputed = self.imputer.transform(X)
@@ -66,14 +67,12 @@ class NoVacancyPipeline:
 
         return self
 
-
     def predict(self, X):
         """Predict class using the final pipeline (with imputer and encoder)."""
         if self.pipe is None:
             raise AttributeError("Pipeline is not trained. Call 'fit' method first.")
-        
-        return self.pipe.predict(X)
 
+        return self.pipe.predict(X)
 
     def predict_proba(self, X):
         """Predict probabilities using the final pipeline (with imputer and encoder)."""

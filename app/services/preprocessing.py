@@ -2,13 +2,8 @@ import re
 from typing import Dict, List, Tuple
 
 import pandas as pd
+from services import BOOKING_MAP, MONTH_ABBREVIATION_MAP, VARIABLE_RENAME_MAP
 from sklearn.base import BaseEstimator, TransformerMixin
-
-from services import (
-    BOOKING_MAP,
-    MONTH_ABBREVIATION_MAP,
-    VARIABLE_RENAME_MAP,
-)
 
 
 class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
@@ -74,6 +69,9 @@ class NoVacancyDataProcessing(BaseEstimator, TransformerMixin):
 
         # Make select column names more intuitive
         X_tr.rename(columns=self.variable_rename, inplace=True)
+
+        # Transform NaN to None to avoid errors when writing to Postgres DB
+        X_tr = X_tr.astype(object).where(pd.notnull(X_tr), None)
 
         # Transform the target variable
         if y_tr is not None and self.booking_map is not None:

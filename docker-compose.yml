@@ -1,0 +1,110 @@
+version: '3.9'
+services:
+  bronze-db:
+    image: postgres:latest
+    container_name: bronze-db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${BRONZE_DB}
+    ports:
+      - "5433:5432"
+    volumes:
+      - bronze_data:/var/lib/postgresql/data
+
+  silver-db:
+    image: postgres:latest
+    container_name: silver-db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${SILVER_DB}
+    ports:
+      - "5434:5432"
+    volumes:
+      - silver_data:/var/lib/postgresql/data
+
+  gold-db:
+    image: postgres:latest
+    container_name: gold-db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${GOLD_DB}
+    ports:
+      - "5435:5432"
+    volumes:
+      - gold_data:/var/lib/postgresql/data
+  
+  test-db:
+    image: postgres:latest
+    container_name: test-db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${TEST_DB_USER}
+      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD}
+      POSTGRES_DB: ${TEST_DB}
+    ports:
+      - "5436:5432"
+    # volumes as test data should not persist
+  app:
+    build: .
+    container_name: novacancy-app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - bronze-db
+      - silver-db
+      - gold-db
+    env_file:
+      - .env
+    volumes:
+    #   - .:/app
+      - ./data:/app/data # Mount data directory to read data into Bronze DB
+
+    environment:
+      # General app configuration
+      DATA_DIR: ./data
+
+      # Bronze DB
+      BRONZE_DB_HOST: bronze-db
+      BRONZE_DB_PORT: ${DB_PORT}
+      BRONZE_DB_NAME: ${BRONZE_DB}
+      BRONZE_DB_USER: ${DB_USER}
+      BRONZE_DB_PASSWORD: ${DB_PASSWORD}
+      BRONZE_TABLE: raw_data
+
+      # Silver DB
+      SILVER_DB_HOST: silver-db
+      SILVER_DB_PORT: ${DB_PORT}
+      SILVER_DB_NAME: ${SILVER_DB}
+      SILVER_DB_USER: ${DB_USER}
+      SILVER_DB_PASSWORD: ${DB_PASSWORD}
+      SILVER_TRAIN_TABLE: train_data
+      SILVER_VALIDATION_TEST_TABLE: validation_test_data
+
+      # Gold DB
+      GOLD_DB_HOST: gold-db
+      GOLD_DB_PORT: ${DB_PORT}
+      GOLD_DB_NAME: ${GOLD_DB}
+      GOLD_DB_USER: ${DB_USER}
+      GOLD_DB_PASSWORD: ${DB_PASSWORD}
+      GOLD_TRAIN_TABLE: train_results
+      GOLD_VALIDATION_TABLE: validation_results
+      GOLD_TEST_TABLE: test_results
+
+    command: /bin/bash -c "python scripts/import_csv_to_postgres.py && \
+                          uvicorn main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  bronze_data:
+  silver_data:
+  gold_data:
+

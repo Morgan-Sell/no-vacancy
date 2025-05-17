@@ -3,13 +3,13 @@
 # ------------------------------------------
 
 # -- Data Processing --
-DEPENDENT_VAR_NAME = "booking status"
+DEPENDENT_VAR_NAME = "booking_status"
 
 
 VARIABLE_RENAME_MAP = {
     "repeated": "is_repeat_guest",
-    "pc": "num_previous_cancellations",
-    "pnot_c": "num_previous_bookings_not_canceled",
+    "p_c": "num_previous_cancellations",
+    "p_not_c": "num_previous_bookings_not_canceled",
 }
 
 MONTH_ABBREVIATION_MAP = {
@@ -32,7 +32,10 @@ BOOKING_MAP = {
     "Canceled": 1,
 }
 
-VARS_TO_DROP = ["booking_id", "date_of_reservation"]
+VARS_TO_DROP = [
+    # "booking_id",
+    "date_of_reservation"
+]
 
 # -- Data Preprocessing (preprocessing.py) --
 VARS_TO_IMPUTE = ["month_of_reservation", "day_of_week"]
@@ -46,15 +49,17 @@ VARS_TO_OHE = [
 ]
 
 # -- Pipeline (pipeline.py) --
+PRIMARY_KEY = "booking_id"
+
+
 RSCV_PARAMS = {
-    "n_iter": 20, # TODO: Update to 50 after debugging
+    "n_iter": 20,  # TODO: Update to 50 after debugging
     "scoring": "roc_auc",
     "n_jobs": -1,
-    "cv": 3, # TODO: Update to 5 after debugging
+    "cv": 3,  # TODO: Update to 5 after debugging
     "verbose": 1,
     "return_train_score": False,
 }
-
 
 
 # -- Model Training (trainer.py) --
@@ -72,7 +77,7 @@ TRAIN_RATIO = 0.7
 
 IMPUTATION_METHOD = "frequent"
 
-TARGET_VARIABLE = "booking status"
+RAW_TARGET_VARIABLE = "booking_status"
 
 # TODO: Update paths
 DATA_PATHS = {
