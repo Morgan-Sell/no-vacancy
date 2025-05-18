@@ -1,4 +1,4 @@
-version: '3.9'
+# Docker Compose file for the NoVacancy application
 services:
   bronze-db:
     image: postgres:latest
@@ -61,10 +61,10 @@ services:
     container_name: mlflow-db
     env_file:
       - .env
-    environemt:
+    environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${MLFOW_DB}
+      POSTGRES_DB: ${MLFLOW_DB}
     ports:
       - "5437:5432"
     volumes:
@@ -72,18 +72,24 @@ services:
 
 
   mlflow:
-    image: ghcr.io/mlflow/mlflow:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
     container_name: mlflow
     ports:
-      - "5000:5000"
+      - "5001:5000"
     depends_on:
       - mlflow-db
+    env_file:
+      - .env
     volumes:
       - ./mlruns:/mlflow/mlruns
-    command: mlflow server \
-      --backend-store-uri sqlite:///mlflow.db \
-      --default-artifact-root /mlflow/mlruns \
-      --host 0.0.0.0
+    command: [
+      "mlflow", "server", 
+      "--backend-store-uri", "postgresql://${DB_USER}:${DB_PASSWORD}@mlflow-db:5432/${MLFLOW_DB}",
+      "--default-artifact-root", "/mlflow/mlruns",
+      "--host", "0.0.0.0"
+    ]
 
 
   app:
@@ -100,7 +106,6 @@ services:
     env_file:
       - .env
     volumes:
-    #   - .:/app
       - ./data:/app/data # Mount data directory to read data into Bronze DB
 
     environment:
@@ -141,4 +146,5 @@ volumes:
   bronze_data:
   silver_data:
   gold_data:
+  mlflow_data:
 

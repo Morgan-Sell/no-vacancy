@@ -37,6 +37,9 @@ import mlflow.sklearn
 logger = get_logger(logger_name=__name__)
 warnings.filterwarnings("ignore")
 
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_experiment("NoVacancyModelTraining")
+
 
 async def load_raw_data(session: AsyncSession, table: RawData):
     """
@@ -142,7 +145,7 @@ async def train_pipeline():
     logger.info("✅ Model trained and saved")
 
     # MLflow logging
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+
     logged_params = pipe.get_logged_params()
     logged_params["model_version"] = __model_version__
 
