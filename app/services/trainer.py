@@ -3,7 +3,7 @@ import logging
 import warnings
 
 import pandas as pd
-from config import __model_version__, get_logger
+from config import __model_version__, get_logger, MLFLOW_TRACKING_URI
 from db.db_init import bronze_db, silver_db
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
@@ -12,7 +12,6 @@ from schemas.silver import TestData, TrainValidationData
 from services import (
     BOOKING_MAP,
     IMPUTATION_METHOD,
-    MLFLOW_TRACKING_URI,
     MONTH_ABBREVIATION_MAP,
     PRIMARY_KEY,
     RAW_TARGET_VARIABLE,

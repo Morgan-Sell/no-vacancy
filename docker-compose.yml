@@ -54,19 +54,38 @@ services:
     ports:
       - "5436:5432"
     # volumes as test data should not persist
-  
+
+
+  mlflow-db:
+    image: postgres:latest
+    container_name: mlflow-db
+    env_file:
+      - .env
+    environemt:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${MLFOW_DB}
+    ports:
+      - "5437:5432"
+    volumes:
+      - mlflow_data:/var/lib/postgresql/data
+
+
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
     container_name: mlflow
     ports:
       - "5000:5000"
+    depends_on:
+      - mlflow-db
     volumes:
       - ./mlruns:/mlflow/mlruns
     command: mlflow server \
       --backend-store-uri sqlite:///mlflow.db \
       --default-artifact-root /mlflow/mlruns \
       --host 0.0.0.0
-  
+
+
   app:
     build: .
     container_name: novacancy-app
@@ -76,6 +95,7 @@ services:
       - bronze-db
       - silver-db
       - gold-db
+      - mlflow-db
       - mlflow
     env_file:
       - .env
