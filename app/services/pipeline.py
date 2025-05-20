@@ -98,3 +98,12 @@ class NoVacancyPipeline:
             "best_model_val_score": round(self.rscv.best_score_, 5),
 
         }
+
+    def get_full_pipeline(self):
+        """
+        Returns the full trained pipeline (imputer → encoder → model).
+        Useful for MLflow logging or inference.
+        """
+        if self.pipe is None:
+            raise AttributeError("Pipeline is not trained. Call 'fit' method first.")
+        return self.pipe
