@@ -82,7 +82,7 @@ class NoVacancyPipeline:
 
     def get_logged_params(self):
         """Get selected parameters to be logged."""
-        if self.rcsv is None:
+        if self.rscv is None:
             raise AttributeError("Model is not trained. Call 'fit' before retrieving parameters.")
         
         return {
