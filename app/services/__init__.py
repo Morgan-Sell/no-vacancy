@@ -79,9 +79,9 @@ IMPUTATION_METHOD = "frequent"
 
 RAW_TARGET_VARIABLE = "booking_status"
 
-# TODO: Update paths
+
 DATA_PATHS = {
-    "raw_data": "data/raw/train.csv",
-    "processed_data": "data/processed/processed_no_vacancy.csv",
     "model_save_path": "models/no_vacancy_pipeline.pkl",
 }
+
+MLFLOW_TRACKING_URI = "http://mlfow:50000"
