@@ -38,6 +38,7 @@ logger = get_logger(logger_name=__name__)
 warnings.filterwarnings("ignore")
 
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+# If an experiment does not exist, MLflow will create it.
 mlflow.set_experiment("NoVacancyModelTraining")
 
 
@@ -145,20 +146,23 @@ async def train_pipeline():
     logger.info("✅ Model trained and saved")
 
     # MLflow logging
-
     logged_params = pipe.get_logged_params()
     logged_params["model_version"] = __model_version__
-
+    
+    # Create parquet to save an input example
+    X_test.iloc[:1].to_parquet("input_example.parquet", index=False)
+    
     with mlflow.start_run():
         mlflow.log_params(logged_params)
         mlflow.sklearn.log_model(
             pipe.get_full_pipeline(),
             "model",
-            input_example=X_test.iloc[:1],
             signature=mlflow.models.infer_signature(X_test, pipe.predict(X_test))
         )
         mlflow.log_metric("val_auc", logged_params["best_model_val_score"])
         mlflow.log_metric("test_auc", test_score)
+        # Saving input_example.parquet separately to mitigate risk of model logging slowdown
+        mlflow.log_artifact("input_example.parquet", artifact_path="input_example")
 
 
 if __name__ == "__main__":
