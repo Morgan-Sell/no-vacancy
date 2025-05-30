@@ -1,0 +1,10 @@
+# Container setup for MLflow
+FROM ghcr.io/mlflow/mlflow:latest
+
+# MLflow requires the git binary to log the Git SHA
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Required for MLflow Postgres DB
+RUN pip install psycopg2-binary

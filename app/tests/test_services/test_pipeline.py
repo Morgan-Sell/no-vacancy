@@ -1,91 +1,44 @@
-from unittest.mock import MagicMock, patch
-
-import pandas as pd
-from feature_engine.encoding import OneHotEncoder
-from feature_engine.imputation import CategoricalImputer
-from services import (
-    BOOKING_MAP,
-    MONTH_ABBREVIATION_MAP,
-    VARIABLE_RENAME_MAP,
-    VARS_TO_DROP,
-)
-from services.preprocessing import NoVacancyDataProcessing
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.pipeline import Pipeline
+import pytest
 
 
-def test_pipeline_initization(sample_pipeline):
-    assert isinstance(sample_pipeline.imputer, CategoricalImputer)
-    assert isinstance(sample_pipeline.encoder, OneHotEncoder)
-    assert isinstance(sample_pipeline.estimator, RandomForestClassifier)
-
-
-def test_pipeline_structure(sample_pipeline, booking_data):
-    """
-    Ensure the pipeline is properly configured with the correct steps.
-    """
+def test_pipeline_fit_and_predict(sample_pipeline, preprocessed_booking_data):
     # Arrange
-    search_space = {
-        "model__n_estimators": list(range(1, 502, 50)),
-        "model__max_features": ["log2", "sqrt"],
-        "model__max_depth": [3, 5],
-    }
+    X, y = preprocessed_booking_data
 
-    processor = NoVacancyDataProcessing(
-        variable_rename=VARIABLE_RENAME_MAP,
-        month_abbreviation=MONTH_ABBREVIATION_MAP,
-        vars_to_drop=VARS_TO_DROP,
-        booking_map=BOOKING_MAP,
-    )
-    X = booking_data.drop(columns=["booking status"])
-    y = booking_data["booking status"]
-    X_tr, y_tr = processor.fit_transform(X, y)
+    search_space = {"n_estimators": [10], "max_depth": [3]}
 
-    # Action
-    sample_pipeline.pipeline(search_space)
-    sample_pipeline.fit(X_tr, y_tr)
+    # Act
+    sample_pipeline.fit(X, y, search_space)
+    preds = sample_pipeline.predict(X)
+    probs = sample_pipeline.predict_proba(X)
 
     # Assert
-    assert isinstance(sample_pipeline.rscv, RandomizedSearchCV)
-    assert isinstance(sample_pipeline.pipe, Pipeline)
-    assert "imputation_step" in sample_pipeline.pipe.named_steps
-    assert "encoding_step" in sample_pipeline.pipe.named_steps
-    assert "model" in sample_pipeline.pipe.named_steps
+    assert len(preds) == len(X)
+    assert probs.shape == (len(X), 2)
 
 
-def test_pipeline_fit(sample_pipeline, booking_data):
-    """
-    Ensure the pipeline's training behavior is correct.
-    """
+def test_get_logged_params(sample_pipeline, preprocessed_booking_data):
     # Arrange
-    search_space = {
-        "model__n_estimators": [100, 200],
-        "model__max_depth": [3, 5, 7],
-        "model__max_features": ["sqrt", "log2"],
-    }
+    X, y = preprocessed_booking_data
 
-    processor = NoVacancyDataProcessing(
-        variable_rename=VARIABLE_RENAME_MAP,
-        month_abbreviation=MONTH_ABBREVIATION_MAP,
-        vars_to_drop=VARS_TO_DROP,
-        booking_map=BOOKING_MAP,
-    )
-    X = booking_data.drop(columns=["booking status"])
-    y = booking_data["booking status"]
-    X_tr, y_tr = processor.fit_transform(X, y)
+    search_space = {"n_estimators": [10], "max_depth":[3]}
 
-    # Action
-    sample_pipeline.pipeline(search_space)
-    sample_pipeline.fit(X_tr, y_tr)
+    # Act
+    sample_pipeline.fit(X, y, search_space)
+    params = sample_pipeline.get_logged_params()
 
     # Assert
-    # Verify RandomSearchCV is successfully fitted
-    assert sample_pipeline.rscv is not None, "RandomizedSearchCV was not initialized."
-    assert hasattr(
-        sample_pipeline.rscv, "best_estimator_"
-    ), "RandomizedSearchCV was not fitted."
+    assert params["model"] == "RandomForestClassifier"
+    assert "model_param_n_estimators" in params
+    assert "best_model_val_score" in params
 
-    # Verify X and y have valid types
-    assert isinstance(X_tr, pd.DataFrame)
-    assert isinstance(y_tr, pd.Series)
+
+def test_predict_before_fit_raises(sample_pipeline, preprocessed_booking_data):
+    X, _ = preprocessed_booking_data
+    with pytest.raises(AttributeError, match="Pipeline is not trained"):
+        sample_pipeline.predict(X)
+
+
+def test_get_logged_params_before_fit_raises(sample_pipeline):
+    with pytest.raises(AttributeError, match="Model is not trained"):
+        sample_pipeline.get_logged_params()
