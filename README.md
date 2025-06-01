@@ -7,6 +7,66 @@ Includes the installation steps for each feature branch.
 
 ## Installation & Running the App
 
+### `mlflow`
+When `NoVacancyPipeline` is trained, model artifacts and experimentation results are saved to MLflow repository.
+
+1. Clone the repo.
+   ```
+    git clone https://github.com/Morgan-Sell/no-vacancy.git
+   ```
+
+2. Switch to `mlflow` feature branch.
+   ```
+   git checkout mlflow
+   ```
+
+3. Create a `.env` file in the project root directory with the following variables:
+   - DB_USER
+   - DB_PASSWORD
+   - DB_PORT
+   - BRONZE_DB_HOST
+   - BRONZE_DB
+   - SILVER_DB_HOST
+   - SILVER_DB
+   - GOLD_DB_HOST
+   - GOLD_DB
+   - TEST_DB_USER
+   - TEST_DB_PASSWORD
+   - TEST_DB_HOST
+   - TEST_DB
+   - TEST_DB_PORT
+   - MLFLOW_DB_HOST
+   - MLFLOW_DB
+   - MLFLOW_TRACKING_URI
+
+4. Build Docker image defined in `docker-compose.yaml`.
+   ```
+   docker compose build
+   ```
+
+5. Start all docker services in detached mode.
+   ```
+   docker compose up -d
+   ```
+
+6. Identify the container ID by running
+   ```
+   docker ps -a
+   ```
+
+7. Once you've identified the container ID associated with the image called `no-vacancy-app` enter the following to access the application:
+   ```
+   docker exec -it <container_id> /bin/bash
+   ```
+
+8 Train the NoVacancyPipeline in a Docker container by running
+   ```
+   python services/trainer.py
+   ```
+
+9. Enter `http://localhost:5001` into your web browser. Your web browser disply MLflow. In the Experiments sidebar, you should see **NoVacancyModelTraining**. Select it and you will see the model artifacts.
+
+
 ### `postgres`
 Implements medallion architecture and reads `/data/bookings_raw.csv` into the `raw_data` table in the Bronze database.
 

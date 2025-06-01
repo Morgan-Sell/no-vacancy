@@ -19,6 +19,8 @@ from services import (
     DATA_PATHS,
     IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
+    PRIMARY_KEY,
+    RAW_TARGET_VARIABLE,
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
     VARS_TO_IMPUTE,
@@ -332,6 +334,22 @@ def booking_data():
 
 
 @pytest.fixture(scope="function")
+def preprocessed_booking_data(booking_data):
+    """Returns preprocessed booking data ready for NoVacancyPipeline."""
+    processor = NoVacancyDataProcessing(
+        variable_rename=VARIABLE_RENAME_MAP,
+        month_abbreviation=MONTH_ABBREVIATION_MAP,
+        vars_to_drop=VARS_TO_DROP,
+        booking_map=BOOKING_MAP,
+    )
+    df = booking_data.copy()
+    X = df.drop(columns=["booking status"])
+    y = df["booking status"]
+
+    X_tr, y_tr = processor.fit_transform(X, y)
+    return X_tr, y_tr
+
+@pytest.fixture(scope="function")
 def mock_read_csv(mocker, booking_data):
     """Mock pandas read_csv to return booking_data."""
     return mocker.patch("pandas.read_csv", return_value=booking_data)
@@ -346,7 +364,7 @@ def sample_pipeline():
     encoder = OneHotEncoder(variables=VARS_TO_OHE)
     estimator = RandomForestClassifier()
 
-    pipeline = NoVacancyPipeline(imputer, encoder, estimator)
+    pipeline = NoVacancyPipeline(imputer, encoder, estimator, [PRIMARY_KEY])
     return pipeline
 
 

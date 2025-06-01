@@ -86,6 +86,12 @@ TEST_DB_HOST = os.getenv("TEST_DB_HOST")
 TEST_DB = os.getenv("TEST_DB")
 TEST_DB_PORT = os.getenv("TEST_DB_PORT")
 
+# MLflow config
+MLFLOW_DB_HOST = os.getenv("MLFLOW_DB_HOST")
+MLFLOW_DB = os.getenv("MLFLOW_DB")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
+
+
 
 # CSV File Paths
 DATA_DIR = "./data"

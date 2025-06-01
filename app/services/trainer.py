@@ -3,7 +3,7 @@ import logging
 import warnings
 
 import pandas as pd
-from config import __model_version__, get_logger
+from config import __model_version__, get_logger, MLFLOW_TRACKING_URI
 from db.db_init import bronze_db, silver_db
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
@@ -31,8 +31,15 @@ from sklearn.model_selection import train_test_split
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+import mlflow
+import mlflow.sklearn
+
 logger = get_logger(logger_name=__name__)
 warnings.filterwarnings("ignore")
+
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+# If an experiment does not exist, MLflow will create it.
+mlflow.set_experiment("NoVacancyModelTraining")
 
 
 async def load_raw_data(session: AsyncSession, table: RawData):
@@ -97,6 +104,7 @@ def evaluate_model(pipe, X_test, y_test):
     auc = roc_auc_score(y_test, y_probs)
     logger.info(f"{__model_version__} - AUC: {auc}")
     print("AUC: ", round(auc, 5))
+    return auc
 
 
 async def train_pipeline():
@@ -119,23 +127,6 @@ async def train_pipeline():
     y = df[RAW_TARGET_VARIABLE]
     X_train, X_test, y_train, y_test = preprocess_data(X, y, processor)
 
-    # Debugging
-    print("DEBUG:")
-    print("---------------------")
-    X_train["split"] = "train"
-    X_test["split"] = "test"
-
-    combined = pd.concat([X_train, X_test])
-    dupes = combined[combined.duplicated(keep=False)]
-    print(f"Collapsed (post-transform) duplicates across train/test: {len(dupes)}")
-    print(dupes.head(10))
-
-    X_train.to_csv("data/X_train_debug.csv", index=False)
-    X_test.to_csv("data/X_test_debug.csv", index=False)
-
-    X_train.drop(columns="split", inplace=True, errors="ignore")
-    X_test.drop(columns="split", inplace=True, errors="ignore")
-
     # Save preprocessed data to Silver database
     async with silver_db.SessionLocal() as silver_session:
         await save_to_silver_db(X_train, y_train, X_test, y_test, silver_session)
@@ -150,26 +141,28 @@ async def train_pipeline():
     pm = PipelineManagement()
     pm.save_pipeline(pipe, processor)
     X_test.drop(columns=[PRIMARY_KEY], inplace=True, errors="ignore")
-    evaluate_model(pipe, X_test, y_test)
-    
-    # DEBUGGING
-    print("DEBUG:")
-    print("---------------------")
-    
-    overlap = pd.merge(X_train, X_test, how="inner")
-    print(f"Overlap rows: {len(overlap)}")
-
-    # Visualization
-    import matplotlib.pyplot as plt
-    plt.hist(pipe.predict_proba(X_test)[:, 1], bins=20)
-    plt.title("Predicted Probabilities")
-    plt.show()
-
-    # Y-Test Distribution
-    print("Y-Test Distribution:\n", y_test.value_counts())
-
+    test_score = evaluate_model(pipe, X_test, y_test)
 
     logger.info("✅ Model trained and saved")
+
+    # MLflow logging
+    logged_params = pipe.get_logged_params()
+    logged_params["model_version"] = __model_version__
+    
+    # Create parquet to save an input example
+    X_test.iloc[:1].to_parquet("input_example.parquet", index=False)
+    
+    with mlflow.start_run():
+        mlflow.log_params(logged_params)
+        mlflow.sklearn.log_model(
+            pipe.get_full_pipeline(),
+            "model",
+            signature=mlflow.models.infer_signature(X_test, pipe.predict(X_test))
+        )
+        mlflow.log_metric("val_auc", logged_params["best_model_val_score"])
+        mlflow.log_metric("test_auc", test_score)
+        # Saving input_example.parquet separately to mitigate risk of model logging slowdown
+        mlflow.log_artifact("input_example.parquet", artifact_path="input_example")
 
 
 if __name__ == "__main__":
