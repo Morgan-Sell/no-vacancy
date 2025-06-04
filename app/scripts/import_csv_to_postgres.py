@@ -1,7 +1,6 @@
 import asyncio
 import csv
 import hashlib
-import os
 import re
 import socket
 import time
@@ -68,7 +67,7 @@ def has_been_imported(conn, filename, file_hash):
     with conn.cursor() as cur:
         cur.execute(
             f"""
-            SELECT 1 FROM {CSV_HASH_TABLE} 
+            SELECT 1 FROM {CSV_HASH_TABLE}
             WHERE filename = %s
             AND file_hash = %s;
             """,
@@ -82,7 +81,7 @@ def log_import(conn, filename, file_hash, csv_rows, db_rows):
     with conn.cursor() as cur:
         cur.execute(
             f"""
-            INSERT INTO {CSV_HASH_TABLE} 
+            INSERT INTO {CSV_HASH_TABLE}
             (filename, file_hash, csv_row_count, db_row_count, imported_date)
             VALUES (%s, %s, %s, %s, %s);
         """,

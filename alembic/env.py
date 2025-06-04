@@ -1,17 +1,15 @@
 import os
 from logging.config import fileConfig
 
-from sqlalchemy import MetaData, engine_from_config, pool
+from sqlalchemy import engine_from_config, pool
 
-from alembic import context
-from app.db.postgres import BRONZE_DB_URL, GOLD_DB_URL, SILVER_DB_URL
-from app.schemas.bronze import Base as bronze_base
-from app.schemas.gold import Base as gold_base
-from app.schemas.silver import Base as silver_base
+from alembic import context as alembic_context  # type: ignore[attr-defined]
+from app.db.postgres import AsyncPostgresDB  # only for URL generation
+from app.schemas import bronze, gold, silver
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
-config = context.config
+config = alembic_context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -22,22 +20,48 @@ if config.config_file_name is not None:
 # Target DB defaults to bronze
 target_db = os.environ.get("ALEMBIC_TARGET_DB", "bronze")
 
-df_config_map = {
-    "bronze": (BRONZE_DB_URL, bronze_base.metadata, "alembic/versions_bronze"),
-    "silver": (SILVER_DB_URL, silver_base.metadata, "alembic/versions_silver"),
-    "gold": (GOLD_DB_URL, gold_base.metadata, "alembic/versions_gold"),
+df_map = {
+    "bronze": (
+        bronze.Base.metadata,
+        AsyncPostgresDB(
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("BRONZE_DB_HOST"),
+            port=os.getenv("DB_PORT"),
+            db_name=os.getenv("BRONZE_DB"),
+        ).build_url(async_mode=False),
+    ),
+    "silver": (
+        silver.Base.metadata,
+        AsyncPostgresDB(
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("SILVER_DB_HOST"),
+            port=os.getenv("DB_PORT"),
+            db_name=os.getenv("SILVER_DB"),
+        ).build_url(async_mode=False),
+    ),
+    "gold": (
+        gold.Base.metadata,
+        AsyncPostgresDB(
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("GOLD_DB_HOST"),
+            port=os.getenv("DB_PORT"),
+            db_name=os.getenv("GOLD_DB"),
+        ).build_url(async_mode=False),
+    ),
 }
 
 try:
-    sqlalchemy_url, target_metadata, version_path = df_config_map[target_db]
-except KeyError:
+    target_metadata, sqlalchemy_url = df_map[target_db]
+except KeyError as err:
     raise ValueError(
-        f"Invalid target database: {target_db}. Must be one of {list(df_config_map.keys())}."
-    )
+        f"Invalid target database: {target_db}. Must be one of {list(df_map.keys())}."
+    ) from err
 
-# Set dynamic database URL and version path
+# Set dynamic database URL
 config.set_main_option("sqlalchemy.url", sqlalchemy_url)
-config.set_main_option("version_locations", version_path)
 
 
 def run_migrations_offline() -> None:
@@ -52,15 +76,15 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    context.configure(
+    alembic_context.configure(
         url=sqlalchemy_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
 
-    with context.begin_transaction():
-        context.run_migrations()
+    with alembic_context.begin_transaction():
+        alembic_context.run_migrations()
 
 
 def run_migrations_online() -> None:
@@ -77,13 +101,15 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        alembic_context.configure(
+            connection=connection, target_metadata=target_metadata
+        )
 
-        with context.begin_transaction():
-            context.run_migrations()
+        with alembic_context.begin_transaction():
+            alembic_context.run_migrations()
 
 
-if context.is_offline_mode():
+if alembic_context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()

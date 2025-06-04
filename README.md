@@ -127,12 +127,12 @@ Implements medallion architecture and reads `/data/bookings_raw.csv` into the `r
 
     SELECT * FROM raw_data LIMIT 10;
     ```
-    
+
 10. Since the `raw_data` table has been populated, you can process the data and save the data to `novacancy-silver` database and train the model using the `NoVacancyPipeline` class. Once you're inside the Docker container (by following instruction #8), execute the following code:
     ```
     python services/trainer.py
     ```
-   
+
    If the application successfully runs, you should see some like the following:
    ```
    2025-05-14 00:43:16,688 - __main__ - INFO -train_pipeline:116 - ✅ Loaded raw data
@@ -158,7 +158,7 @@ FastAPI web server comprised of the routers and the services required to process
 
 3. Build the Docker image (replace <docker_username> with your Docker Hub username). Make sure Docker is running on your local PC.
    ```
-   docker build -t <docker_username>/no-vacancy:v1 . 
+   docker build -t <docker_username>/no-vacancy:v1 .
    ```
 
 4. Run the container.
@@ -167,7 +167,3 @@ FastAPI web server comprised of the routers and the services required to process
    ```
 
 5. Test the API by going to `http://0.0.0.0:8000/docs` in your browser.
-
-
-
-

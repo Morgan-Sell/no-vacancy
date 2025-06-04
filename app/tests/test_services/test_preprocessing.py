@@ -107,7 +107,7 @@ def test_no_vacancy_data_processing_transform(booking_data):
     assert all(
         month == expected_month
         for month, expected_month in zip(
-            X_tr["month_of_reservation"].tolist(), expected_months
+            X_tr["month_of_reservation"].tolist(), expected_months, strict=False
         )
     )
 
@@ -118,7 +118,7 @@ def test_no_vacancy_data_processing_transform(booking_data):
     assert all(
         weekday == expected_weekday
         for weekday, expected_weekday in zip(
-            X_tr["day_of_week"].tolist(), expected_weekdays
+            X_tr["day_of_week"].tolist(), expected_weekdays, strict=False
         )
     )
 

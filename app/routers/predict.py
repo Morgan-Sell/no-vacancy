@@ -1,7 +1,7 @@
 # import simplejson
 import pandas as pd
 from config import __model_version__, get_logger
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from services.pipeline_management import PipelineManagement
 from services.predictor import make_prediction
@@ -49,4 +49,6 @@ def predict(request_data: PredictionRequest):
 
     except Exception as exc:
         _logger.error(f"Unexpected error during prediction: {exc}")
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}")
+        raise HTTPException(
+            status_code=500, detail=f"Prediction failed: {exc}"
+        ) from exc

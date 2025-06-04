@@ -1,8 +1,6 @@
-import os
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
-import joblib
 import numpy as np
 import pytest
 from feature_engine.encoding import OneHotEncoder

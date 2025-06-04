@@ -1,15 +1,14 @@
-import os
 from pathlib import Path
-from typing import Any, Tuple
+from typing import NoReturn, Tuple
 
 import joblib
-from config import PIPELINE_DIR, PIPELINE_SAVE_FILE, get_logger
+from config import get_logger
 from services import DATA_PATHS
 from services.pipeline import NoVacancyPipeline
 from services.preprocessing import NoVacancyDataProcessing
 
 
-def handle_error_dm(logger, error_type, message, exception):
+def handle_error_dm(logger, error_type, message, exception) -> NoReturn:
     logger.error(f"{message}: {exception}")
     raise error_type(f"{message}: {exception}")
 

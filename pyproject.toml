@@ -36,19 +36,23 @@ omit = ["app/main.py"]
 
 
 [tool.ruff]
+target-version = "py311"
 line-length = 88 # match black's line length
 fix = false # black handles it
-exclude = ["tests/"]
+exclude = ["app/tests/"]
 
 
 [tool.ruff.lint]
-# E: Enforces pycodestyle error codes (like PEP 8).
-# F: Runs pyflakes for identifying unused imports and variables.
-# B: Runs flake8-bugbear for finding potential bugs.
-# W: Warnings for pycodestyle
-select = ["E", "F", "W", "B"] 
+select = [
+  "E", # Enforces pycodestyle error codes (like PEP 8).
+  "F", # Runs pyflakes for identifying unused imports and variables.
+  "W", # Warnings for pycodestyle
+  "B", # Runs flake8-bugbear for finding potential bugs.
+  "PL", # pylint
+  "I", # isort
+]
 # E501: ignore line length (handled by black)
-ignore = ["E501"] 
+ignore = ["E501"]
 
 
 [tool.black]

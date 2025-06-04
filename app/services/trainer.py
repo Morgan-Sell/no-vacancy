@@ -1,9 +1,10 @@
 import asyncio
-import logging
 import warnings
 
+import mlflow
+import mlflow.sklearn
 import pandas as pd
-from config import __model_version__, get_logger, MLFLOW_TRACKING_URI
+from config import MLFLOW_TRACKING_URI, __model_version__, get_logger
 from db.db_init import bronze_db, silver_db
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
@@ -30,9 +31,6 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-
-import mlflow
-import mlflow.sklearn
 
 logger = get_logger(logger_name=__name__)
 warnings.filterwarnings("ignore")
@@ -148,16 +146,16 @@ async def train_pipeline():
     # MLflow logging
     logged_params = pipe.get_logged_params()
     logged_params["model_version"] = __model_version__
-    
+
     # Create parquet to save an input example
     X_test.iloc[:1].to_parquet("input_example.parquet", index=False)
-    
+
     with mlflow.start_run():
         mlflow.log_params(logged_params)
         mlflow.sklearn.log_model(
             pipe.get_full_pipeline(),
             "model",
-            signature=mlflow.models.infer_signature(X_test, pipe.predict(X_test))
+            signature=mlflow.models.infer_signature(X_test, pipe.predict(X_test)),
         )
         mlflow.log_metric("val_auc", logged_params["best_model_val_score"])
         mlflow.log_metric("test_auc", test_score)

@@ -1,12 +1,10 @@
 import glob
 import os
-import random
 import shutil
 import tempfile
 import time
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pandas as pd
 import psycopg2
@@ -20,7 +18,6 @@ from services import (
     IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
     PRIMARY_KEY,
-    RAW_TARGET_VARIABLE,
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
     VARS_TO_IMPUTE,
@@ -348,6 +345,7 @@ def preprocessed_booking_data(booking_data):
 
     X_tr, y_tr = processor.fit_transform(X, y)
     return X_tr, y_tr
+
 
 @pytest.fixture(scope="function")
 def mock_read_csv(mocker, booking_data):

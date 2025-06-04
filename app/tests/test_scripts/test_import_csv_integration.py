@@ -1,8 +1,6 @@
 import hashlib
 import os
 
-import psycopg2
-import pytest
 from scripts.import_csv_to_postgres import (
     get_csv_row_count,
     get_db_row_count,
