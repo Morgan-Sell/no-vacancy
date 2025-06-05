@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import time
 from pathlib import Path
+from unittest import mock
 from unittest.mock import MagicMock
 
 import pandas as pd
@@ -562,3 +563,14 @@ def test_db_conn():
     conn.commit()
     cursor.close()
     conn.close()
+
+
+@pytest.fixture(autouse=True)
+def mock_mlflow():
+    with mock.patch("services.trainer.mlflow") as mock_ml:
+        mock_ml.set_experiment.return_vale = None
+        mock_ml.start_run.return_value.__enter__.return_value = mock.Mock()
+        mock_ml.log_params.return_vale = None
+        mock_ml.log_metric.return_vale = None
+        mock_ml.sklearn.log_model.return_value = None
+        yield

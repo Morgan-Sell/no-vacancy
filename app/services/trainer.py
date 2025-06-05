@@ -35,10 +35,6 @@ from sqlalchemy.future import select
 logger = get_logger(logger_name=__name__)
 warnings.filterwarnings("ignore")
 
-mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-# If an experiment does not exist, MLflow will create it.
-mlflow.set_experiment("NoVacancyModelTraining")
-
 
 async def load_raw_data(session: AsyncSession, table: RawData):
     """
@@ -105,6 +101,12 @@ def evaluate_model(pipe, X_test, y_test):
     return auc
 
 
+def setup_mlflow():
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    # If an experiment does not exist, MLflow will create it.
+    mlflow.set_experiment("NoVacancyModelTraining")
+
+
 async def train_pipeline():
     # Preprocess data separately b/c Pipeline() does not handle target variable transformation
     # Also datetime object needs to be dropped before pipe.fit()
@@ -150,6 +152,7 @@ async def train_pipeline():
     # Create parquet to save an input example
     X_test.iloc[:1].to_parquet("input_example.parquet", index=False)
 
+    setup_mlflow()
     with mlflow.start_run():
         mlflow.log_params(logged_params)
         mlflow.sklearn.log_model(
