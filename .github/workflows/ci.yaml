@@ -18,6 +18,12 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Make setup_env.sh executable
+        run: chmod +x scripts/setup_env.sh
+
+      - name: Create .env file
+        run: ./scripts/setup_env.sh
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -38,6 +44,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Make setup_env.sh executable
+        run: chmod +x scripts/setup_env.sh
+
+      - name: Create .env file
+        run: ./scripts/setup_env.sh
 
       - name: Install dependencies
         run: |

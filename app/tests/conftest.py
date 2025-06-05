@@ -546,8 +546,12 @@ def test_db_conn():
         CREATE TABLE {TEST_TABLE} (
             number_of_adults INTEGER,
             number_of_weekend_nights INTEGER
+
+        DROP TABLE IF EXISTS csv_hashs (
+            filename TEXT,
+            file_hash TEXT
         );
-    """
+        """
     )
     conn.commit()
 

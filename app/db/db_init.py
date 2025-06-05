@@ -61,5 +61,6 @@ async def init_all_databases():
     async with gold_db.create_engine().begin() as conn:
         await conn.run_sync(gold.Base.metadata.create_all)
 
-    async with test_db.engine.begin() as conn:
+    # test_db is used integration tests. Uses the same schema as bronze_db.
+    async with test_db.create_engine().begin() as conn:
         await conn.run_sync(bronze.Base.metadata.create_all)
