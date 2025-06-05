@@ -4,6 +4,26 @@ on:
     branches:
       - main
 
+env:
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_PORT: ${{ secrets.DB_PORT }}
+  BRONZE_DB_HOST: ${{ secrets.BRONZE_DB_HOST }}
+  BRONZE_DB: ${{ secrets.BRONZE_DB }}
+  SILVER_DB_HOST: ${{ secrets.SILVER_DB_HOST }}
+  SILVER_DB: ${{ secrets.SILVER_DB }}
+  GOLD_DB_HOST: ${{ secrets.GOLD_DB_HOST }}
+  GOLD_DB: ${{ secrets.GOLD_DB }}
+  MLFLOW_DB_HOST: ${{ secrets.MLFLOW_DB_HOST }}
+  MLFLOW_DB: ${{ secrets.MLFLOW_DB }}
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+  TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
+  TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+  TEST_DB_HOST: ${{ secrets.TEST_DB_HOST }}
+  TEST_DB: ${{ secrets.TEST_DB }}
+  TEST_DB_PORT: ${{ secrets.TEST_DB_PORT }}
+
+
 jobs:
   lint:
     name: Lint with Ruff, Black, and MyPy
