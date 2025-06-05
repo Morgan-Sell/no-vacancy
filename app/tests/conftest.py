@@ -1,12 +1,11 @@
 import glob
 import os
-import random
 import shutil
 import tempfile
 import time
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest import mock
+from unittest.mock import MagicMock
 
 import pandas as pd
 import psycopg2
@@ -20,7 +19,6 @@ from services import (
     IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
     PRIMARY_KEY,
-    RAW_TARGET_VARIABLE,
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
     VARS_TO_IMPUTE,
@@ -349,6 +347,7 @@ def preprocessed_booking_data(booking_data):
     X_tr, y_tr = processor.fit_transform(X, y)
     return X_tr, y_tr
 
+
 @pytest.fixture(scope="function")
 def mock_read_csv(mocker, booking_data):
     """Mock pandas read_csv to return booking_data."""
@@ -548,8 +547,12 @@ def test_db_conn():
         CREATE TABLE {TEST_TABLE} (
             number_of_adults INTEGER,
             number_of_weekend_nights INTEGER
+
+        DROP TABLE IF EXISTS csv_hashs (
+            filename TEXT,
+            file_hash TEXT
         );
-    """
+        """
     )
     conn.commit()
 
@@ -560,3 +563,14 @@ def test_db_conn():
     conn.commit()
     cursor.close()
     conn.close()
+
+
+@pytest.fixture(autouse=True)
+def mock_mlflow():
+    with mock.patch("services.trainer.mlflow") as mock_ml:
+        mock_ml.set_experiment.return_vale = None
+        mock_ml.start_run.return_value.__enter__.return_value = mock.Mock()
+        mock_ml.log_params.return_vale = None
+        mock_ml.log_metric.return_vale = None
+        mock_ml.sklearn.log_model.return_value = None
+        yield

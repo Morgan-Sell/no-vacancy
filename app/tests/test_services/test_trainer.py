@@ -1,8 +1,7 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pandas as pd
-import pytest
 from schemas.bronze import RawData
 from services.pipeline import NoVacancyPipeline
 from services.trainer import (
@@ -12,7 +11,6 @@ from services.trainer import (
     preprocess_data,
     save_to_silver_db,
 )
-from sklearn.metrics import roc_auc_score
 
 
 def test_load_raw_data_from_bronze(mocker, booking_data):
