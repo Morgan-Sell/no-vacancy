@@ -12,6 +12,9 @@ class AsyncPostgresDB:
         self.db_name = db_name
         self.port = int(port)
 
+        self._engine = None
+        self._sessionmaker = None
+
     def build_url(self, async_mode=True):
         """Constructs the db URL using either asyncpg driver (for async code like FastAPI)
         or psycopg2 derive (for synchronous tools like Alembic)."""
@@ -20,16 +23,20 @@ class AsyncPostgresDB:
 
     def create_engine(self):
         """Creates and returns an SQLAlchemy async engine for the database."""
-        url = self.build_url(async_mode=True)
-        return create_async_engine(
-            url, echo=False, connect_args={"timeout": DB_CONNECT_TIMEOUT}
-        )
+        if self._engine is None:
+            self._engine = create_async_engine(
+                self.build_url(async_mode=True),
+                echo=False,
+                connect_args={"timeout": DB_CONNECT_TIMEOUT},
+            )
+        return self._engine
 
     def create_session(self):
         """Initializes and returns an async sessionmaker for the database engine."""
-        engine = self.create_engine()
-        return sessionmaker(
-            bind=engine,
-            class_=AsyncSession,
-            expire_on_commit=False,
-        )
+        if self._sessionmaker is None:
+            self._sessionmaker = sessionmaker(
+                bind=self.create_engine(),
+                class_=AsyncSession,
+                expire_on_commit=False,
+            )
+        return self._sessionmaker

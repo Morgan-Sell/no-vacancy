@@ -1,6 +1,10 @@
 import asyncio
+import os
+import tempfile
 import warnings
+from pathlib import Path
 
+import joblib
 import mlflow
 import mlflow.sklearn
 import pandas as pd
@@ -24,7 +28,6 @@ from services import (
     VARS_TO_OHE,
 )
 from services.pipeline import NoVacancyPipeline
-from services.pipeline_management import PipelineManagement
 from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
@@ -102,7 +105,8 @@ def evaluate_model(pipe, X_test, y_test):
 
 
 def setup_mlflow():
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    # Use os.getenv to improve testability and flexibility for CLI overrides
+    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", MLFLOW_TRACKING_URI))
     # If an experiment does not exist, MLflow will create it.
     mlflow.set_experiment("NoVacancyModelTraining")
 
@@ -118,7 +122,7 @@ async def train_pipeline():
     )
 
     # Load and process raw data
-    async with bronze_db.SessionLocal() as bronze_session:
+    async with bronze_db.create_session()() as bronze_session:
         df = await load_raw_data(bronze_session, RawData)
 
     logger.info("✅ Loaded raw data")
@@ -128,7 +132,7 @@ async def train_pipeline():
     X_train, X_test, y_train, y_test = preprocess_data(X, y, processor)
 
     # Save preprocessed data to Silver database
-    async with silver_db.SessionLocal() as silver_session:
+    async with silver_db.create_session()() as silver_session:
         await save_to_silver_db(X_train, y_train, X_test, y_test, silver_session)
 
     logger.info("✅ Saved preprocessed data to Silver database")
@@ -138,12 +142,8 @@ async def train_pipeline():
     pipe.fit(X_train, y_train, search_space=SEARCH_SPACE)
 
     # Save the pipeline and processor
-    pm = PipelineManagement()
-    pm.save_pipeline(pipe, processor)
     X_test.drop(columns=[PRIMARY_KEY], inplace=True, errors="ignore")
     test_score = evaluate_model(pipe, X_test, y_test)
-
-    logger.info("✅ Model trained and saved")
 
     # MLflow logging
     logged_params = pipe.get_logged_params()
@@ -155,15 +155,33 @@ async def train_pipeline():
     setup_mlflow()
     with mlflow.start_run():
         mlflow.log_params(logged_params)
+
+        # Log model pipeline
         mlflow.sklearn.log_model(
             pipe.get_full_pipeline(),
             "model",
             signature=mlflow.models.infer_signature(X_test, pipe.predict(X_test)),
         )
+
+        # Log metrics
         mlflow.log_metric("val_auc", logged_params["best_model_val_score"])
         mlflow.log_metric("test_auc", test_score)
-        # Saving input_example.parquet separately to mitigate risk of model logging slowdown
-        mlflow.log_artifact("input_example.parquet", artifact_path="input_example")
+
+        # Create a temporary directory to save the processor
+        # and log it as an artifact. Prevents overcrowding in project root.
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+
+            processor_path = tmp_path / "processor.joblib"
+            joblib.dump(processor, processor_path)
+            mlflow.log_artifact(str(processor_path), artifact_path="processor")
+
+            # Saving input_example.parquet separately to mitigate risk of model logging slowdown
+            input_example_path = tmp_path / "input_example.parquet"
+            X_test.iloc[:1].to_parquet(input_example_path, index=False)
+            mlflow.log_artifact(str(input_example_path), artifact_path="input_example")
+
+    logger.info("✅ Pipeline and processor saved to MLflow")
 
 
 if __name__ == "__main__":

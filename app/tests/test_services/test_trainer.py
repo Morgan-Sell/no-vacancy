@@ -1,7 +1,13 @@
+import shutil
+import tempfile
+import time
 from unittest.mock import MagicMock
-
+from pathlib import Path
+import mlflow
 import numpy as np
 import pandas as pd
+import joblib
+import pytest
 from schemas.bronze import RawData
 from services.pipeline import NoVacancyPipeline
 from services.trainer import (
@@ -10,6 +16,7 @@ from services.trainer import (
     load_raw_data,
     preprocess_data,
     save_to_silver_db,
+    train_pipeline,
 )
 
 
@@ -59,7 +66,8 @@ def test_preprocess_data(booking_data, sample_processor):
     assert len(y_train) + len(y_test) == len(y)
 
 
-def test_save_to_silver_db(mocker):
+@pytest.mark.asyncio
+async def test_save_to_silver_db(mocker):
     # Arrange
     X_mock = pd.DataFrame(
         [
@@ -120,10 +128,10 @@ def test_save_to_silver_db(mocker):
     mock_session = mocker.MagicMock()
 
     # Act
-    save_to_silver_db(X_mock.copy(), y_mock, X_mock.copy(), y_mock, mock_session)
+    await save_to_silver_db(X_mock.copy(), y_mock, X_mock.copy(), y_mock, mock_session)
 
     # Assert
-    assert mock_session.bulk_save_objects.call_count == 2
+    assert mock_session.add_all.call_count == 2
     assert mock_session.commit.called
 
 
@@ -146,3 +154,63 @@ def test_evaluate_model(capsys):
     output = capsys.readouterr().out
     assert "AUC" in output
     assert mock_pipe.predict_proba.called
+
+
+@pytest.mark.asyncio
+async def test_train_pipeline_logs_to_mlflow(monkeypatch):
+    # Use a temp directory for MLflow tracking URI
+    temp_dir = tempfile.mkdtemp()
+    mlruns_dir = Path(temp_dir) / "mlruns"
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", f"file://{mlruns_dir}")
+
+    # Run the training pipeline
+    await train_pipeline()
+
+    client = mlflow.tracking.MlflowClient()
+
+    # Load the latest run
+    # Allow MLflow to store experiment data in the temp directory
+    # Retry for up to 5 seconds to ensure the run is logged
+    for _ in range(10):
+        experiment = client.get_experiment_by_name("NoVacancyModelTraining")
+        if experiment:
+            break
+        time.sleep(0.5)
+
+    # Assert experiment exists
+    assert experiment is not None, "Experiment was not registered in MLflow"
+    experiment_id = experiment.experiment_id
+
+    # Collect the records of the modeling session
+    runs = client.search_runs(
+        experiment_ids=[experiment_id], order_by=["start_time desc"]
+    )
+    assert runs, "No MLflow runs found"
+    run = runs[0]
+
+    # Assert artifacts exist
+    run_id = run.info.run_id
+    model_path = mlflow.artifacts.download_artifacts(run_id, "model")
+    assert Path(model_path, "MLmodel").exists(), "MLmodel artifact not found"
+
+    processor_path = mlflow.artifacts.download_artifacts(
+        run_id, "processor/processor.joblib"
+    )
+    assert Path(processor_path).exists()
+    processor = joblib.load(processor_path)
+    assert hasattr(processor, "prepare_data")  # rough sanity check
+
+    input_example_path = mlflow.artifacts.download_artifacts(
+        run_id, "input_example/input_example.parquet"
+    )
+    assert Path(input_example_path).exists()
+    df = pd.read_parquet(input_example_path)
+    assert not df.empty
+
+    # Assert metrics were logged
+    logged_metrics = run.data.metrics
+    assert "val_auc" in logged_metrics
+    assert "test_auc" in logged_metrics
+
+    # Clean up temp mlruns directory
+    shutil.rmtree(temp_dir)
