@@ -57,7 +57,7 @@ async def make_prediction(test_data: pd.DataFrame, pm: PipelineManagement = None
             raise ValueError(
                 "Input data is empty. Cannot make predictions on an empty DataFrame."
             )
-
+        # TODO: replace pm.load_pipeline() with MLflow
         # Load pipeline
         if pm is None:
             pm = PipelineManagement()
