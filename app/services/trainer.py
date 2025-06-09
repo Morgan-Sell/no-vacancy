@@ -17,6 +17,8 @@ from schemas.silver import TestData, TrainValidationData
 from services import (
     BOOKING_MAP,
     IMPUTATION_METHOD,
+    MLFLOW_EXPERIMENT_NAME,
+    MLFLOW_PROCESSOR_JOBLIB,
     MONTH_ABBREVIATION_MAP,
     PRIMARY_KEY,
     RAW_TARGET_VARIABLE,
@@ -108,7 +110,7 @@ def setup_mlflow():
     # Use os.getenv to improve testability and flexibility for CLI overrides
     mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", MLFLOW_TRACKING_URI))
     # If an experiment does not exist, MLflow will create it.
-    mlflow.set_experiment("NoVacancyModelTraining")
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
 
 async def train_pipeline():
@@ -172,7 +174,7 @@ async def train_pipeline():
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
 
-            processor_path = tmp_path / "processor.joblib"
+            processor_path = tmp_path / MLFLOW_PROCESSOR_JOBLIB
             joblib.dump(processor, processor_path)
             mlflow.log_artifact(str(processor_path), artifact_path="processor")
 
