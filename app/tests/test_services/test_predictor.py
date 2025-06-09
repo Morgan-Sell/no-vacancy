@@ -2,7 +2,69 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-from services.predictor import make_prediction
+from app.services import MLFLOW_EXPERIMENT_NAME, MLFLOW_PROCESSOR_PATH
+from services.predictor import load_pipeline_and_processor_from_mlflow, make_prediction
+
+
+@patch("services.predictor.joblib.load")
+@patch("services.predictor.mlflow.artifacts.download_artifacts")
+@patch("services.predictor.mlflow.sklearn.load_model")
+@patch("services.predictor.mlflow.MlflowClient")
+@patch("services.predictor.mlflow.set_tracking_uri")
+def test_load_pipeline_and_processor_from_mlflow_success(
+    mock_set_tracking_uri,
+    mock_client_class,
+    mock_load_model,
+    mock_download_artifacts,
+    mock_joblib_load,
+):
+    # Arrange
+    fake_pipeline = MagicMock(name="pipeline")
+    fake_processor = MagicMock(name="processor")
+
+    mock_client = MagicMock()
+    mock_client.get_latest_versions.return_value = [MagicMock(run_id="fake_run_id")]
+    mock_client_class.return_value = mock_client
+
+    mock_load_model.return_value = fake_pipeline
+    mock_download_artifacts.return_value = "tmp/processor.joblib"
+    mock_joblib_load.return_value = fake_processor
+
+    # Act
+    pipeline, processor = load_pipeline_and_processor_from_mlflow(stage="Production")
+
+    # Assert
+    mock_set_tracking_uri.assert_called_once_with()
+    mock_client.get_latest_versions.assert_called_once_with(
+        MLFLOW_EXPERIMENT_NAME, stages=["Production"]
+    )
+    mock_load_model.assert_called_once_with(
+        model_uri=f"models:/{MLFLOW_EXPERIMENT_NAME}/Production"
+    )
+    mock_download_artifacts.assert_called_once_with(
+        run_id="fake_run_id", artifact_path=MLFLOW_PROCESSOR_PATH
+    )
+    mock_joblib_load.assert_called_once_with("tmp/processor.joblib")
+
+    assert pipeline == fake_pipeline
+    assert processor == fake_processor
+
+
+@patch("services.predictor.MlflowClient")
+@patch("services.predictor.set_tracking_uri")
+def test_load_pipeline_and_processor_from_mlflow_no_versions(
+    mock_set_tracking_uri, mock_client_class
+):
+    # Arrange
+    mock_client = MagicMock()
+    mock_client.get_latest_versions.return_value = []
+    mock_client_class.return_value = mock_client
+
+    # Act & Assert
+    with pytest.raises(
+        RuntimeError, match="No model version found for stage 'Staging'"
+    ):
+        load_pipeline_and_processor_from_mlflow(stage="Staging")
 
 
 def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm):
