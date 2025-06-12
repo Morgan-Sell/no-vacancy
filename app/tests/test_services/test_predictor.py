@@ -3,9 +3,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import numpy as np
 import pandas as pd
 import pytest
-from app.config import MLFLOW_TRACKING_URI
-from app.services import MLFLOW_EXPERIMENT_NAME, MLFLOW_PROCESSOR_PATH
+from config import MLFLOW_TRACKING_URI
+from services import MLFLOW_EXPERIMENT_NAME, MLFLOW_PROCESSOR_PATH
 from services.predictor import load_pipeline_and_processor_from_mlflow, make_prediction
+from services import predictor
 
 
 @patch("services.predictor.joblib.load")
@@ -52,8 +53,8 @@ def test_load_pipeline_and_processor_from_mlflow_success(
     assert processor == fake_processor
 
 
-@patch("services.predictor.MlflowClient")
-@patch("services.predictor.set_tracking_uri")
+@patch("services.predictor.mlflow.MlflowClient")
+@patch("services.predictor.mlflow.set_tracking_uri")
 def test_load_pipeline_and_processor_from_mlflow_no_versions(
     mock_set_tracking_uri, mock_client_class
 ):
@@ -70,10 +71,9 @@ def test_load_pipeline_and_processor_from_mlflow_no_versions(
 
 
 @pytest.mark.asyncio
-@patch("services.predictor.gold_db.SessionLocal")
 @patch("services.predictor.load_pipeline_and_processor_from_mlflow")
 async def test_make_prediction_integration_mock(
-    mock_load_pipeline, mock_session_local, booking_data, mock_pipeline, mock_processor
+    mock_load_pipeline, booking_data, mock_pipeline, mock_processor
 ):
     # mock_lock_pipeline is automatically injected by @patch
     # Arrange
@@ -96,12 +96,11 @@ async def test_make_prediction_integration_mock(
 
     mock_load_pipeline.return_value = (mock_pipeline, mock_processor)
 
-    # Mock DB session
-    async_session = AsyncMock()
-    mock_session_local.return_value.__aenter__.return_value = async_session
-
-    # Action
-    result = await make_prediction(df)
+    # Action: Patch the gold_db.SessionLocal on the actual object
+    mock_session = AsyncMock()
+    with patch.object(predictor.gold_db, "SessionLocal") as mock_session_local:
+        mock_session_local.return_value.__aenter__.return_value = mock_session
+        result = await make_prediction(df)
 
     # Assert
     assert isinstance(result, pd.DataFrame)

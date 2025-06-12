@@ -509,7 +509,7 @@ def trained_pipeline_and_processor(booking_data, tmp_path):
         "max_depth": [1, 3, 5],
         "min_samples_split": [2, 5, 10],
     }
-    pipe = NoVacancyPipeline(imputer, encoder, clsfr)
+    pipe = NoVacancyPipeline(imputer, encoder, clsfr, VARS_TO_DROP)
     pipe.fit(X_train_prcsd, y_train_prcsd, search_space)
 
     # Save the trained pipeline and processor
