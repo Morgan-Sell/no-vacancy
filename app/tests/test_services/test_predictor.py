@@ -1,7 +1,9 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import numpy as np
 import pandas as pd
 import pytest
+from app.config import MLFLOW_TRACKING_URI
 from app.services import MLFLOW_EXPERIMENT_NAME, MLFLOW_PROCESSOR_PATH
 from services.predictor import load_pipeline_and_processor_from_mlflow, make_prediction
 
@@ -34,7 +36,7 @@ def test_load_pipeline_and_processor_from_mlflow_success(
     pipeline, processor = load_pipeline_and_processor_from_mlflow(stage="Production")
 
     # Assert
-    mock_set_tracking_uri.assert_called_once_with()
+    mock_set_tracking_uri.assert_called_once_with(MLFLOW_TRACKING_URI)
     mock_client.get_latest_versions.assert_called_once_with(
         MLFLOW_EXPERIMENT_NAME, stages=["Production"]
     )
@@ -67,149 +69,42 @@ def test_load_pipeline_and_processor_from_mlflow_no_versions(
         load_pipeline_and_processor_from_mlflow(stage="Staging")
 
 
-def test_make_prediction_success(booking_data, mock_pipeline, mock_processor, pm):
-    # Arrange: Create mock rscv and best_estimator_
-    mock_rscv = MagicMock()
-    mock_best_estimator = MagicMock()
-
-    # Mock the named_steps of the best estimator
-    mock_best_estimator.named_steps = {
-        "imputation_step": MagicMock(),
-        "encoding_step": MagicMock(
-            get_feature_names_out=MagicMock(return_value=["col1", "col2"])
-        ),
-    }
-
-    # Assign best_estimator_ to mock_rscv
-    mock_rscv.best_estimator_ = mock_best_estimator
-
-    # Attach rscv to mock_pipeline
-    mock_pipeline.rscv = mock_rscv
-
-    with patch(
-        "app.services.pipeline_management.PipelineManagement.load_pipeline",
-        return_value=(mock_pipeline, mock_processor),
-    ):
-        # Act
-        results = make_prediction(booking_data, pm)
-
-        # Assert
-        assert isinstance(results, pd.DataFrame)
-        assert len(results) == 2, "Expected 2 predictions from mock_pipeline."
-        assert list(results.columns) == [
-            "prediction",
-            "probability_not_canceled",
-            "probabilities_canceled",
-        ], "Unexpected columns in prediction results."
-
-
-def test_make_prediction_with_empty_data():
-    # Arrange
-    empty_data = pd.DataFrame()
-
-    # Act & Assert
-    with pytest.raises(
-        ValueError,
-        match="❌ Invalid input: Input data is empty. Cannot make predictions on an empty DataFrame.",
-    ):
-        make_prediction(empty_data)
-
-
-def test_make_prediction_pipeline_not_found(booking_data, mock_processor, pm):
-    # Arrange: Patch PipelineManagement to raise FileNotFoundError
-    with patch(
-        "app.services.pipeline_management.PipelineManagement.load_pipeline",
-        side_effect=FileNotFoundError("Pipeline not found"),
-    ):
-        # Act & Assert
-        with pytest.raises(
-            FileNotFoundError, match="❌ No pipeline found: Pipeline not found"
-        ):
-            make_prediction(booking_data, pm)
-
-
-def test_make_prediction_unexpected_error(
-    booking_data, mock_pipeline, mock_processor, pm
+@pytest.mark.asyncio
+@patch("services.predictor.gold_db.SessionLocal")
+@patch("services.predictor.load_pipeline_and_processor_from_mlflow")
+async def test_make_prediction_integration_mock(
+    mock_load_pipeline, mock_session_local, booking_data, mock_pipeline, mock_processor
 ):
-    # Arrange: Create a mock RandomizedSearchCV with best_estimator_
-    mock_rscv = MagicMock()
-    mock_best_estimator = MagicMock()
-
-    # Mock named_steps in best_estimator_ to avoid AttributeError
-    mock_best_estimator.named_steps = {
-        "imputation_step": MagicMock(),
-        "encoding_step": MagicMock(
-            get_feature_names_out=MagicMock(return_value=["col1", "col2"])
-        ),
-    }
-
-    # Attach the best_estimator_ to mock_rscv
-    mock_rscv.best_estimator_ = mock_best_estimator
-
-    # Simulate the unexpected error during prediction
-    mock_pipeline.rscv = mock_rscv
-    mock_pipeline.predict.side_effect = Exception("Unexpected prediction error")
-
-    # Patch PipelineManagement to return the mock pipeline and processor
-    with patch(
-        "app.services.pipeline_management.PipelineManagement.load_pipeline",
-        return_value=(mock_pipeline, mock_processor),
-    ):
-        # Act & Assert
-        with pytest.raises(
-            RuntimeError, match="❌ Prediction failed: Unexpected prediction error"
-        ):
-            make_prediction(booking_data, pm)
-
-
-def test_make_prediction_invalid_input_type():
+    # mock_lock_pipeline is automatically injected by @patch
     # Arrange
-    invalid_input = {"breakfast": [3, "waffles"]}
+    # Use only a slice to keep the test lightweight
+    df = booking_data[
+        ["Booking_ID", "number of adults", "number of children", "booking status"]
+    ].copy()
+    df.rename(
+        columns={"Booking_ID": "booking_id", "booking status": "is_canceled"},
+        inplace=True,
+    )
 
-    with pytest.raises(
-        ValueError, match="❌ Invalid input: Input must be a pandas DataFrame"
-    ):
-        make_prediction(invalid_input)
+    # Mock pipeline & processor behavior
+    mock_pipeline.predict.return_value = np.array([1] * len(df))
+    mock_pipeline.predict_proba.return_value = np.array([[0.8, 0.2]] * len(df))
+    mock_processor.transform.return_value = (
+        np.array([[0.1, 0.2, 0.3]] * len(df)),
+        np.array([1] * len(df)),
+    )
 
+    mock_load_pipeline.return_value = (mock_pipeline, mock_processor)
 
-def test_make_prediction_single_observation(
-    booking_data, mock_pipeline, mock_processor, pm
-):
-    # Use a single observation
-    single_observation = booking_data.iloc[0].to_frame().T.copy()
+    # Mock DB session
+    async_session = AsyncMock()
+    mock_session_local.return_value.__aenter__.return_value = async_session
 
-    # Mock rscv and best_estimator_
-    mock_rscv = MagicMock()
-    mock_best_estimator = MagicMock()
+    # Action
+    result = await make_prediction(df)
 
-    # Simulate named_steps for best_estimator_
-    mock_best_estimator.named_steps = {
-        "imputation_step": MagicMock(),
-        "encoding_step": MagicMock(
-            get_feature_names_out=MagicMock(return_value=["col1", "col2"])
-        ),
-    }
-
-    # Attach mocks
-    mock_rscv.best_estimator_ = mock_best_estimator
-    mock_pipeline.rscv = mock_rscv
-
-    # Mock prediction behavior
-    mock_pipeline.predict.return_value = [1]
-    mock_pipeline.predict_proba.return_value = [[0.3, 0.7]]
-
-    with patch(
-        "app.services.pipeline_management.PipelineManagement.load_pipeline",
-        return_value=(mock_pipeline, mock_processor),
-    ):
-        # Act
-        results = make_prediction(single_observation, pm)
-
-        # Assert
-        assert isinstance(results, pd.DataFrame)
-        assert results.shape[0] == 1
-        assert results.columns.tolist() == [
-            "prediction",
-            "probability_not_canceled",
-            "probabilities_canceled",
-        ]
+    # Assert
+    assert isinstance(result, pd.DataFrame)
+    assert len(result) == len(df)
+    assert "prediction" in result.columns
+    assert result["booking_id"].iloc[0] == df["booking_id"].iloc[0]

@@ -79,7 +79,7 @@ def load_pipeline_and_processor_from_mlflow(stage: str = "Production"):
     return pipeline, processor
 
 
-async def make_prediction(test_data: pd.DataFrame, pm: PipelineManagement = None):
+async def make_prediction(test_data: pd.DataFrame):
     try:
         if not isinstance(test_data, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame.")
