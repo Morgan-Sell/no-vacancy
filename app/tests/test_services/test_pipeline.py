@@ -21,7 +21,7 @@ def test_get_logged_params(sample_pipeline, preprocessed_booking_data):
     # Arrange
     X, y = preprocessed_booking_data
 
-    search_space = {"n_estimators": [10], "max_depth":[3]}
+    search_space = {"n_estimators": [10], "max_depth": [3]}
 
     # Act
     sample_pipeline.fit(X, y, search_space)

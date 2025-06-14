@@ -1,14 +1,17 @@
 import asyncio
 import logging
+import os
 from datetime import datetime
 
+import joblib
+import mlflow
 import numpy as np
 import pandas as pd
-from config import __model_version__
+from config import MLFLOW_TRACKING_URI, __model_version__
 from db.db_init import gold_db, silver_db
 from schemas.gold import Predictions
 from schemas.silver import TestData
-from services import DEPENDENT_VAR_NAME
+from services import DEPENDENT_VAR_NAME, MLFLOW_EXPERIMENT_NAME, MLFLOW_PROCESSOR_PATH
 from services.pipeline_management import PipelineManagement
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import select
@@ -48,7 +51,35 @@ async def load_test_data(session_local, data_table):
         )
 
 
-async def make_prediction(test_data: pd.DataFrame, pm: PipelineManagement = None):
+def load_pipeline_and_processor_from_mlflow(stage: str = "Production"):
+
+    # Use os.getenv to improve testability and flexibility for CLI overrides
+    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", MLFLOW_TRACKING_URI))
+    client = mlflow.MlflowClient()
+
+    # Get the latest run in provided stage
+    versions = client.get_latest_versions(MLFLOW_EXPERIMENT_NAME, stages=[stage])
+    if not versions:
+        raise RuntimeError(
+            f"No model version found for stage '{stage}' in experiment '{MLFLOW_EXPERIMENT_NAME}'"
+        )
+
+    run_id = versions[0].run_id
+
+    # Load pipeline
+    model_uri = f"models:/{MLFLOW_EXPERIMENT_NAME}/{stage}"
+    pipeline = mlflow.sklearn.load_model(model_uri=model_uri)
+
+    # Load processor artifact
+    local_processor_path = mlflow.artifacts.download_artifacts(
+        run_id=run_id, artifact_path=MLFLOW_PROCESSOR_PATH
+    )
+    processor = joblib.load(local_processor_path)
+
+    return pipeline, processor
+
+
+async def make_prediction(test_data: pd.DataFrame):
     try:
         if not isinstance(test_data, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame.")
@@ -58,10 +89,10 @@ async def make_prediction(test_data: pd.DataFrame, pm: PipelineManagement = None
                 "Input data is empty. Cannot make predictions on an empty DataFrame."
             )
 
-        # Load pipeline
-        if pm is None:
-            pm = PipelineManagement()
-        pipeline, processor = pm.load_pipeline()
+        # Load pipeline & processor artifacts
+        pipeline, processor = load_pipeline_and_processor_from_mlflow(
+            stage="Production"
+        )
 
         # Process test data using loaded processor
         X_test = test_data.drop(columns=[DEPENDENT_VAR_NAME])
@@ -69,10 +100,12 @@ async def make_prediction(test_data: pd.DataFrame, pm: PipelineManagement = None
         X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
 
         # Generate the predictions using the pipeline
-        predictions = pipeline.predict(X_test_prcsd)
         probabilities = pipeline.predict_proba(X_test_prcsd)
+        predictions = pipeline.predict(X_test_prcsd)
 
+        # Ensure predictions and probabilities are numpy arrays
         probabilities = np.array(probabilities)
+        predictions = np.array(predictions)
 
         # Format predictions into a dataframe
         results = pd.DataFrame(
@@ -85,7 +118,8 @@ async def make_prediction(test_data: pd.DataFrame, pm: PipelineManagement = None
         )
 
         # Save predictions to the database
-        async with gold_db.SessionLocal() as session:
+        # Second () is required to implement the sessionmaker
+        async with gold_db.create_session()() as session:
             try:
                 for _, row in results.iterrows():
                     pred_row = Predictions(
@@ -122,7 +156,8 @@ if __name__ == "__main__":
     pm = PipelineManagement()
 
     async def run():
-        data = await load_test_data(silver_db.SessionLocal(), TestData)
-        await make_prediction(data, pm)
+        # Requie ()() b/c create_session() returns a sessionmaker, the second () instantiates the session
+        data = await load_test_data(silver_db.create_session()(), TestData)
+        await make_prediction(data)
 
     asyncio.run(run())
