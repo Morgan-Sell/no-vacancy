@@ -69,6 +69,9 @@ def test_load_pipeline_and_processor_from_mlflow_no_versions(
     ):
         load_pipeline_and_processor_from_mlflow(stage="Staging")
 
+    # Ensure coverage of set_tracking_uri side effect with correct URI
+    mock_set_tracking_uri.assert_called_once_with(MLFLOW_TRACKING_URI)
+
 
 @pytest.mark.asyncio
 @patch("services.predictor.load_pipeline_and_processor_from_mlflow")
@@ -82,7 +85,7 @@ async def test_make_prediction_integration_mock(
         ["Booking_ID", "number of adults", "number of children", "booking status"]
     ].copy()
     df.rename(
-        columns={"Booking_ID": "booking_id", "booking status": "is_canceled"},
+        columns={"Booking_ID": "booking_id", "booking status": "booking_status"},
         inplace=True,
     )
 
@@ -96,14 +99,27 @@ async def test_make_prediction_integration_mock(
 
     mock_load_pipeline.return_value = (mock_pipeline, mock_processor)
 
-    # Action: Patch the gold_db.SessionLocal on the actual object
+    # Patch gold_db.create_session() to return a sessionmaker that returns an AsyncSession
     mock_session = AsyncMock()
-    with patch.object(predictor.gold_db, "SessionLocal") as mock_session_local:
-        mock_session_local.return_value.__aenter__.return_value = mock_session
+    mock_sessionmaker = MagicMock(return_value=mock_session)
+    mock_session.__aenter__.return_value = mock_session
+
+    # Always patch the import path in the module that's being tested, not the original module
+    with patch.object(
+        predictor.gold_db, "create_session", return_value=mock_sessionmaker
+    ):
+        # Act
         result = await make_prediction(df)
 
     # Assert
     assert isinstance(result, pd.DataFrame)
     assert len(result) == len(df)
-    assert "prediction" in result.columns
     assert result["booking_id"].iloc[0] == df["booking_id"].iloc[0]
+    mock_session.merge.assert_called()  # Confirm insert logic ran
+    mock_session.commit.assert_awaited()
+    assert set(result.columns) >= {
+        "booking_id",
+        "prediction",
+        "probability_not_canceled",
+        "probabilities_canceled",
+    }  # >= operator checks if the set on the left is a superset of the set on the right

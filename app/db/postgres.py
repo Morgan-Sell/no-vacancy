@@ -22,7 +22,19 @@ class AsyncPostgresDB:
         return f"{driver}://{self.user}:{self.password}@{self.host}:{self.port}/{self.db_name}"
 
     def create_engine(self):
-        """Creates and returns an SQLAlchemy async engine for the database."""
+        """
+        Creates the SQLAlchemy async engine for the database if the engine hasn't been created yet.
+
+        Returns:
+            AsyncEngine: A SQLAlchemy async engine connected to the configured database.
+
+        Notes:
+            - Uses the `asyncpg` driver for async support.
+            - The engine is created only once and reused for subsequent calls.
+            - Connection timeout is configured via `DB_CONNECT_TIMEOUT`.
+            - The engine is created with `echo=False` to disable SQL statement logging.
+
+        """
         if self._engine is None:
             self._engine = create_async_engine(
                 self.build_url(async_mode=True),
@@ -32,7 +44,18 @@ class AsyncPostgresDB:
         return self._engine
 
     def create_session(self):
-        """Initializes and returns an async sessionmaker for the database engine."""
+        """
+        Creates the SQLAlchemy async sessionmaker if it hasn't been created yet.
+
+        Returns:
+            sessionmaker: A factory for creating AsyncSession instances.
+
+        Notes:
+            - Behaves like a singleton: only one sessionmaker is created per instance.
+            - The sessionmaker is bound to the async engine created by `create_engine()`.
+            - `expire_on_commit=False` keeps ORM objects usable after commit.
+            - Usage: `async with db.create_session() as session:`
+        """
         if self._sessionmaker is None:
             self._sessionmaker = sessionmaker(
                 bind=self.create_engine(),

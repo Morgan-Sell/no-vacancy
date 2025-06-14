@@ -163,6 +163,7 @@ async def train_pipeline():
             pipe.get_full_pipeline(),
             "model",
             signature=mlflow.models.infer_signature(X_test, pipe.predict(X_test)),
+            registered_model_name=MLFLOW_EXPERIMENT_NAME,
         )
 
         # Log metrics

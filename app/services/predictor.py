@@ -100,10 +100,12 @@ async def make_prediction(test_data: pd.DataFrame):
         X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
 
         # Generate the predictions using the pipeline
-        predictions = pipeline.predict(X_test_prcsd)
         probabilities = pipeline.predict_proba(X_test_prcsd)
+        predictions = pipeline.predict(X_test_prcsd)
 
+        # Ensure predictions and probabilities are numpy arrays
         probabilities = np.array(probabilities)
+        predictions = np.array(predictions)
 
         # Format predictions into a dataframe
         results = pd.DataFrame(
@@ -116,7 +118,8 @@ async def make_prediction(test_data: pd.DataFrame):
         )
 
         # Save predictions to the database
-        async with gold_db.SessionLocal() as session:
+        # Second () is required to implement the sessionmaker
+        async with gold_db.create_session()() as session:
             try:
                 for _, row in results.iterrows():
                     pred_row = Predictions(
@@ -153,7 +156,8 @@ if __name__ == "__main__":
     pm = PipelineManagement()
 
     async def run():
-        data = await load_test_data(silver_db.SessionLocal(), TestData)
-        await make_prediction(data, pm)
+        # Requie ()() b/c create_session() returns a sessionmaker, the second () instantiates the session
+        data = await load_test_data(silver_db.create_session()(), TestData)
+        await make_prediction(data)
 
     asyncio.run(run())
