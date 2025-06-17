@@ -84,6 +84,9 @@ DATA_PATHS = {
     "model_save_path": "models/no_vacancy_pipeline.pkl",
 }
 
+# -- Model Inference (predictor.py) --
+SILVER_DB_TARGET_VARIABLE = "is_cancellation"
+
 # -- MLflow Tracking --
 MLFLOW_TRACKING_URI = "http://mlfow:50000"
 MLFLOW_PROCESSOR_JOBLIB = "processor.joblib"

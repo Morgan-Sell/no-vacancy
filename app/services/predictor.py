@@ -11,8 +11,12 @@ from config import MLFLOW_TRACKING_URI, __model_version__
 from db.db_init import gold_db, silver_db
 from schemas.gold import Predictions
 from schemas.silver import TestData
-from services import DEPENDENT_VAR_NAME, MLFLOW_EXPERIMENT_NAME, MLFLOW_PROCESSOR_PATH
-from services.pipeline_management import PipelineManagement
+from services import (
+    DEPENDENT_VAR_NAME,
+    MLFLOW_EXPERIMENT_NAME,
+    MLFLOW_PROCESSOR_PATH,
+    SILVER_DB_TARGET_VARIABLE,
+)
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import select
 
@@ -79,7 +83,7 @@ def load_pipeline_and_processor_from_mlflow(stage: str = "Production"):
     return pipeline, processor
 
 
-async def make_prediction(test_data: pd.DataFrame):
+async def make_prediction(test_data: pd.DataFrame, already_processed: bool = False):
     try:
         if not isinstance(test_data, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame.")
@@ -94,10 +98,19 @@ async def make_prediction(test_data: pd.DataFrame):
             stage="Production"
         )
 
-        # Process test data using loaded processor
-        X_test = test_data.drop(columns=[DEPENDENT_VAR_NAME])
-        y_test = test_data[DEPENDENT_VAR_NAME]
-        X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
+        # If data is preprocessed, skip processor.transform()
+        if already_processed:
+            X_test_prcsd = test_data.drop(columns=[SILVER_DB_TARGET_VARIABLE])
+            # y_test_prcsd = test_data[SILVER_DB_TARGET_VARIABLE].copy()
+        else:
+            # Process test data using loaded processor
+            X_test = test_data.copy()
+            y_test = None
+
+            if DEPENDENT_VAR_NAME in X_test.columns:
+                X_test.drop(columns=[DEPENDENT_VAR_NAME])
+
+            X_test_prcsd, _ = processor.transform(X_test, y_test)
 
         # Generate the predictions using the pipeline
         probabilities = pipeline.predict_proba(X_test_prcsd)
@@ -152,12 +165,10 @@ async def make_prediction(test_data: pd.DataFrame):
 
 
 if __name__ == "__main__":
-    # Load data
-    pm = PipelineManagement()
 
     async def run():
         # Requie ()() b/c create_session() returns a sessionmaker, the second () instantiates the session
         data = await load_test_data(silver_db.create_session()(), TestData)
-        await make_prediction(data)
+        await make_prediction(data, already_processed=True)
 
     asyncio.run(run())

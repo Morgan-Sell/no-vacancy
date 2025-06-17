@@ -1,6 +1,7 @@
 import asyncio
 import os
 import tempfile
+import time
 import warnings
 from pathlib import Path
 
@@ -164,6 +165,21 @@ async def train_pipeline():
             "model",
             signature=mlflow.models.infer_signature(X_test, pipe.predict(X_test)),
             registered_model_name=MLFLOW_EXPERIMENT_NAME,
+        )
+
+        # Transition latest model to production stage
+        client = mlflow.MlflowClient()
+        latest_version = client.get_latest_versions(
+            MLFLOW_EXPERIMENT_NAME, stages=["None"]
+        )[0].version
+
+        # Model registry tends to lag creation
+        time.sleep(3)
+
+        client.transition_model_version_stage(
+            name=MLFLOW_EXPERIMENT_NAME,
+            version=latest_version,
+            stage="Production",
         )
 
         # Log metrics

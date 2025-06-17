@@ -3,7 +3,6 @@ import pandas as pd
 from config import __model_version__, get_logger
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from services.pipeline_management import PipelineManagement
 from services.predictor import make_prediction
 
 # Define the router
@@ -25,7 +24,7 @@ class PredictionResponse(BaseModel):
 
 
 @router.post("/", response_model=PredictionResponse)
-def predict(request_data: PredictionRequest):
+async def predict(request_data: PredictionRequest):
     try:
         # Log the received input
         _logger.debug(f"Inputs: {request_data}")
@@ -34,18 +33,15 @@ def predict(request_data: PredictionRequest):
         test_data = pd.DataFrame(request_data.data)
 
         # Ensure predictions can be made
-        dm = PipelineManagement()
-        results = make_prediction(test_data, dm)
+        results = await make_prediction(test_data, already_processed=False)
 
-        # Extract predictions and version
-        predictions = results["prediction"].to_list()
         # version = results["version"]
 
         # FastAPI automatically converts Python data structures into JSON responses
-        return {
-            "predictions": predictions,
-            "version": __model_version__,
-        }
+        return PredictionResponse(
+            predictions=results["prediction"].to_list(),
+            version=__model_version__,
+        )
 
     except Exception as exc:
         _logger.error(f"Unexpected error during prediction: {exc}")
