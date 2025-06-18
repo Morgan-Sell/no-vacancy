@@ -33,7 +33,7 @@ BOOKING_MAP = {
 }
 
 VARS_TO_DROP = [
-    # "booking_id",
+    # "booking_id", # Primary key should not be dropped. Value is required for Silver DB.
     "date_of_reservation"
 ]
 

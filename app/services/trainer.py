@@ -73,15 +73,22 @@ async def save_to_silver_db(X_train, y_train, X_test, y_test, session: AsyncSess
     """
     Save the preprocessed data to the Silver database.
     """
-    X_train["is_cancellation"] = y_train
-    X_test["is_cancellation"] = y_test
+    # Need to rename so original dataframes are not modified throughout the module
+    X_train_db = X_train.copy()
+    X_test_db = X_test.copy()
+
+    X_train_db["is_cancellation"] = y_train
+    X_test_db["is_cancellation"] = y_test
 
     # Create a list of TrainData instances
     train_objects = [
-        TrainValidationData(**row._asdict()) for row in X_train.itertuples(index=False)
+        TrainValidationData(**row._asdict())
+        for row in X_train_db.itertuples(index=False)
     ]
     # Create a list of ValidationTestData instances
-    test_objects = [TestData(**row._asdict()) for row in X_test.itertuples(index=False)]
+    test_objects = [
+        TestData(**row._asdict()) for row in X_test_db.itertuples(index=False)
+    ]
 
     # Insert ORM objects to database w/o primary key updates and relationship handling
     session.add_all(train_objects)

@@ -15,6 +15,7 @@ from services import (
     DEPENDENT_VAR_NAME,
     MLFLOW_EXPERIMENT_NAME,
     MLFLOW_PROCESSOR_PATH,
+    PRIMARY_KEY,
     SILVER_DB_TARGET_VARIABLE,
 )
 from sqlalchemy.exc import SQLAlchemyError
@@ -100,15 +101,18 @@ async def make_prediction(test_data: pd.DataFrame, already_processed: bool = Fal
 
         # If data is preprocessed, skip processor.transform()
         if already_processed:
-            X_test_prcsd = test_data.drop(columns=[SILVER_DB_TARGET_VARIABLE])
+            X_test_prcsd = test_data.drop(
+                columns=[SILVER_DB_TARGET_VARIABLE, PRIMARY_KEY], errors="ignore"
+            )
             # y_test_prcsd = test_data[SILVER_DB_TARGET_VARIABLE].copy()
         else:
             # Process test data using loaded processor
             X_test = test_data.copy()
             y_test = None
 
-            if DEPENDENT_VAR_NAME in X_test.columns:
-                X_test.drop(columns=[DEPENDENT_VAR_NAME])
+            X_test.drop(
+                columns=[DEPENDENT_VAR_NAME, PRIMARY_KEY], inplace=True, errors="ignore"
+            )
 
             X_test_prcsd, _ = processor.transform(X_test, y_test)
 
