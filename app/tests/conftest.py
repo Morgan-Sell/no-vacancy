@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock
 
+import numpy as np
 import pandas as pd
 import psycopg2
 import pytest
@@ -513,6 +514,9 @@ def test_db_conn():
     conn.close()
 
 
+# ------ Mock MLflow Fixtures ------
+
+
 @pytest.fixture(autouse=True)
 def mock_mlflow():
     with mock.patch("services.trainer.mlflow") as mock_ml:
@@ -522,3 +526,59 @@ def mock_mlflow():
         mock_ml.log_metric.return_vale = None
         mock_ml.sklearn.log_model.return_value = None
         yield
+
+
+@pytest.fixture
+def mock_mlflow_pipeline():
+    """Mock MLflow pipeline for testing"""
+    mock_pipeline = MagicMock()
+    mock_pipeline.predict.return_value = np.array([0, 1, 0])
+    mock_pipeline.predict_proba.return_value = np.array(
+        [[0.8, 0.2], [0.3, 0.7], [0.9, 0.1]]
+    )
+    return mock_pipeline
+
+
+@pytest.fixture
+def mock_mlflow_processor():
+    """Mock MLflow processor for testing"""
+    mock_processor = MagicMock()
+
+    # Mock the transform method to return processed data
+    def mock_transform(X, y=None):
+        # Return a copy of X with some basic transformations
+        X_processed = X.copy()
+        if "booking_id" in X_processed.columns:
+            X_processed.drop(columns=["booking_id"], inplace=True)
+        return X_processed, y
+
+    mock_processor.transform = mock_transform
+    return mock_processor
+
+
+@pytest.fixture
+def mock_mlflow_client(mocker):
+    """Mock MLflow client to avoid network calls"""
+    mock_client = mocker.patch("mlflow.MlflowClient")
+    mock_client.return_value.get_latest_versions.return_value = [
+        MagicMock(run_id="test-run-id", version="1")
+    ]
+
+    # Mock mlflow.sklearn.load_model to return a mock pipeline
+    mock_load_model = mocker.patch("mlflow.sklearn.load_model")
+    mock_pipeline = MagicMock()
+    mock_pipeline.predict.return_value = np.array([0, 1])
+    mock_pipeline.predict_proba.return_value = np.array([[0.8, 0.2], [0.3, 0.7]])
+    mock_load_model.return_value = mock_pipeline
+
+    # Mock mlflow.artifacts.download_artifacts
+    mock_download = mocker.patch("mlflow.artifacts.download_artifacts")
+    mock_download.return_value = "/tmp/mock_processor.pkl"
+
+    # Mock joblib.load
+    mock_joblib_load = mocker.patch("joblib.load")
+    mock_processor = MagicMock()
+    mock_processor.transform.return_value = (pd.DataFrame({"test": [1, 2]}), None)
+    mock_joblib_load.return_value = mock_processor
+
+    return mock_client

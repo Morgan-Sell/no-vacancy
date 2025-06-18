@@ -159,9 +159,6 @@ async def train_pipeline():
     logged_params = pipe.get_logged_params()
     logged_params["model_version"] = __model_version__
 
-    # Create parquet to save an input example
-    X_test.iloc[:1].to_parquet("input_example.parquet", index=False)
-
     setup_mlflow()
     with mlflow.start_run():
         mlflow.log_params(logged_params)
@@ -204,7 +201,7 @@ async def train_pipeline():
 
             # Saving input_example.parquet separately to mitigate risk of model logging slowdown
             input_example_path = tmp_path / "input_example.parquet"
-            X_test.iloc[:1].to_parquet(input_example_path, index=False)
+            X_train.iloc[:1].to_parquet(input_example_path, index=False)
             mlflow.log_artifact(str(input_example_path), artifact_path="input_example")
 
     logger.info("✅ Pipeline and processor saved to MLflow")

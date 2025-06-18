@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import joblib
 import pytest
+from app.services import DEPENDENT_VAR_NAME
 from schemas.bronze import RawData
 from services.pipeline import NoVacancyPipeline
 from services.trainer import (
@@ -34,12 +35,14 @@ def test_load_raw_data_from_bronze(mocker, booking_data):
             setattr(record, attr, val)
         mock_records.append(record)
 
-    # Create a mock BronzeSessionLocal
+    # Create a mock session
     mock_session = mocker.MagicMock()
-    mock_session.query.return_value.all.return_value = mock_records
+    mock_result = mocker.MagicMock()
+    mock_result.scalars.return_value.all.return_value = mock_records
+    mock_session.execute.return_value = mock_result
 
     # Act
-    df_result = load_raw_data(mock_session)
+    df_result = load_raw_data(mock_session, RawData)
 
     # Assert
     assert isinstance(df_result, pd.DataFrame)
@@ -50,8 +53,8 @@ def test_load_raw_data_from_bronze(mocker, booking_data):
 
 def test_preprocess_data(booking_data, sample_processor):
     # Arrange
-    X = booking_data.drop(columns=["booking status"])
-    y = booking_data["booking status"]
+    X = booking_data.drop(columns=[DEPENDENT_VAR_NAME])
+    y = booking_data[DEPENDENT_VAR_NAME]
 
     # Action
     X_train, X_test, y_train, y_test = preprocess_data(X, y, sample_processor)
@@ -76,55 +79,25 @@ async def test_save_to_silver_db(mocker):
                 "number_of_adults": 1,
                 "number_of_children": 0,
                 "number_of_weekend_nights": 1,
-                "number_of_weekdays_nights": 2,
+                "number_of_week_nights": 2,  # Fixed: removed 'days'
                 "lead_time": 10,
                 "type_of_meal": "Meal Plan 1",
                 "car_parking_space": 0,
                 "room_type": "Room_Type 1",
                 "average_price": 100.0,
-                **{
-                    col: 0
-                    for col in [
-                        "is_type_of_meal_meal_plan_1",
-                        "is_type_of_meal_meal_plan_2",
-                        "is_type_of_meal_meal_plan_3",
-                        "is_room_type_room_type_1",
-                        "is_room_type_room_type_2",
-                        "is_room_type_room_type_3",
-                        "is_room_type_room_type_4",
-                        "is_room_type_room_type_5",
-                        "is_room_type_room_type_6",
-                        "is_room_type_room_type_7",
-                        "is_market_segment_type_online",
-                        "is_market_segment_type_corporate",
-                        "is_market_segment_type_complementary",
-                        "is_market_segment_type_aviation",
-                        "is_month_of_reservation_jan",
-                        "is_month_of_reservation_feb",
-                        "is_month_of_reservation_mar",
-                        "is_month_of_reservation_apr",
-                        "is_month_of_reservation_may",
-                        "is_month_of_reservation_jun",
-                        "is_month_of_reservation_aug",
-                        "is_month_of_reservation_oct",
-                        "is_month_of_reservation_nov",
-                        "is_month_of_reservation_dec",
-                        "is_day_of_week_monday",
-                        "is_day_of_week_tuesday",
-                        "is_day_of_week_wednesday",
-                        "is_day_of_week_thursday",
-                        "is_day_of_week_friday",
-                        "is_day_of_week_saturday",
-                    ]
-                },
-                "is_cancellation": 1,
+                "market_segment_type": "Online",
+                "is_repeat_guest": 0,
+                "num_previous_cancellations": 0,
+                "num_previous_bookings_not_canceled": 0,
+                "special_requests": 0,
+                "month_of_reservation": "jan",
+                "day_of_week": "Monday",
             }
             for i in range(2)
         ]
     )
 
     y_mock = pd.Series([1, 0])
-
     mock_session = mocker.MagicMock()
 
     # Act

@@ -82,8 +82,8 @@ def test_no_vacancy_data_processing_transform(booking_data):
         booking_map=BOOKING_MAP,
     )
 
-    X = booking_data.drop(columns=["booking status"])
-    y = booking_data["booking status"]
+    X = booking_data.drop(columns=["booking_status"])
+    y = booking_data["booking_status"]
 
     # Action
     transformer.fit(X, y)
