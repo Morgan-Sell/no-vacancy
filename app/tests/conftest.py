@@ -25,7 +25,6 @@ from services import (
     VARS_TO_OHE,
 )
 from services.pipeline import NoVacancyPipeline
-from services.pipeline_management import PipelineManagement
 from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 from tests import TEST_TABLE
@@ -473,57 +472,6 @@ def pytest_sessionfinish(session, exitstatus):
 def temp_pipeline_path(tmp_path):
     """Provide a temporary path for pipeline storage."""
     return tmp_path / "no_vacancy_pipeline.pkl"
-
-
-@pytest.fixture(scope="function")
-def pm(temp_pipeline_path):
-    """
-    Use fixture to instantiate DataManagement to follow DRY
-    principle and enable easier code changes.
-    """
-    return PipelineManagement(pipeline_path=str(temp_pipeline_path))
-
-
-@pytest.fixture(scope="function")
-def trained_pipeline_and_processor(booking_data, tmp_path):
-    # Preprocessing
-    processor = NoVacancyDataProcessing(
-        variable_rename=VARIABLE_RENAME_MAP,
-        month_abbreviation=MONTH_ABBREVIATION_MAP,
-        vars_to_drop=VARS_TO_DROP,
-        booking_map=BOOKING_MAP,
-    )
-    X = booking_data.drop(columns=["booking status"])
-    y = booking_data["booking status"]
-    X_train_prcsd, y_train_prcsd = processor.fit_transform(X, y)
-
-    # Build + train pipeline
-    imputer = CategoricalImputer(
-        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
-    )
-    encoder = OneHotEncoder(variables=VARS_TO_OHE)
-    clsfr = RandomForestClassifier()
-    search_space = {
-        "n_estimators": [20, 50, 100, 200],
-        "max_features": ["log2", "sqrt"],
-        "max_depth": [1, 3, 5],
-        "min_samples_split": [2, 5, 10],
-    }
-    pipe = NoVacancyPipeline(imputer, encoder, clsfr, VARS_TO_DROP)
-    pipe.fit(X_train_prcsd, y_train_prcsd, search_space)
-
-    # Save the trained pipeline and processor
-    temp_pipeline_path = tmp_path / DATA_PATHS["model_save_path"]
-    pm = PipelineManagement(pipeline_path=temp_pipeline_path)
-    pm.save_pipeline(pipe, processor)
-
-    # Move the model artifacts to the app path
-    app_path = Path(DATA_PATHS["model_save_path"])
-    app_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(temp_pipeline_path, app_path)
-
-    # In case there's a need to return the variables
-    return pipe, processor, pm
 
 
 @pytest.fixture(scope="function")
