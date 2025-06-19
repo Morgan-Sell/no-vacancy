@@ -1,7 +1,7 @@
 import shutil
 import tempfile
 import time
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from pathlib import Path
 import mlflow
 import numpy as np
@@ -21,7 +21,8 @@ from services.trainer import (
 )
 
 
-def test_load_raw_data_from_bronze(mocker, booking_data):
+@pytest.fixture.asyncio
+async def test_load_raw_data_from_bronze(mocker, booking_data):
     # Arrange: Convert booking_data to list of mocked RawData objects
     mock_records = []
 
@@ -42,7 +43,7 @@ def test_load_raw_data_from_bronze(mocker, booking_data):
     mock_session.execute.return_value = mock_result
 
     # Act
-    df_result = load_raw_data(mock_session, RawData)
+    df_result = await load_raw_data(mock_session, RawData)
 
     # Assert
     assert isinstance(df_result, pd.DataFrame)
@@ -98,7 +99,7 @@ async def test_save_to_silver_db(mocker):
     )
 
     y_mock = pd.Series([1, 0])
-    mock_session = mocker.MagicMock()
+    mock_session = AsyncMock()
 
     # Act
     await save_to_silver_db(X_mock.copy(), y_mock, X_mock.copy(), y_mock, mock_session)

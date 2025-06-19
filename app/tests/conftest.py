@@ -37,7 +37,7 @@ from tests import TEST_TABLE
 def booking_data():
     data = {
         "Booking_ID": [f"INN0000{i}" for i in range(1, 21)],
-        "number of adults": [
+        "number_of_adults": [
             1,
             1,
             2,
@@ -59,7 +59,7 @@ def booking_data():
             1,
             2,
         ],
-        "number of children": [
+        "number_of_children": [
             1,
             0,
             1,
@@ -81,7 +81,7 @@ def booking_data():
             2,
             1,
         ],
-        "number of weekend nights": [
+        "number_of_weekend_nights": [
             2,
             1,
             1,
@@ -103,7 +103,7 @@ def booking_data():
             1,
             1,
         ],
-        "number of week nights": [
+        "number_of_week_nights": [
             5,
             3,
             3,
@@ -191,7 +191,7 @@ def booking_data():
             "Room_Type 6",
             "Room_Type 7",
         ],
-        "lead time": [
+        "lead_time": [
             224,
             5,
             1,
@@ -213,7 +213,7 @@ def booking_data():
             77,
             85,
         ],
-        "market segment type": [
+        "market_segment_type": [
             "Offline",
             "Online",
             "Airline",
@@ -238,7 +238,7 @@ def booking_data():
         "repeated": [0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0],
         "P-C": [0, 0, 0, 3, 0, 0, 0, 0, 0, 1, 1, 0, 12, 0, 0, 4, 2, 0, 3, 1],
         "P-not-C": [5, 0, 24, 0, 0, 2, 1, 0, 0, 0, 0, 0, 48, 0, 0, 10, 15, 0, 5, 12],
-        "average price": [
+        "average_price": [
             88.00,
             106.68,
             50.70,
@@ -260,7 +260,7 @@ def booking_data():
             111.80,
             95.60,
         ],
-        "special requests": [
+        "special_requests": [
             0,
             1,
             0,
@@ -282,7 +282,7 @@ def booking_data():
             0,
             1,
         ],
-        "date of reservation": [
+        "date_of_reservation": [
             "10/2/2015",
             "11/6/2018",
             "2/28/2018",
@@ -304,7 +304,7 @@ def booking_data():
             "8/9/2023",
             "12/1/2023",
         ],
-        "booking status": [
+        "booking_status": [
             "Not_Canceled",
             "Not_Canceled",
             "Canceled",

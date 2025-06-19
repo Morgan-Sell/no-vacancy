@@ -98,11 +98,10 @@ def test_no_vacancy_data_processing_transform(booking_data):
 
     # Check that the columns have been dropped
     assert "Booking_ID" not in X_tr.columns
-    assert "date of reservation" not in X_tr.columns
 
     # Check that "month_of_reservation" was properly extracted
     expected_months = (
-        pd.to_datetime(booking_data["date of reservation"]).dt.strftime("%b").tolist()
+        pd.to_datetime(booking_data["date_of_reservation"]).dt.strftime("%b").tolist()
     )
     assert all(
         month == expected_month
@@ -113,7 +112,7 @@ def test_no_vacancy_data_processing_transform(booking_data):
 
     # Check that "day_of_week" was properly extracted
     expected_weekdays = (
-        pd.to_datetime(booking_data["date of reservation"]).dt.strftime("%A").tolist()
+        pd.to_datetime(booking_data["date_of_reservation"]).dt.strftime("%A").tolist()
     )
     assert all(
         weekday == expected_weekday

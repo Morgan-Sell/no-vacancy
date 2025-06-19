@@ -105,6 +105,7 @@ async def test_make_prediction_integration_mock(
     mock_session.__aenter__.return_value = mock_session
 
     # Always patch the import path in the module that's being tested, not the original module
+    # Mock where the object is used, not where it is defined
     with patch.object(
         predictor.gold_db, "create_session", return_value=mock_sessionmaker
     ):
