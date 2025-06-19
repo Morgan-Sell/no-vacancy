@@ -21,7 +21,7 @@ from services.trainer import (
 )
 
 
-@pytest.fixture.asyncio
+@pytest.mark.asyncio
 async def test_load_raw_data_from_bronze(mocker, booking_data):
     # Arrange: Convert booking_data to list of mocked RawData objects
     mock_records = []
