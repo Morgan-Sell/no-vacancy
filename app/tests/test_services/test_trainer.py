@@ -164,7 +164,7 @@ async def test_train_pipeline_logs_to_mlflow(monkeypatch, booking_data):
     # Allow MLflow to store experiment data in the temp directory
     # Retry for up to 5 seconds to ensure the run is logged
     experiment = None
-    for _ in range(20):
+    for attempt in range(20):
         try:
             experiment = client.get_experiment_by_name("NoVacancyModelTraining")
             if experiment:
