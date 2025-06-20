@@ -1,3 +1,4 @@
+from fastapi.testclient import TestClient
 import numpy as np
 import pandas as pd
 import pytest
@@ -14,6 +15,7 @@ from services.predictor import make_prediction
 from services.preprocessing import NoVacancyDataProcessing
 from unittest.mock import patch, MagicMock, AsyncMock
 from services import predictor
+from main import app
 
 
 @pytest.mark.asyncio
@@ -67,3 +69,35 @@ async def test_end_to_end_pipeline(booking_data):
         mock_session.merge.assert_called()
         mock_session.commit.assert_awaited_once()
         mock_load.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_api_prediction_integration(booking_data):
+    """
+    Test the API endpoint integration with the prediction endpoint
+    """
+    # Create a test client for the FastAPI app (from main.py)
+    client = TestClient(app)
+
+    # Mock the prediction
+    with patch.object(predictor, "make_prediction") as mock_make_prediction:
+        mock_make_prediction.return_value = pd.DataFrame(
+            {
+                "booking_id": booking_data["Booking_ID"].tolist(),
+                "prediction": [0] * len(booking_data),
+                "probability_not_canceled": [0.8] * len(booking_data),
+                "probabilities_canceled": [0.2] * len(booking_data),
+            }
+        )
+
+        # Test API call
+        payload = {"data": booking_data.to_dict(orient="records")}
+        response = client.post("/predict", json=payload)
+
+        # Assertions
+        assert response.status_code == 200
+        response_data = response.json()
+        assert "predictions" in response_data
+        assert "version" in response_data
+        assert len(response_data["predictions"]) == len(booking_data)
+        mock_make_prediction.assert_called_once()
