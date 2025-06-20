@@ -36,8 +36,11 @@ async def test_end_to_end_pipeline(booking_data):
     ):
 
         mock_pipeline = MagicMock()
-        mock_pipeline.predict.return_value = np.array([0])
-        mock_pipeline.predict_proba.return_value = np.array([[0.8, 0.2]])
+
+        # Predictions much match booking_data length
+        num_rows = len(booking_data)
+        mock_pipeline.predict.return_value = np.array([0] * num_rows)
+        mock_pipeline.predict_proba.return_value = np.array([[0.8, 0.2]] * num_rows)
 
         mock_processor = MagicMock()
         mock_processor.transform.return_value = (

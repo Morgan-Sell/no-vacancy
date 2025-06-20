@@ -80,12 +80,12 @@ async def save_to_silver_db(X_train, y_train, X_test, y_test, session: AsyncSess
     X_train_db["is_cancellation"] = y_train
     X_test_db["is_cancellation"] = y_test
 
-    # Create a list of TrainData instances
+    # Create a list of TrainValidationData instances
     train_objects = [
         TrainValidationData(**row._asdict())
         for row in X_train_db.itertuples(index=False)
     ]
-    # Create a list of ValidationTestData instances
+    # Create a list of TestData instances
     test_objects = [
         TestData(**row._asdict()) for row in X_test_db.itertuples(index=False)
     ]

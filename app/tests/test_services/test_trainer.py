@@ -141,9 +141,14 @@ async def test_train_pipeline_logs_to_mlflow(monkeypatch, booking_data):
         mock_load_raw_data.return_value = raw_data_mock
         mock_save_to_silver_db.return_value = None
 
-        # Simplified session context manager mocking
-        mock_bronze_session.return_value = AsyncMock()
-        mock_silver_session.return_value = AsyncMock()
+        # Mock the session context manager
+        # 'coroutine' object does not support the asynchronous context manager protocol
+        mock_bronze_session_session = AsyncMock()
+        mock_silver_session_session = AsyncMock()
+
+        # Setup session managers that return AsyncMock instances that support async context management
+        mock_bronze_session.return_value = mock_bronze_session_session
+        mock_silver_session.return_value = mock_silver_session_session
 
         # Run the training pipeline
         await train_pipeline()

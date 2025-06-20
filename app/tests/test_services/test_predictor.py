@@ -82,12 +82,8 @@ async def test_make_prediction_integration_mock(
     # Arrange
     # Use only a slice to keep the test lightweight
     df = booking_data[
-        ["Booking_ID", "number of adults", "number of children", "booking status"]
+        ["booking_id", "number_of_adults", "number_of_children", "booking_status"]
     ].copy()
-    df.rename(
-        columns={"Booking_ID": "booking_id", "booking status": "booking_status"},
-        inplace=True,
-    )
 
     # Mock pipeline & processor behavior
     mock_pipeline.predict.return_value = np.array([1] * len(df))
