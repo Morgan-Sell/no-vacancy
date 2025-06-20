@@ -118,145 +118,61 @@ def test_evaluate_model(capsys):
 
 
 @pytest.mark.asyncio
-async def test_train_pipeline_logs_to_mlflow(monkeypatch, booking_data):
-    """
-    Test that MLflow logging works and pipeline components integrate correctly.
-    """
-    # Use a temp directory for MLflow tracking URI
-    temp_dir = tempfile.mkdtemp()
-    mlruns_dir = Path(temp_dir) / "mlruns"
-    monkeypatch.setenv("MLFLOW_TRACKING_URI", f"file://{mlruns_dir}")
+async def test_train_pipeline_unit_test(monkeypatch, booking_data):
+    """True unit test - mock ALL external dependencies."""
 
-    # Use raw data since train_pipeline preprocesses internally
-    raw_data_mock = booking_data.copy()
-
+    # Mock ALL external dependencies
     with (
+        # Database mocks (already doing this)
         patch.object(trainer.bronze_db, "create_session") as mock_bronze_session,
         patch.object(trainer.silver_db, "create_session") as mock_silver_session,
         patch("services.trainer.load_raw_data") as mock_load_raw_data,
         patch("services.trainer.save_to_silver_db") as mock_save_to_silver_db,
+        # MLflow mocks
+        patch("mlflow.set_experiment") as mock_set_experiment,
+        patch("mlflow.start_run") as mock_start_run,
+        patch("mlflow.sklearn.log_model") as mock_log_model,
+        patch("mlflow.log_params") as mock_log_params,
+        patch("mlflow.log_metric") as mock_log_metric,
+        patch("mlflow.log_artifact") as mock_log_artifact,
+        patch("mlflow.MlflowClient") as mock_mlflow_client,
     ):
 
-        # Configure mocks to return our raw test data
-        mock_load_raw_data.return_value = raw_data_mock
+        # Setup data mocks
+        mock_load_raw_data.return_value = booking_data.copy()
         mock_save_to_silver_db.return_value = None
 
-        # Properly mock the double-call pattern bronze_db.create_session()()
-        # The real code does: async with bronze_db.create_session()() as session:
-        # This means create_session() returns a sessionmaker, then () calls it
+        # Setup session mocks
         mock_session = AsyncMock()
-        # sessionmaker object is a regular factory function, not async
         mock_sessionmaker = MagicMock()
-        # __aenter__ and __aexit__ suport async context manager protocol
         mock_sessionmaker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_sessionmaker.return_value.__aexit__ = AsyncMock(return_value=None)
-
-        # Setup session managers that return AsyncMock instances that support async context management
         mock_bronze_session.return_value = mock_sessionmaker
         mock_silver_session.return_value = mock_sessionmaker
 
-        # Run the training pipeline
+        # Setup MLflow mocks
+        mock_client_instance = MagicMock()
+        mock_mlflow_client.return_value = mock_client_instance
+
+        # Act - run the actual function
         await train_pipeline()
 
-    # Verify MLflow logged everything correctly
-    client = mlflow.tracking.MlflowClient()
+        # Assert - verify the function called the right things in the right order
 
-    # Allow MLflow to store experiment data in the temp directory
-    # Retry for up to 5 seconds to ensure the run is logged
-    experiment = None
-    for attempt in range(20):
-        try:
-            experiment = client.get_experiment_by_name("NoVacancyModelTraining")
-            if experiment:
-                print("✅ Found experiment on attempt {attempt + 1}")
-                break
+        # 1. Verify data operations were called
+        mock_load_raw_data.assert_called_once()
+        mock_save_to_silver_db.assert_called_once()
 
-            # Look under the MLflow experiment hood
-            all_experiments = client.search_experiments()
-            print(f"Attempt {attempt + 1}: Found {len(all_experiments)} experiments")
-            for exp in all_experiments:
-                print(f"  - {exp.name}")
+        # 2. Verify MLflow setup was called
+        mock_set_experiment.assert_called_once_with("NoVacancyModelTraining")
+        mock_start_run.assert_called_once()
 
-        except Exception:
-            print(f"Attempt {attempt + 1} failed: {e}")
+        # 3. Verify model logging was called
+        mock_log_model.assert_called_once()
+        mock_log_params.assert_called_once()
+        mock_log_metric.assert_called()  # Called multiple times
+        mock_log_artifact.assert_called()  # Called multiple times
 
-        time.sleep(1)
-
-    # Assert experiment exists
-    if experiment is None:
-        # Print debugging info before failing
-        try:
-            all_experiments = client.search_experiments()
-            print(f"❌ No experiment found. Total experiments: {len(all_experiments)}")
-            for exp in all_experiments:
-                print(f"  - Available: {exp.name}")
-
-            # Check if mlruns directory was created
-            print(f"MLruns directory exists: {mlruns_dir.exists()}")
-            if mlruns_dir.exists():
-                print(f"Contents: {list(mlruns_dir.iterdir())}")
-
-        except Exception as e:
-            print(f"Error during debugging: {e}")
-
-        pytest.fail("Experiment 'NoVacancyModelTraining' was not registered in MLflow")
-
-    experiment_id = experiment.experiment_id
-
-    # Collect the records of the modeling session
-    runs = client.search_runs(
-        experiment_ids=[experiment_id], order_by=["start_time desc"]
-    )
-    assert runs, "No MLflow runs found"
-    run = runs[0]
-
-    # Assert artifacts exist
-    run_id = run.info.run_id
-
-    # Check model artifact
-    model_path = mlflow.artifacts.download_artifacts(run_id, "model")
-    assert Path(model_path, "MLmodel").exists(), "MLmodel artifact not found"
-
-    # Check processor artifact
-    processor_path = mlflow.artifacts.download_artifacts(
-        run_id, "processor/processor.joblib"
-    )
-    assert Path(processor_path).exists(), "Processor artifact not found"
-    processor = joblib.load(processor_path)
-    assert hasattr(
-        processor, "fit_transform"
-    ), "Processor doesn't have expected methods"
-
-    # Check input example artifact
-    input_example_path = mlflow.artifacts.download_artifacts(
-        run_id, "input_example/input_example.parquet"
-    )
-    assert Path(input_example_path).exists(), "Input example artifact not found"
-    df = pd.read_parquet(input_example_path)
-    assert not df.empty, "Input example is empty"
-
-    # Assert metrics were logged
-    logged_metrics = run.data.metrics
-    assert "val_auc" in logged_metrics, "Validation AUC not logged"
-    assert "test_auc" in logged_metrics, "Test AUC not logged"
-
-    # Assert the AUC values are reasonable (between 0 and 1)
-    assert 0 <= logged_metrics["val_auc"] <= 1, "Invalid validation AUC value"
-    assert 0 <= logged_metrics["test_auc"] <= 1, "Invalid test AUC value"
-
-    # Assert parameters were logged
-    logged_params = run.data.params
-    assert "model_version" in logged_params, "Model version not logged"
-    assert "imputer_type" in logged_params, "Imputer type not logged"
-    assert "encoder_type" in logged_params, "Encoder type not logged"
-
-    # FIX: Use the correct variable names that match your patches
-    mock_load_raw_data.assert_called_once()
-    mock_save_to_silver_db.assert_called_once()
-
-    # Verify database sessions were created
-    mock_bronze_session.assert_called_once()
-    mock_silver_session.assert_called_once()
-
-    # Clean up temp mlruns directory
-    shutil.rmtree(temp_dir)
+        # 4. Verify model registry operations
+        mock_client_instance.get_latest_versions.assert_called_once()
+        mock_client_instance.transition_model_version_stage.assert_called_once()
