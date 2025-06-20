@@ -1,7 +1,7 @@
 import shutil
 import tempfile
 import time
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from pathlib import Path
 import mlflow
 import numpy as np
@@ -19,6 +19,7 @@ from services.trainer import (
     save_to_silver_db,
     train_pipeline,
 )
+from services import trainer
 
 
 @pytest.mark.asyncio
@@ -36,8 +37,8 @@ async def test_load_raw_data_from_bronze(mocker, booking_data):
             setattr(record, attr, val)
         mock_records.append(record)
 
-    # Create a mock session
-    mock_session = mocker.MagicMock()
+    # Create an asymc mock session
+    mock_session = AsyncMock()
     mock_result = mocker.MagicMock()
     mock_result.scalars.return_value.all.return_value = mock_records
     mock_session.execute.return_value = mock_result
@@ -71,42 +72,28 @@ def test_preprocess_data(booking_data, sample_processor):
 
 
 @pytest.mark.asyncio
-async def test_save_to_silver_db(mocker):
+async def test_save_to_silver_db(preprocessed_booking_data):
     # Arrange
-    X_mock = pd.DataFrame(
-        [
-            {
-                "booking_id": f"id_{i}",
-                "number_of_adults": 1,
-                "number_of_children": 0,
-                "number_of_weekend_nights": 1,
-                "number_of_week_nights": 2,  # Fixed: removed 'days'
-                "lead_time": 10,
-                "type_of_meal": "Meal Plan 1",
-                "car_parking_space": 0,
-                "room_type": "Room_Type 1",
-                "average_price": 100.0,
-                "market_segment_type": "Online",
-                "is_repeat_guest": 0,
-                "num_previous_cancellations": 0,
-                "num_previous_bookings_not_canceled": 0,
-                "special_requests": 0,
-                "month_of_reservation": "jan",
-                "day_of_week": "Monday",
-            }
-            for i in range(2)
-        ]
-    )
+    X, y = preprocessed_booking_data
 
-    y_mock = pd.Series([1, 0])
+    X_train = X.iloc[: int(len(X) * 0.7)].copy()
+    X_test = X.iloc[int(len(X) * 0.7) :].copy()
+
+    y_train = y.iloc[: int(len(y) * 0.7)].copy()
+    y_test = y.iloc[int(len(y) * 0.7) :].copy()
+
+    # Create AsyncMock session
     mock_session = AsyncMock()
+    mock_session.add_all = AsyncMock()
+    mock_session.commit = AsyncMock()
 
     # Act
-    await save_to_silver_db(X_mock.copy(), y_mock, X_mock.copy(), y_mock, mock_session)
+    await save_to_silver_db(X_train, y_train, X_test, y_test, mock_session)
 
     # Assert
+    # call_count = 2 b/c there is a call for SilverDB's TrainValidationData and TestData
     assert mock_session.add_all.call_count == 2
-    assert mock_session.commit.called
+    mock_session.commit.assert_called_once()
 
 
 def test_build_pipeline():
@@ -131,24 +118,49 @@ def test_evaluate_model(capsys):
 
 
 @pytest.mark.asyncio
-async def test_train_pipeline_logs_to_mlflow(monkeypatch):
+async def test_train_pipeline_logs_to_mlflow(monkeypatch, booking_data):
+    """
+    Test that MLflow logging works and pipeline components integrate correctly.
+    """
     # Use a temp directory for MLflow tracking URI
     temp_dir = tempfile.mkdtemp()
     mlruns_dir = Path(temp_dir) / "mlruns"
     monkeypatch.setenv("MLFLOW_TRACKING_URI", f"file://{mlruns_dir}")
 
-    # Run the training pipeline
-    await train_pipeline()
+    # Use raw data since train_pipeline preprocesses internally
+    raw_data_mock = booking_data.copy()
 
+    with (
+        patch.object(trainer.bronze_db, "create_session") as mock_bronze_session,
+        patch.object(trainer.silver_db, "create_session") as mock_silver_session,
+        patch("services.trainer.load_raw_data") as mock_load_raw_data,
+        patch("services.trainer.save_to_silver_db") as mock_save_to_silver_db,
+    ):
+
+        # Configure mocks to return our raw test data
+        mock_load_raw_data.return_value = raw_data_mock
+        mock_save_to_silver_db.return_value = None
+
+        # Simplified session context manager mocking
+        mock_bronze_session.return_value = AsyncMock()
+        mock_silver_session.return_value = AsyncMock()
+
+        # Run the training pipeline
+        await train_pipeline()
+
+    # Verify MLflow logged everything correctly
     client = mlflow.tracking.MlflowClient()
 
-    # Load the latest run
     # Allow MLflow to store experiment data in the temp directory
     # Retry for up to 5 seconds to ensure the run is logged
+    experiment = None
     for _ in range(10):
-        experiment = client.get_experiment_by_name("NoVacancyModelTraining")
-        if experiment:
-            break
+        try:
+            experiment = client.get_experiment_by_name("NoVacancyModelTraining")
+            if experiment:
+                break
+        except Exception:
+            pass
         time.sleep(0.5)
 
     # Assert experiment exists
@@ -164,27 +176,51 @@ async def test_train_pipeline_logs_to_mlflow(monkeypatch):
 
     # Assert artifacts exist
     run_id = run.info.run_id
+
+    # Check model artifact
     model_path = mlflow.artifacts.download_artifacts(run_id, "model")
     assert Path(model_path, "MLmodel").exists(), "MLmodel artifact not found"
 
+    # Check processor artifact
     processor_path = mlflow.artifacts.download_artifacts(
         run_id, "processor/processor.joblib"
     )
-    assert Path(processor_path).exists()
+    assert Path(processor_path).exists(), "Processor artifact not found"
     processor = joblib.load(processor_path)
-    assert hasattr(processor, "prepare_data")  # rough sanity check
+    assert hasattr(
+        processor, "fit_transform"
+    ), "Processor doesn't have expected methods"
 
+    # Check input example artifact
     input_example_path = mlflow.artifacts.download_artifacts(
         run_id, "input_example/input_example.parquet"
     )
-    assert Path(input_example_path).exists()
+    assert Path(input_example_path).exists(), "Input example artifact not found"
     df = pd.read_parquet(input_example_path)
-    assert not df.empty
+    assert not df.empty, "Input example is empty"
 
     # Assert metrics were logged
     logged_metrics = run.data.metrics
-    assert "val_auc" in logged_metrics
-    assert "test_auc" in logged_metrics
+    assert "val_auc" in logged_metrics, "Validation AUC not logged"
+    assert "test_auc" in logged_metrics, "Test AUC not logged"
+
+    # Assert the AUC values are reasonable (between 0 and 1)
+    assert 0 <= logged_metrics["val_auc"] <= 1, "Invalid validation AUC value"
+    assert 0 <= logged_metrics["test_auc"] <= 1, "Invalid test AUC value"
+
+    # Assert parameters were logged
+    logged_params = run.data.params
+    assert "model_version" in logged_params, "Model version not logged"
+    assert "imputer_type" in logged_params, "Imputer type not logged"
+    assert "encoder_type" in logged_params, "Encoder type not logged"
+
+    # FIX: Use the correct variable names that match your patches
+    mock_load_raw_data.assert_called_once()
+    mock_save_to_silver_db.assert_called_once()
+
+    # Verify database sessions were created
+    mock_bronze_session.assert_called_once()
+    mock_silver_session.assert_called_once()
 
     # Clean up temp mlruns directory
     shutil.rmtree(temp_dir)

@@ -124,10 +124,17 @@ async def make_prediction(test_data: pd.DataFrame, already_processed: bool = Fal
         probabilities = np.array(probabilities)
         predictions = np.array(predictions)
 
+        # Manage name changes to variables
+        booking_ids = (
+            test_data["Booking_ID"]
+            if "Booking_ID" in test_data.columns
+            else test_data["booking_id"]
+        )
+
         # Format predictions into a dataframe
         results = pd.DataFrame(
             {
-                "booking_id": test_data["booking_id"],
+                "booking_id": booking_ids,
                 "prediction": predictions,
                 "probability_not_canceled": probabilities[:, 0],
                 "probabilities_canceled": probabilities[:, 1],

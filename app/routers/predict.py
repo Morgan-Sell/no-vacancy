@@ -39,7 +39,7 @@ async def predict(request_data: PredictionRequest):
 
         # FastAPI automatically converts Python data structures into JSON responses
         return PredictionResponse(
-            predictions=results["prediction"].to_list(),
+            predictions=results["prediction"].tolist(),
             version=__model_version__,
         )
 

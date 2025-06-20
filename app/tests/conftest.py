@@ -341,8 +341,8 @@ def preprocessed_booking_data(booking_data):
         booking_map=BOOKING_MAP,
     )
     df = booking_data.copy()
-    X = df.drop(columns=["booking status"])
-    y = df["booking status"]
+    X = df.drop(columns=["booking_status"])
+    y = df["booking_status"]
 
     X_tr, y_tr = processor.fit_transform(X, y)
     return X_tr, y_tr
