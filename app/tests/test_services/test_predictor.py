@@ -82,17 +82,10 @@ async def test_make_prediction_integration_mock(
     # Arrange
     # Use only a slice to keep the test lightweight
     df = booking_data[
-        ["booking_id", "number_of_adults", "number_of_children", "booking_status"]
+        ["Booking_ID", "number_of_adults", "number_of_children", "booking_status"]
     ].copy()
 
-    # Mock pipeline & processor behavior
-    mock_pipeline.predict.return_value = np.array([1] * len(df))
-    mock_pipeline.predict_proba.return_value = np.array([[0.8, 0.2]] * len(df))
-    mock_processor.transform.return_value = (
-        np.array([[0.1, 0.2, 0.3]] * len(df)),
-        np.array([1] * len(df)),
-    )
-
+    # Configure mocks
     mock_load_pipeline.return_value = (mock_pipeline, mock_processor)
 
     # Patch gold_db.create_session() to return a sessionmaker that returns an AsyncSession
@@ -105,8 +98,19 @@ async def test_make_prediction_integration_mock(
     with patch.object(
         predictor.gold_db, "create_session", return_value=mock_sessionmaker
     ):
+        # Mock the processor
+        processed_df = df.drop(columns=["booking_status"]).rename(
+            columns={"Booking_ID": "booking_id"}
+        )
+        mock_processor.transform.return_value = (processed_df, None)
+
+        # Mock the pipeline
+        num_rows = len(df)
+        mock_pipeline.predict.return_value = np.array([0] * num_rows)
+        mock_pipeline.predict_proba.return_value = np.array([[0.8, 0.2]] * num_rows)
+
         # Act
-        result = await make_prediction(df)
+        result = await make_prediction(df, already_processed=False)
 
     # Assert
     assert isinstance(result, pd.DataFrame)

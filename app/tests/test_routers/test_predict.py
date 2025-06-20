@@ -16,12 +16,14 @@ def test_predict_endpoint(booking_data, mock_mlflow_client):
 
     # Mock the make_prediction function
     with patch("routers.predict.make_prediction") as mock_predict:
-        mock_predict.return_value = {
-            "booking_id": ["INN00001"],
-            "prediction": [0],
-            "probability_not_canceled": [0.8],
-            "probabilities_canceled": [0.2],
-        }
+        mock_predict.return_value = pd.DataFrame(
+            {
+                "booking_id": ["INN00001"],
+                "prediction": [0],
+                "probability_not_canceled": [0.8],
+                "probabilities_canceled": [0.2],
+            }
+        )
 
         # Act
         response = client.post("/predict", json=payload)

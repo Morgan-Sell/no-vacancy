@@ -82,9 +82,9 @@ async def test_save_to_silver_db(preprocessed_booking_data):
     y_train = y.iloc[: int(len(y) * 0.7)].copy()
     y_test = y.iloc[int(len(y) * 0.7) :].copy()
 
-    # Create AsyncMock session
+    # Use MagicMock for non-awaited methods to avoid warnings
     mock_session = AsyncMock()
-    mock_session.add_all = AsyncMock()
+    mock_session.add_all = MagicMock()
     mock_session.commit = AsyncMock()
 
     # Act
@@ -141,14 +141,16 @@ async def test_train_pipeline_logs_to_mlflow(monkeypatch, booking_data):
         mock_load_raw_data.return_value = raw_data_mock
         mock_save_to_silver_db.return_value = None
 
-        # Mock the session context manager
-        # 'coroutine' object does not support the asynchronous context manager protocol
-        mock_bronze_session_session = AsyncMock()
-        mock_silver_session_session = AsyncMock()
+        # Properly mock the double-call pattern bronze_db.create_session()()
+        # The real code does: async with bronze_db.create_session()() as session:
+        # This means create_session() returns a sessionmaker, then () calls it
+        mock_session = AsyncMock()
+        mock_sessionmaker = AsyncMock()
+        mock_sessionmaker.return_value = mock_session
 
         # Setup session managers that return AsyncMock instances that support async context management
-        mock_bronze_session.return_value = mock_bronze_session_session
-        mock_silver_session.return_value = mock_silver_session_session
+        mock_bronze_session.return_value = mock_sessionmaker
+        mock_silver_session.return_value = mock_sessionmaker
 
         # Run the training pipeline
         await train_pipeline()
