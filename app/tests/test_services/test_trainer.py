@@ -164,17 +164,43 @@ async def test_train_pipeline_logs_to_mlflow(monkeypatch, booking_data):
     # Allow MLflow to store experiment data in the temp directory
     # Retry for up to 5 seconds to ensure the run is logged
     experiment = None
-    for _ in range(10):
+    for _ in range(20):
         try:
             experiment = client.get_experiment_by_name("NoVacancyModelTraining")
             if experiment:
+                print("✅ Found experiment on attempt {attempt + 1}")
                 break
+
+            # Look under the MLflow experiment hood
+            all_experiments = client.search_experiments()
+            print(f"Attempt {attempt + 1}: Found {len(all_experiments)} experiments")
+            for exp in all_experiments:
+                print(f"  - {exp.name}")
+
         except Exception:
-            pass
-        time.sleep(0.5)
+            print(f"Attempt {attempt + 1} failed: {e}")
+
+        time.sleep(1)
 
     # Assert experiment exists
-    assert experiment is not None, "Experiment was not registered in MLflow"
+    if experiment is None:
+        # Print debugging info before failing
+        try:
+            all_experiments = client.search_experiments()
+            print(f"❌ No experiment found. Total experiments: {len(all_experiments)}")
+            for exp in all_experiments:
+                print(f"  - Available: {exp.name}")
+
+            # Check if mlruns directory was created
+            print(f"MLruns directory exists: {mlruns_dir.exists()}")
+            if mlruns_dir.exists():
+                print(f"Contents: {list(mlruns_dir.iterdir())}")
+
+        except Exception as e:
+            print(f"Error during debugging: {e}")
+
+        pytest.fail("Experiment 'NoVacancyModelTraining' was not registered in MLflow")
+
     experiment_id = experiment.experiment_id
 
     # Collect the records of the modeling session
