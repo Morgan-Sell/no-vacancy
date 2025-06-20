@@ -7,6 +7,50 @@ Includes the installation steps for each feature branch.
 
 ## Installation & Running the App
 
+
+### `ci-pipe-v2`
+Implemented a CI pipeline with GitHub Actions for automated linting and testing. Enhanced the MLflow integration to provide complete model lifecycle management - the system now logs trained models and preprocessing artifacts in `trainer.py` and retrieves them for inference in `predictor.py`, enabling consistent model versioning and deployment.
+
+1. Clone the repo.
+   ```
+    git clone https://github.com/Morgan-Sell/no-vacancy.git
+   ```
+
+2. Switch to `mlflow` feature branch.
+   ```
+   git checkout mlflow
+   ```
+
+3. Add the following GitHub secrets:
+   - `BRONZE_DB`
+   - `BRONZE_DB_HOST`
+   - `DB_PASSWORD`
+   - `DB_PORT`
+   - `DB_USER`
+   - `GOLD_DB`
+   - `GOLD_DB_HOST`
+   - `MLFLOW_DB`
+   - `MLFLOW_DB_HOST`
+   - `MLFLOW_TRACKING_URI`
+   - `SILVER_DB`
+   - `SILVER_DB_HOST`
+   - `TEST_DB`
+   - `TEST_DB_HOST`
+   - `TEST_DB_PASSWORD`
+   - `TEST_DB_PORT`
+   - `TEST_DB_USER`
+
+4. Every time code changes are pushed to GitHub, the CI pipeline will be executed. To see the CI pipeline results, navigate to the **Actions** tab. Here you will see a list of all completed workflows.
+<p align="center">
+   <img src="./img/github_actions.png" alt="GitHub Actions" width="400"/>
+</p>
+
+5. The CI pipeline only checks code style; it doesn't fix the code. To enable auto-fixing, `.pre-commit-config.yaml` was created. Before committing/pushing your code changes to GitHub, run the following code in your terminal
+   ```
+   pre-commit run --all-files --config .pre-commit-config.yaml
+   ```
+
+
 ### `mlflow`
 When `NoVacancyPipeline` is trained, model artifacts and experimentation results are saved to MLflow repository.
 
@@ -127,12 +171,12 @@ Implements medallion architecture and reads `/data/bookings_raw.csv` into the `r
 
     SELECT * FROM raw_data LIMIT 10;
     ```
-    
+
 10. Since the `raw_data` table has been populated, you can process the data and save the data to `novacancy-silver` database and train the model using the `NoVacancyPipeline` class. Once you're inside the Docker container (by following instruction #8), execute the following code:
     ```
     python services/trainer.py
     ```
-   
+
    If the application successfully runs, you should see some like the following:
    ```
    2025-05-14 00:43:16,688 - __main__ - INFO -train_pipeline:116 - ✅ Loaded raw data
@@ -158,7 +202,7 @@ FastAPI web server comprised of the routers and the services required to process
 
 3. Build the Docker image (replace <docker_username> with your Docker Hub username). Make sure Docker is running on your local PC.
    ```
-   docker build -t <docker_username>/no-vacancy:v1 . 
+   docker build -t <docker_username>/no-vacancy:v1 .
    ```
 
 4. Run the container.
@@ -167,7 +211,3 @@ FastAPI web server comprised of the routers and the services required to process
    ```
 
 5. Test the API by going to `http://0.0.0.0:8000/docs` in your browser.
-
-
-
-

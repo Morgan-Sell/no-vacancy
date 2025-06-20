@@ -1,8 +1,14 @@
-from unittest.mock import MagicMock, patch
-
+import shutil
+import tempfile
+import time
+from unittest.mock import AsyncMock, MagicMock, patch
+from pathlib import Path
+import mlflow
 import numpy as np
 import pandas as pd
+import joblib
 import pytest
+from app.services import DEPENDENT_VAR_NAME
 from schemas.bronze import RawData
 from services.pipeline import NoVacancyPipeline
 from services.trainer import (
@@ -11,11 +17,13 @@ from services.trainer import (
     load_raw_data,
     preprocess_data,
     save_to_silver_db,
+    train_pipeline,
 )
-from sklearn.metrics import roc_auc_score
+from services import trainer
 
 
-def test_load_raw_data_from_bronze(mocker, booking_data):
+@pytest.mark.asyncio
+async def test_load_raw_data_from_bronze(mocker, booking_data):
     # Arrange: Convert booking_data to list of mocked RawData objects
     mock_records = []
 
@@ -29,12 +37,14 @@ def test_load_raw_data_from_bronze(mocker, booking_data):
             setattr(record, attr, val)
         mock_records.append(record)
 
-    # Create a mock BronzeSessionLocal
-    mock_session = mocker.MagicMock()
-    mock_session.query.return_value.all.return_value = mock_records
+    # Create an asymc mock session
+    mock_session = AsyncMock()
+    mock_result = mocker.MagicMock()
+    mock_result.scalars.return_value.all.return_value = mock_records
+    mock_session.execute.return_value = mock_result
 
     # Act
-    df_result = load_raw_data(mock_session)
+    df_result = await load_raw_data(mock_session, RawData)
 
     # Assert
     assert isinstance(df_result, pd.DataFrame)
@@ -45,8 +55,8 @@ def test_load_raw_data_from_bronze(mocker, booking_data):
 
 def test_preprocess_data(booking_data, sample_processor):
     # Arrange
-    X = booking_data.drop(columns=["booking status"])
-    y = booking_data["booking status"]
+    X = booking_data.drop(columns=[DEPENDENT_VAR_NAME])
+    y = booking_data[DEPENDENT_VAR_NAME]
 
     # Action
     X_train, X_test, y_train, y_test = preprocess_data(X, y, sample_processor)
@@ -61,72 +71,29 @@ def test_preprocess_data(booking_data, sample_processor):
     assert len(y_train) + len(y_test) == len(y)
 
 
-def test_save_to_silver_db(mocker):
+@pytest.mark.asyncio
+async def test_save_to_silver_db(preprocessed_booking_data):
     # Arrange
-    X_mock = pd.DataFrame(
-        [
-            {
-                "booking_id": f"id_{i}",
-                "number_of_adults": 1,
-                "number_of_children": 0,
-                "number_of_weekend_nights": 1,
-                "number_of_weekdays_nights": 2,
-                "lead_time": 10,
-                "type_of_meal": "Meal Plan 1",
-                "car_parking_space": 0,
-                "room_type": "Room_Type 1",
-                "average_price": 100.0,
-                **{
-                    col: 0
-                    for col in [
-                        "is_type_of_meal_meal_plan_1",
-                        "is_type_of_meal_meal_plan_2",
-                        "is_type_of_meal_meal_plan_3",
-                        "is_room_type_room_type_1",
-                        "is_room_type_room_type_2",
-                        "is_room_type_room_type_3",
-                        "is_room_type_room_type_4",
-                        "is_room_type_room_type_5",
-                        "is_room_type_room_type_6",
-                        "is_room_type_room_type_7",
-                        "is_market_segment_type_online",
-                        "is_market_segment_type_corporate",
-                        "is_market_segment_type_complementary",
-                        "is_market_segment_type_aviation",
-                        "is_month_of_reservation_jan",
-                        "is_month_of_reservation_feb",
-                        "is_month_of_reservation_mar",
-                        "is_month_of_reservation_apr",
-                        "is_month_of_reservation_may",
-                        "is_month_of_reservation_jun",
-                        "is_month_of_reservation_aug",
-                        "is_month_of_reservation_oct",
-                        "is_month_of_reservation_nov",
-                        "is_month_of_reservation_dec",
-                        "is_day_of_week_monday",
-                        "is_day_of_week_tuesday",
-                        "is_day_of_week_wednesday",
-                        "is_day_of_week_thursday",
-                        "is_day_of_week_friday",
-                        "is_day_of_week_saturday",
-                    ]
-                },
-                "is_cancellation": 1,
-            }
-            for i in range(2)
-        ]
-    )
+    X, y = preprocessed_booking_data
 
-    y_mock = pd.Series([1, 0])
+    X_train = X.iloc[: int(len(X) * 0.7)].copy()
+    X_test = X.iloc[int(len(X) * 0.7) :].copy()
 
-    mock_session = mocker.MagicMock()
+    y_train = y.iloc[: int(len(y) * 0.7)].copy()
+    y_test = y.iloc[int(len(y) * 0.7) :].copy()
+
+    # Use MagicMock for non-awaited methods to avoid warnings
+    mock_session = AsyncMock()
+    mock_session.add_all = MagicMock()
+    mock_session.commit = AsyncMock()
 
     # Act
-    save_to_silver_db(X_mock.copy(), y_mock, X_mock.copy(), y_mock, mock_session)
+    await save_to_silver_db(X_train, y_train, X_test, y_test, mock_session)
 
     # Assert
-    assert mock_session.bulk_save_objects.call_count == 2
-    assert mock_session.commit.called
+    # call_count = 2 b/c there is a call for SilverDB's TrainValidationData and TestData
+    assert mock_session.add_all.call_count == 2
+    mock_session.commit.assert_called_once()
 
 
 def test_build_pipeline():

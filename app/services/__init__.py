@@ -33,7 +33,7 @@ BOOKING_MAP = {
 }
 
 VARS_TO_DROP = [
-    # "booking_id",
+    # "booking_id", # Primary key should not be dropped. Value is required for Silver DB.
     "date_of_reservation"
 ]
 
@@ -55,7 +55,7 @@ PRIMARY_KEY = "booking_id"
 RSCV_PARAMS = {
     "n_iter": 20,  # TODO: Update to 50 after debugging
     "scoring": "roc_auc",
-    "n_jobs": -1,
+    "n_jobs": 1,
     "cv": 3,  # TODO: Update to 5 after debugging
     "verbose": 1,
     "return_train_score": False,
@@ -84,4 +84,11 @@ DATA_PATHS = {
     "model_save_path": "models/no_vacancy_pipeline.pkl",
 }
 
+# -- Model Inference (predictor.py) --
+SILVER_DB_TARGET_VARIABLE = "is_cancellation"
+
+# -- MLflow Tracking --
 MLFLOW_TRACKING_URI = "http://mlfow:50000"
+MLFLOW_PROCESSOR_JOBLIB = "processor.joblib"
+MLFLOW_PROCESSOR_PATH = f"processor/{MLFLOW_PROCESSOR_JOBLIB}"
+MLFLOW_EXPERIMENT_NAME = "NoVacancyModelTraining"

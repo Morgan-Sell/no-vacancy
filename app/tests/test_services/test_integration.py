@@ -1,9 +1,9 @@
+from fastapi.testclient import TestClient
+import numpy as np
 import pandas as pd
-from feature_engine.encoding import OneHotEncoder
-from feature_engine.imputation import CategoricalImputer
+import pytest
 from services import (
     BOOKING_MAP,
-    DATA_PATHS,
     MONTH_ABBREVIATION_MAP,
     SEARCH_SPACE,
     VARIABLE_RENAME_MAP,
@@ -11,100 +11,106 @@ from services import (
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
-from services.pipeline import NoVacancyPipeline
-from services.pipeline_management import PipelineManagement
 from services.predictor import make_prediction
 from services.preprocessing import NoVacancyDataProcessing
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
+from unittest.mock import patch, MagicMock, AsyncMock
+from services import predictor
+from main import app
+from routers import predict
+from config import __model_version__
 
 
-def test_end_to_end_pipeline(booking_data, pm, temp_pipeline_path):
-    # Step 1: Split data into train and test
-    X = booking_data.drop(columns=["booking status"])
-    y = booking_data["booking status"]
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=33
-    )
+@pytest.mark.asyncio
+async def test_end_to_end_pipeline(booking_data):
+    """Test end-to-end pipeline using MLflow mocks."""
 
-    # Step 2: Data Preprocessing
-    processor = NoVacancyDataProcessing(
-        variable_rename=VARIABLE_RENAME_MAP,
-        month_abbreviation=MONTH_ABBREVIATION_MAP,
-        vars_to_drop=VARS_TO_DROP,
-        booking_map=BOOKING_MAP,
-    )
-    X_train_prcsd, y_train_prcsd = processor.fit_transform(X_train, y_train)
+    # Create async session mock based on AsyncPostgresDB config in postgres.py
+    mock_session = AsyncMock()
+    mock_sessionmaker = MagicMock()
+    mock_sessionmaker.return_value.__aenter__.return_value = mock_session
+    mock_sessionmaker.return_value.__aexit__.return_value = None
 
-    # Assertions: Data Preprocessing
-    assert isinstance(X_train_prcsd, pd.DataFrame), "X_prcsd is not a DataFrame."
-    assert isinstance(y_train_prcsd, pd.Series), "y_prcsd is not a Series."
-    assert (
-        X_train_prcsd.shape[0] == y_train_prcsd.shape[0]
-    ), "X_prcsd and y_prcsd row counts do not equal "
+    # Mock AsyncPostgresDB.create_session()
+    # Mock where gold_db is used, not where it is defined. Import system creates a local reference.
+    with (
+        patch.object(
+            predictor.gold_db, "create_session", return_value=mock_sessionmaker
+        ),
+        patch.object(predictor, "load_pipeline_and_processor_from_mlflow") as mock_load,
+    ):
 
-    # Step 3: Train pipeline
-    imputer = CategoricalImputer(imputation_method="frequent", variables=VARS_TO_IMPUTE)
-    encoder = OneHotEncoder(variables=VARS_TO_OHE)
-    estimator = RandomForestClassifier()
+        mock_pipeline = MagicMock()
 
-    pipeline = NoVacancyPipeline(imputer, encoder, estimator)
-    pipeline.pipeline(SEARCH_SPACE)
-    pipeline.fit(X_train_prcsd, y_train_prcsd)
+        # Predictions much match booking_data length
+        num_rows = len(booking_data)
+        mock_pipeline.predict.return_value = np.array([0] * num_rows)
+        mock_pipeline.predict_proba.return_value = np.array([[0.8, 0.2]] * num_rows)
 
-    # Asserts: Pipeline training
-    assert hasattr(pipeline, "rscv"), "Pipeline does not have rscv attribute."
-    assert pipeline.rscv.best_estimator_ is not None, "Best estimator is None."
+        mock_processor = MagicMock()
+        mock_processor.transform.return_value = (
+            booking_data.drop(columns=["booking_status"]),
+            None,
+        )
 
-    # Step 4: Save pipeline using the dm pytest fixture
-    pm.save_pipeline(pipeline, processor)
+        # Mock MLflow return the trained pipeline and processor
+        mock_load.return_value = (mock_pipeline, mock_processor)
 
-    # Assertions: Pipeline saving
-    assert (
-        pm.pipeline_path == temp_pipeline_path
-    ), "Pipeline path does not match temp path."
+        result = await make_prediction(booking_data, already_processed=False)
 
-    # Step 5: Load pipeline & processor
-    loaded_pipeline, loaded_processor = pm.load_pipeline()
+        # Assert
+        assert result is not None
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(booking_data)  # Should match input length
+        assert "prediction" in result.columns
+        assert "probability_not_canceled" in result.columns
+        assert "probabilities_canceled" in result.columns
+        assert "booking_id" in result.columns
 
-    # Assertions: Pipeline & Processor loading
-    assert loaded_pipeline is not None, "Loaded pipeline is None."
-    assert hasattr(
-        loaded_pipeline, "predict"
-    ), "Loaded pipeline missing predict method."
-    assert loaded_processor is not None, "Loaded processor is None."
-    assert hasattr(
-        loaded_processor, "transform"
-    ), "Loaded processor missing transform method."
+        # Verify mocks were called
+        mock_sessionmaker.assert_called_once()
+        mock_session.merge.assert_called()
+        mock_session.commit.assert_awaited_once()
+        mock_load.assert_called_once()
 
-    # Step 5: Preprocess and align test data
-    # X_test_prcsd, y_test_prcsd = processor.transform(X_test, y_test)
-    # expected_columns = loaded_pipeline.rscv.best_estimator_.named_steps[
-    #     "encoding_step"
-    # ].get_feature_names_out()
-    # X_test_prcsd = X_test_prcsd.reindex(columns=expected_columns, fill_value=0)
 
-    # Step 6: Prediction
-    predictions = make_prediction(X_test, pm)
+@pytest.mark.asyncio
+async def test_api_prediction_integration(booking_data):
+    """
+    Test the API endpoint integration with the prediction endpoint
+    """
+    # Create a test client for the FastAPI app (from main.py)
+    client = TestClient(app)
 
-    # Assertions: Prediction
-    assert isinstance(predictions, pd.DataFrame), "Predictions are not a DataFrame."
-    assert (
-        predictions.shape[0] == X_test.shape[0]
-    ), "Prediction row count does not match input data."
-    assert predictions.columns.tolist() == [
-        "prediction",
-        "probability_not_canceled",
-        "probabilities_canceled",
-    ], "Prediction columns do not match expected output."
+    # Mock the prediction from where it is used, i.e., i.e., routers/predict.py
+    with patch.object(predict, "make_prediction") as mock_make_prediction:
+        mock_make_prediction.return_value = pd.DataFrame(
+            {
+                "booking_id": booking_data["Booking_ID"].tolist(),
+                "prediction": [0] * len(booking_data),
+                "probability_not_canceled": [0.8] * len(booking_data),
+                "probabilities_canceled": [0.2] * len(booking_data),
+            }
+        )
 
-    # Validation prediction results
-    assert (
-        predictions["prediction"].isin([0, 1]).all()
-    ), "Predictions contain invalid values."
-    assert (
-        predictions["probability_not_canceled"].between(0, 1).all()
-    ), "Probability values are out of bounds."
-    assert (
-        predictions["probabilities_canceled"].between(0, 1).all()
-    ), "Probability values are out of bounds."
+        # Test API call
+        payload = {"data": booking_data.to_dict(orient="records")}
+        response = client.post("/predict", json=payload)
+
+        # Assertions
+        assert response.status_code == 200
+
+        response_data = response.json()
+        assert "predictions" in response_data
+        assert "version" in response_data
+
+        # More specific checks
+        assert response_data["predictions"] == [0] * len(booking_data)
+        assert response_data["version"] == __model_version__
+
+        # Verify the API correctly processed the input
+        mock_make_prediction.assert_called_once()
+
+        # Check that the function was called with a DataFrame
+        call_args = mock_make_prediction.call_args[0][0]
+        assert isinstance(call_args, pd.DataFrame)
+        assert len(call_args) == len(booking_data)

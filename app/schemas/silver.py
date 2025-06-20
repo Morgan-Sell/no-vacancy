@@ -1,7 +1,14 @@
-from sqlalchemy import Column, Date, Float, Integer, String
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import Column, Float, Integer, String
+from sqlalchemy.orm import DeclarativeBase
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    """
+    Base class for SQLAlchemy models.
+    This approach makes Base a class, which can be inherited by other models.
+    """
+
+    pass
 
 
 class TrainValidationData(Base):

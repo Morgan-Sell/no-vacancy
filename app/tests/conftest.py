@@ -1,13 +1,13 @@
 import glob
 import os
-import random
 import shutil
 import tempfile
 import time
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest import mock
+from unittest.mock import MagicMock
 
+import numpy as np
 import pandas as pd
 import psycopg2
 import pytest
@@ -20,14 +20,12 @@ from services import (
     IMPUTATION_METHOD,
     MONTH_ABBREVIATION_MAP,
     PRIMARY_KEY,
-    RAW_TARGET_VARIABLE,
     VARIABLE_RENAME_MAP,
     VARS_TO_DROP,
     VARS_TO_IMPUTE,
     VARS_TO_OHE,
 )
 from services.pipeline import NoVacancyPipeline
-from services.pipeline_management import PipelineManagement
 from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 from tests import TEST_TABLE
@@ -39,7 +37,7 @@ from tests import TEST_TABLE
 def booking_data():
     data = {
         "Booking_ID": [f"INN0000{i}" for i in range(1, 21)],
-        "number of adults": [
+        "number_of_adults": [
             1,
             1,
             2,
@@ -61,7 +59,7 @@ def booking_data():
             1,
             2,
         ],
-        "number of children": [
+        "number_of_children": [
             1,
             0,
             1,
@@ -83,7 +81,7 @@ def booking_data():
             2,
             1,
         ],
-        "number of weekend nights": [
+        "number_of_weekend_nights": [
             2,
             1,
             1,
@@ -105,7 +103,7 @@ def booking_data():
             1,
             1,
         ],
-        "number of week nights": [
+        "number_of_week_nights": [
             5,
             3,
             3,
@@ -193,7 +191,7 @@ def booking_data():
             "Room_Type 6",
             "Room_Type 7",
         ],
-        "lead time": [
+        "lead_time": [
             224,
             5,
             1,
@@ -215,7 +213,7 @@ def booking_data():
             77,
             85,
         ],
-        "market segment type": [
+        "market_segment_type": [
             "Offline",
             "Online",
             "Airline",
@@ -240,7 +238,7 @@ def booking_data():
         "repeated": [0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0],
         "P-C": [0, 0, 0, 3, 0, 0, 0, 0, 0, 1, 1, 0, 12, 0, 0, 4, 2, 0, 3, 1],
         "P-not-C": [5, 0, 24, 0, 0, 2, 1, 0, 0, 0, 0, 0, 48, 0, 0, 10, 15, 0, 5, 12],
-        "average price": [
+        "average_price": [
             88.00,
             106.68,
             50.70,
@@ -262,7 +260,7 @@ def booking_data():
             111.80,
             95.60,
         ],
-        "special requests": [
+        "special_requests": [
             0,
             1,
             0,
@@ -284,7 +282,7 @@ def booking_data():
             0,
             1,
         ],
-        "date of reservation": [
+        "date_of_reservation": [
             "10/2/2015",
             "11/6/2018",
             "2/28/2018",
@@ -306,7 +304,7 @@ def booking_data():
             "8/9/2023",
             "12/1/2023",
         ],
-        "booking status": [
+        "booking_status": [
             "Not_Canceled",
             "Not_Canceled",
             "Canceled",
@@ -343,11 +341,12 @@ def preprocessed_booking_data(booking_data):
         booking_map=BOOKING_MAP,
     )
     df = booking_data.copy()
-    X = df.drop(columns=["booking status"])
-    y = df["booking status"]
+    X = df.drop(columns=["booking_status"])
+    y = df["booking_status"]
 
     X_tr, y_tr = processor.fit_transform(X, y)
     return X_tr, y_tr
+
 
 @pytest.fixture(scope="function")
 def mock_read_csv(mocker, booking_data):
@@ -477,68 +476,22 @@ def temp_pipeline_path(tmp_path):
 
 
 @pytest.fixture(scope="function")
-def pm(temp_pipeline_path):
-    """
-    Use fixture to instantiate DataManagement to follow DRY
-    principle and enable easier code changes.
-    """
-    return PipelineManagement(pipeline_path=str(temp_pipeline_path))
-
-
-@pytest.fixture(scope="function")
-def trained_pipeline_and_processor(booking_data, tmp_path):
-    # Preprocessing
-    processor = NoVacancyDataProcessing(
-        variable_rename=VARIABLE_RENAME_MAP,
-        month_abbreviation=MONTH_ABBREVIATION_MAP,
-        vars_to_drop=VARS_TO_DROP,
-        booking_map=BOOKING_MAP,
-    )
-    X = booking_data.drop(columns=["booking status"])
-    y = booking_data["booking status"]
-    X_train_prcsd, y_train_prcsd = processor.fit_transform(X, y)
-
-    # Build + train pipeline
-    imputer = CategoricalImputer(
-        imputation_method=IMPUTATION_METHOD, variables=VARS_TO_IMPUTE
-    )
-    encoder = OneHotEncoder(variables=VARS_TO_OHE)
-    clsfr = RandomForestClassifier()
-    search_space = {
-        "n_estimators": [20, 50, 100, 200],
-        "max_features": ["log2", "sqrt"],
-        "max_depth": [1, 3, 5],
-        "min_samples_split": [2, 5, 10],
-    }
-    pipe = NoVacancyPipeline(imputer, encoder, clsfr)
-    pipe.fit(X_train_prcsd, y_train_prcsd, search_space)
-
-    # Save the trained pipeline and processor
-    temp_pipeline_path = tmp_path / DATA_PATHS["model_save_path"]
-    pm = PipelineManagement(pipeline_path=temp_pipeline_path)
-    pm.save_pipeline(pipe, processor)
-
-    # Move the model artifacts to the app path
-    app_path = Path(DATA_PATHS["model_save_path"])
-    app_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(temp_pipeline_path, app_path)
-
-    # In case there's a need to return the variables
-    return pipe, processor, pm
-
-
-@pytest.fixture(scope="function")
 def test_db_conn():
     """
     Fixture for test DB connection and test table setup.
     """
-    conn = psycopg2.connect(
-        host=TEST_DB_HOST,
-        port=TEST_DB_PORT,
-        dbname=TEST_DB,
-        user=TEST_DB_USER,
-        password=TEST_DB_PASSWORD,
-    )
+    # Use try-except to ensure unit tests pass during CI even if the DB is unavailable.
+    try:
+        conn = psycopg2.connect(
+            host=TEST_DB_HOST,
+            port=TEST_DB_PORT,
+            dbname=TEST_DB,
+            user=TEST_DB_USER,
+            password=TEST_DB_PASSWORD,
+        )
+
+    except psycopg2.OperationalError as e:
+        pytest.skip(f"Test database not available: {e}")
 
     cursor = conn.cursor()
 
@@ -548,8 +501,12 @@ def test_db_conn():
         CREATE TABLE {TEST_TABLE} (
             number_of_adults INTEGER,
             number_of_weekend_nights INTEGER
+
+        DROP TABLE IF EXISTS csv_hashs (
+            filename TEXT,
+            file_hash TEXT
         );
-    """
+        """
     )
     conn.commit()
 
@@ -560,3 +517,73 @@ def test_db_conn():
     conn.commit()
     cursor.close()
     conn.close()
+
+
+# ------ Mock MLflow Fixtures ------
+
+
+@pytest.fixture(autouse=True)
+def mock_mlflow():
+    with mock.patch("services.trainer.mlflow") as mock_ml:
+        mock_ml.set_experiment.return_vale = None
+        mock_ml.start_run.return_value.__enter__.return_value = mock.Mock()
+        mock_ml.log_params.return_vale = None
+        mock_ml.log_metric.return_vale = None
+        mock_ml.sklearn.log_model.return_value = None
+        yield
+
+
+@pytest.fixture
+def mock_mlflow_pipeline():
+    """Mock MLflow pipeline for testing"""
+    mock_pipeline = MagicMock()
+    mock_pipeline.predict.return_value = np.array([0, 1, 0])
+    mock_pipeline.predict_proba.return_value = np.array(
+        [[0.8, 0.2], [0.3, 0.7], [0.9, 0.1]]
+    )
+    return mock_pipeline
+
+
+@pytest.fixture
+def mock_mlflow_processor():
+    """Mock MLflow processor for testing"""
+    mock_processor = MagicMock()
+
+    # Mock the transform method to return processed data
+    def mock_transform(X, y=None):
+        # Return a copy of X with some basic transformations
+        X_processed = X.copy()
+        if "booking_id" in X_processed.columns:
+            X_processed.drop(columns=["booking_id"], inplace=True)
+        return X_processed, y
+
+    mock_processor.transform = mock_transform
+    return mock_processor
+
+
+@pytest.fixture
+def mock_mlflow_client(mocker):
+    """Mock MLflow client to avoid network calls"""
+    mock_client = mocker.patch("mlflow.MlflowClient")
+    mock_client.return_value.get_latest_versions.return_value = [
+        MagicMock(run_id="test-run-id", version="1")
+    ]
+
+    # Mock mlflow.sklearn.load_model to return a mock pipeline
+    mock_load_model = mocker.patch("mlflow.sklearn.load_model")
+    mock_pipeline = MagicMock()
+    mock_pipeline.predict.return_value = np.array([0, 1])
+    mock_pipeline.predict_proba.return_value = np.array([[0.8, 0.2], [0.3, 0.7]])
+    mock_load_model.return_value = mock_pipeline
+
+    # Mock mlflow.artifacts.download_artifacts
+    mock_download = mocker.patch("mlflow.artifacts.download_artifacts")
+    mock_download.return_value = "/tmp/mock_processor.pkl"
+
+    # Mock joblib.load
+    mock_joblib_load = mocker.patch("joblib.load")
+    mock_processor = MagicMock()
+    mock_processor.transform.return_value = (pd.DataFrame({"test": [1, 2]}), None)
+    mock_joblib_load.return_value = mock_processor
+
+    return mock_client
