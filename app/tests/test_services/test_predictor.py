@@ -115,7 +115,7 @@ async def test_make_prediction_integration_mock(
     # Assert
     assert isinstance(result, pd.DataFrame)
     assert len(result) == len(df)
-    assert result["booking_id"].iloc[0] == df["booking_id"].iloc[0]
+    assert result["booking_id"].iloc[0] == df["Booking_ID"].iloc[0]
     mock_session.merge.assert_called()  # Confirm insert logic ran
     mock_session.commit.assert_awaited()
     assert set(result.columns) >= {

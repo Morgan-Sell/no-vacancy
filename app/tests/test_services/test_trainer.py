@@ -145,8 +145,11 @@ async def test_train_pipeline_logs_to_mlflow(monkeypatch, booking_data):
         # The real code does: async with bronze_db.create_session()() as session:
         # This means create_session() returns a sessionmaker, then () calls it
         mock_session = AsyncMock()
-        mock_sessionmaker = AsyncMock()
-        mock_sessionmaker.return_value = mock_session
+        # sessionmaker object is a regular factory function, not async
+        mock_sessionmaker = MagicMock()
+        # __aenter__ and __aexit__ suport async context manager protocol
+        mock_sessionmaker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_sessionmaker.return_value.__aexit__ = AsyncMock(return_value=None)
 
         # Setup session managers that return AsyncMock instances that support async context management
         mock_bronze_session.return_value = mock_sessionmaker
