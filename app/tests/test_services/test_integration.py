@@ -16,6 +16,8 @@ from services.preprocessing import NoVacancyDataProcessing
 from unittest.mock import patch, MagicMock, AsyncMock
 from services import predictor
 from main import app
+from routers import predict
+from config import __model_version__
 
 
 @pytest.mark.asyncio
@@ -79,8 +81,8 @@ async def test_api_prediction_integration(booking_data):
     # Create a test client for the FastAPI app (from main.py)
     client = TestClient(app)
 
-    # Mock the prediction
-    with patch.object(predictor, "make_prediction") as mock_make_prediction:
+    # Mock the prediction from where it is used, i.e., i.e., routers/predict.py
+    with patch.object(predict, "make_prediction") as mock_make_prediction:
         mock_make_prediction.return_value = pd.DataFrame(
             {
                 "booking_id": booking_data["Booking_ID"].tolist(),
@@ -96,8 +98,19 @@ async def test_api_prediction_integration(booking_data):
 
         # Assertions
         assert response.status_code == 200
+
         response_data = response.json()
         assert "predictions" in response_data
         assert "version" in response_data
-        assert len(response_data["predictions"]) == len(booking_data)
+
+        # More specific checks
+        assert response_data["predictions"] == [0] * len(booking_data)
+        assert response_data["version"] == __model_version__
+
+        # Verify the API correctly processed the input
         mock_make_prediction.assert_called_once()
+
+        # Check that the function was called with a DataFrame
+        call_args = mock_make_prediction.call_args[0][0]
+        assert isinstance(call_args, pd.DataFrame)
+        assert len(call_args) == len(booking_data)
