@@ -1,3 +1,7 @@
+# Dockerfile (keep this as-is, but add a comment)
+# This is the all-in-one development container
+# For production, use Dockerfile.training and Dockerfile.prediction
+
 # Python image
 FROM python:3.12-slim
 
@@ -29,5 +33,6 @@ COPY app /app
 # Expose API port
 EXPOSE 8000
 
+# Default to prediction service, but can be overridden
 # Start FastAPI server
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
