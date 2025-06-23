@@ -1,8 +1,7 @@
 import logging
-import os
 import sys
 from logging.handlers import TimedRotatingFileHandler
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from config import FORMATTER, LOG_FILE, get_console_handler, get_file_handler
 

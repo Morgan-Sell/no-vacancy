@@ -1,5 +1,4 @@
 import hashlib
-import os
 
 from scripts.import_csv_to_postgres import get_csv_row_count, hash_csv
 

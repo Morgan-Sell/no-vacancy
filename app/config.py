@@ -92,7 +92,6 @@ MLFLOW_DB = os.getenv("MLFLOW_DB")
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
 
 
-
 # CSV File Paths
 DATA_DIR = "./data"
 RAW_DATA_FILE_PATH = os.path.join(DATA_DIR, "bookings_raw.csv")

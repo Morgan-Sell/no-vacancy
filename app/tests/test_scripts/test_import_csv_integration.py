@@ -1,8 +1,8 @@
 import hashlib
 import os
 
-import psycopg2
 import pytest
+
 from scripts.import_csv_to_postgres import (
     get_csv_row_count,
     get_db_row_count,
@@ -26,6 +26,8 @@ def test_hash_csv_and_row_count(temp_booking_data_csv):
     assert row_count == 20
 
 
+# Only run with pytest -m integration b/c it requires a real DB connection
+@pytest.mark.integration
 def test_import_csv_and_log(temp_booking_data_csv, test_db_conn):
     """Test CSV import and import log functionality."""
     # Filter CSV to match test table schema
