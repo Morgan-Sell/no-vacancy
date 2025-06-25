@@ -45,7 +45,7 @@ class TestMLflowArtifactLoader:
             MLFLOW_EXPERIMENT_NAME, stages=["Production"]
         )
         mock_load_model.assert_called_once_with(
-            model_uri=f"models://{MLFLOW_EXPERIMENT_NAME}/Production"
+            model_uri=f"models:/{MLFLOW_EXPERIMENT_NAME}/Production"
         )
         mock_download.assert_called_once_with(
             run_id="test_run_id", artifact_path=MLFLOW_PROCESSOR_PATH
@@ -81,7 +81,7 @@ class TestMLflowArtifactLoader:
             name=MLFLOW_EXPERIMENT_NAME, version="36"
         )
         mock_load_model.assert_called_once_with(
-            model_uri=f"models://{MLFLOW_EXPERIMENT_NAME}/36"
+            model_uri=f"models:/{MLFLOW_EXPERIMENT_NAME}/36"
         )
         mock_download.assert_called_once_with(
             run_id="forest-gump", artifact_path=MLFLOW_PROCESSOR_PATH
