@@ -3,7 +3,7 @@ from typing import Any, Dict, Tuple, Union
 
 import joblib
 import mlflow
-from config import MLFLOW_EXPERIMENT_NAME, MLFLOW_PROCESSOR_PATH, MLFLOW_TRACKING_URI
+from services import MLFLOW_EXPERIMENT_NAME, MLFLOW_PROCESSOR_PATH, MLFLOW_TRACKING_URI
 
 
 class MLflowArtifactLoader:
