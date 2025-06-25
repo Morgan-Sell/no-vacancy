@@ -67,7 +67,7 @@ class TestMLflowArtifactLoader:
 
         mock_load_model = mocker.patch.object(mlflow.sklearn, "load_model")
         mock_download = mocker.patch.object(mlflow.artifacts, "download_artifacts")
-        mock_joblib_load = mocker.patch.object(joblib, "loadl")
+        mock_joblib_load = mocker.patch.object(joblib, "load")
 
         mock_load_model.return_value = mock_mlflow_pipeline
         mock_download.return_value = "/tmp/no_vacancy_processor.pkl"
