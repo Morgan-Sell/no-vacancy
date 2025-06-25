@@ -1,0 +1,45 @@
+import subprocess
+
+from base import DeploymentStrategy
+
+
+class TrainingContainerDeployment(DeploymentStrategy):
+    """
+    Deployment strategy that triggers training in dedicated training container.
+    Used for automated retraining workflows.
+    """
+
+    def deploy(self, model_version: str) -> dict:
+        """
+        Deploy by trigering training in training container.
+        Used for scheduled retraiing or data drift scenarios.
+        """
+        try:
+            # Run training container (it will exit when training completes)
+            result = subprocess.run(
+                ["docker", "compose", "run", "--rm", "training-container"],
+                capture_output=True,
+                text=True,
+                timeout=3600,
+                check=False,
+            )  # 1 hour timeeout
+
+            if result.returncode == 0:
+                return {
+                    "status": "success",
+                    "action": "training_triggered",
+                    "message": "Training completed successfully.",
+                }
+
+            else:
+                return {
+                    "status": "failed",
+                    "error": result.stderr,
+                    "action": "training_failed",
+                }
+
+        except subprocess.TimeoutExpired:
+            return {"status": "failed", "error": "Training timed out after 1 hour."}
+
+        except Exception as e:
+            return {"status": "failed", "error": str(e)}
