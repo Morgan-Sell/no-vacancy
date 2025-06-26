@@ -32,7 +32,7 @@ class TestMLflowDeployment:
         assert result["model_version"] == model_version
         assert result["container_restarted"] is False
         assert "promoted to Production stage" in result["message"]
-        assert model_version is result["message"]
+        assert model_version in result["message"]
 
     @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_deploy_mlflow_exception(self, mock_loader_class):
