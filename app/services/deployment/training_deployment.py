@@ -1,7 +1,7 @@
 import subprocess
 
-from base import DeploymentStrategy
-from deployment import TRAINING_DEPLOYMENT_TIMEOUT
+from services.deployment import TRAINING_DEPLOYMENT_TIMEOUT
+from services.deployment.base import DeploymentStrategy
 
 
 class TrainingContainerDeployment(DeploymentStrategy):

@@ -1,4 +1,4 @@
-from base import DeploymentStrategy
+from services.deployment.base import DeploymentStrategy
 from services.mlflow_utils import MLflowArtifactLoader
 
 
