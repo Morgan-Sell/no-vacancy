@@ -22,11 +22,11 @@ class InferenceContainerDeployment(DeploymentStrategy):
 
             # Restart only the inference container
             result = subprocess.run(
-                ["docker", "compose", "restar", "inference-container"],
+                ["docker", "compose", "restart", "inference-container"],
                 capture_output=True,
                 text=True,
-                timeout=60,
-                check=False,
+                timeout=60,  # 1 minute timeout
+                check=True,
             )
 
             if result.returncode == 0:

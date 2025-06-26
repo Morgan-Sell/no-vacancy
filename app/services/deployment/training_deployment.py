@@ -1,6 +1,7 @@
 import subprocess
 
 from base import DeploymentStrategy
+from deployment import TRAINING_DEPLOYMENT_TIMEOUT
 
 
 class TrainingContainerDeployment(DeploymentStrategy):
@@ -20,8 +21,8 @@ class TrainingContainerDeployment(DeploymentStrategy):
                 ["docker", "compose", "run", "--rm", "training-container"],
                 capture_output=True,
                 text=True,
-                timeout=3600,
-                check=False,
+                timeout=TRAINING_DEPLOYMENT_TIMEOUT,
+                check=True,  # Raise exception if command fails
             )  # 1 hour timeeout
 
             if result.returncode == 0:

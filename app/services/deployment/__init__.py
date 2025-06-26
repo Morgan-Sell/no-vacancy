@@ -1,0 +1,3 @@
+# -- Global Variables for DeploymentStrategy --
+TRAINING_DEPLOYMENT_TIMEOUT = 600
+INFERENCE_DEPLOYMENT_TIMEOUT = 60
