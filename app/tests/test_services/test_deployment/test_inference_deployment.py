@@ -16,7 +16,7 @@ class TestInferenceContainerDeployment:
         assert hasattr(deployment, "deploy")
 
     @patch("subprocess.run")
-    @patch("services.deployment.inference_container_deployment.MLflowArtifactLoader")
+    @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_deploy_success(self, mock_loader_class, mock_subprocess):
         """Test successful deployment with MLflow promotion and container restart."""
         # Arrange - MLflow mock
@@ -58,7 +58,7 @@ class TestInferenceContainerDeployment:
         )
 
     @patch("subprocess.run")
-    @patch("services.deployment.inference_container_deployment.MLflowArtifactLoader")
+    @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_deploy_mlflow_failure(self, mock_loader_class, mock_subprocess):
         """Test deployment failure when MLflow promotion fails."""
         # Arrange - MLflow fails
@@ -87,7 +87,7 @@ class TestInferenceContainerDeployment:
         mock_subprocess.assert_not_called()
 
     @patch("subprocess.run")
-    @patch("services.deployment.inference_container_deployment.MLflowArtifactLoader")
+    @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_deploy_container_restart_failure(self, mock_loader_class, mock_subprocess):
         """Test deployment failure when container restart fails."""
         # Arrange - MLflow succeeds
@@ -117,7 +117,7 @@ class TestInferenceContainerDeployment:
         mock_subprocess.assert_called_once()
 
     @patch("subprocess.run")
-    @patch("services.deployment.inference_container_deployment.MLflowArtifactLoader")
+    @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_deploy_subprocess_exception(self, mock_loader_class, mock_subprocess):
         """Test deployment failure when subprocess raises exception."""
         # Arrange - MLflow succeeds
@@ -141,7 +141,7 @@ class TestInferenceContainerDeployment:
         assert "conatiner_restarted" in result  # Note: matches typo in original
         assert result["conatiner_restarted"] is False
 
-    @patch("services.deployment.inference_container_deployment.MLflowArtifactLoader")
+    @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_deploy_loader_instantiation_failure(self, mock_loader_class):
         """Test deployment failure when MLflowArtifactLoader instantiation fails."""
         # Arrange
@@ -172,7 +172,7 @@ class TestInferenceContainerDeployment:
         assert sig.parameters["model_version"].annotation == str
 
     @patch("subprocess.run")
-    @patch("services.deployment.inference_container_deployment.MLflowArtifactLoader")
+    @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_subprocess_timeout_parameter(self, mock_loader_class, mock_subprocess):
         """Test that subprocess is called with correct timeout value."""
         # Arrange
@@ -192,7 +192,7 @@ class TestInferenceContainerDeployment:
         assert call_args[1]["timeout"] == 60  # 1 minute as specified
 
     @patch("subprocess.run")
-    @patch("services.deployment.inference_container_deployment.MLflowArtifactLoader")
+    @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_subprocess_command_structure(self, mock_loader_class, mock_subprocess):
         """Test that subprocess is called with correct Docker command."""
         # Arrange
@@ -213,7 +213,7 @@ class TestInferenceContainerDeployment:
         assert call_args[0][0] == expected_command
 
     @patch("subprocess.run")
-    @patch("services.deployment.inference_container_deployment.MLflowArtifactLoader")
+    @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_return_dict_structure_success(self, mock_loader_class, mock_subprocess):
         """Test that success return dictionary has correct structure."""
         # Arrange
@@ -244,7 +244,7 @@ class TestInferenceContainerDeployment:
         assert result["container_restarted"] == "inference-container"
 
     @patch("subprocess.run")
-    @patch("services.deployment.inference_container_deployment.MLflowArtifactLoader")
+    @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_return_dict_structure_failure(self, mock_loader_class, mock_subprocess):
         """Test that failure return dictionary has correct structure."""
         # Arrange - force failure
@@ -269,7 +269,7 @@ class TestInferenceContainerDeployment:
         assert result["conatiner_restarted"] is False
 
     @patch("subprocess.run")
-    @patch("services.deployment.inference_container_deployment.MLflowArtifactLoader")
+    @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_deployment_workflow_order(self, mock_loader_class, mock_subprocess):
         """Test that MLflow promotion happens before container restart."""
         # Arrange
@@ -292,7 +292,7 @@ class TestInferenceContainerDeployment:
         # This test just ensures both are called when successful
 
     @patch("subprocess.run")
-    @patch("services.deployment.inference_container_deployment.MLflowArtifactLoader")
+    @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_container_restarted_value_types(self, mock_loader_class, mock_subprocess):
         """Test that container_restarted has correct value types in different scenarios."""
         mock_loader = MagicMock()
