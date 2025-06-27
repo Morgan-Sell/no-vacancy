@@ -110,7 +110,8 @@ RAW_DATA_TABLE = "raw_data"
 class DeploymentMode(Enum):
     """Deployment modes for different container strategies."""
 
-    CONTAINER_RESTART = "container_restart"
+    INFERENCE_CONTAINER_RESTART = "inference_container_restart"
+    TRAINING_CONTAINER_RUN = "training_container_run"
     MLFLOW_ONLY = "mlflow_only"
     KUBERNETES = "kubernetes"  # Placeholder for future addtions
 
@@ -124,16 +125,28 @@ class CDConfig:
     target_environment: str
     require_manual_validation: bool
     deployment_mode: DeploymentMode
-    container_name: str = "inference-container"
+    inference_container_name: str = "inference-container"
+    training_container_name: str = "training-container"
+    mlflow_container_name: str = "mlflow"
 
     @classmethod
-    def for_inference_containers(cls):
+    def for_production_inference(cls):
         """Production configuration with container restart."""
         return cls(
             target_environment="production",
             require_manual_validation=True,
-            deployment_mode=DeploymentMode.CONTAINER_RESTART,
-            container_name="inference-container",
+            deployment_mode=DeploymentMode.INFERENCE_CONTAINER_RESTART,
+            inference_container_name="inference-container",
+        )
+
+    @classmethod
+    def for_automated_traning(cls):
+        """Configuration for automated training workflows."""
+        return cls(
+            target_environment="training",
+            require_manual_validation=False,
+            deployment_mode=DeploymentMode.TRAINING_CONTAINER_RUN,
+            training_container_name="training-container",
         )
 
     @classmethod
@@ -143,4 +156,14 @@ class CDConfig:
             target_environment="staging",
             require_manual_validation=False,
             deployment_mode=DeploymentMode.MLFLOW_ONLY,
+        )
+
+    @classmethod
+    def for_development_training(cls):
+        """Development configuration for training experiments."""
+        return cls(
+            target_environment="development",
+            require_manual_validation=False,
+            deployment_mode=DeploymentMode.TRAINING_CONTAINER_RUN,
+            training_container_name="training-container",
         )
