@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 import pytest
-from app.services.deployment.mlflow_deployment import MLflowDeployment
-from app.services.deployment.training_deployment import TrainingContainerDeployment
+from services.deployment.mlflow_deployment import MLflowDeployment
+from services.deployment.training_deployment import TrainingContainerDeployment
 from services.deployment.inference_deployment import InferenceContainerDeployment
 from config import INFERENCE_CONTAINER, CDConfig, DeploymentMode
 from services.cd_pipeline import CDPipeline
@@ -34,7 +34,7 @@ class TestCDPipeline:
 
     def test_factory_creates_training_deployment_strategy(self):
         # Arrange
-        config = CDConfig.for_automated_traning()
+        config = CDConfig.for_automated_training()
 
         # Act
         pipeline = CDPipeline(config)

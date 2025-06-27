@@ -69,3 +69,4 @@ sqlalchemy==2.0.40
 matplotlib==3.10.3
 mlflow==2.22.0
 pre_commit==4.2.0
+pytest-timeout==2.4.0

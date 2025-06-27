@@ -25,7 +25,8 @@ testpaths = ["app/tests"]
 pythonpath = ["app"]
 addopts = [
     "--cov=app",
-    "--cov-report=term-missing"
+    "--cov-report=term-missing",
+    "--timeout=60"
 ]
 
 
