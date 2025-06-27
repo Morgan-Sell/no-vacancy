@@ -1,8 +1,6 @@
-import subprocess
 from unittest.mock import MagicMock, patch
 
-import pytest
-from services.deployment import TRAINING_DEPLOYMENT_TIMEOUT
+from config import TRAINING_DEPLOYMENT_TIMEOUT
 from services.deployment.base import DeploymentStrategy
 from services.deployment.training_deployment import TrainingContainerDeployment
 

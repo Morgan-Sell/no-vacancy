@@ -103,6 +103,22 @@ RAW_DATA_FILE_PATH = os.path.join(DATA_DIR, "bookings_raw.csv")
 CSV_HASH_TABLE = "csv_hashes"
 RAW_DATA_TABLE = "raw_data"
 
+# -- Docker Config --
+
+# Timeout configurations (in seconds)
+TRAINING_DEPLOYMENT_TIMEOUT = 3600  # 1 hour
+INFERENCE_DEPLOYMENT_TIMEOUT = 60  # 1 minute
+MLFLOW_DEPLOYMENT_TIMEOUT = 30  # 30 seconds
+
+# Container names
+TRAINING_CONTAINER = "training-container"
+INFERENCE_CONTAINER = "inference-container"
+MLFLOW_CONTAINER = "mlflow"
+
+# Docker compose commands
+DOCKER_COMPOSE_RESTART_CMD = ["docker", "compose", "restart"]
+DOCKER_COMPOSE_RUN_CMD = ["docker", "compose", "run", "--rm"]
+
 
 # -- Continuous Deployment --
 
