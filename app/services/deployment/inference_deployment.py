@@ -1,5 +1,10 @@
 import subprocess
 
+from config import (
+    DOCKER_COMPOSE_RESTART_CMD,
+    INFERENCE_CONTAINER,
+    INFERENCE_DEPLOYMENT_TIMEOUT,
+)
 from services.deployment.base import DeploymentStrategy
 from services.mlflow_utils import MLflowArtifactLoader
 
@@ -22,10 +27,10 @@ class InferenceContainerDeployment(DeploymentStrategy):
 
             # Restart only the inference container
             result = subprocess.run(
-                ["docker", "compose", "restart", "inference-container"],
+                DOCKER_COMPOSE_RESTART_CMD + [INFERENCE_CONTAINER],
                 capture_output=True,
                 text=True,
-                timeout=60,  # 1 minute timeout
+                timeout=INFERENCE_DEPLOYMENT_TIMEOUT,
                 check=True,
             )
 

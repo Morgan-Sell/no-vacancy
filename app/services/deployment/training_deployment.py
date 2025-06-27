@@ -1,6 +1,10 @@
 import subprocess
 
-from services.deployment import TRAINING_DEPLOYMENT_TIMEOUT
+from config import (
+    DOCKER_COMPOSE_RUN_CMD,
+    TRAINING_CONTAINER,
+    TRAINING_DEPLOYMENT_TIMEOUT,
+)
 from services.deployment.base import DeploymentStrategy
 
 
@@ -18,7 +22,7 @@ class TrainingContainerDeployment(DeploymentStrategy):
         try:
             # Run training container (it will exit when training completes)
             result = subprocess.run(
-                ["docker", "compose", "run", "--rm", "training-container"],
+                DOCKER_COMPOSE_RUN_CMD + [TRAINING_CONTAINER],
                 capture_output=True,
                 text=True,
                 timeout=TRAINING_DEPLOYMENT_TIMEOUT,
