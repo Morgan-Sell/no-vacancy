@@ -28,10 +28,10 @@ env:
 
 jobs:
     deploy-to-production:
-    name: Deploy latest validated model
-    runs-on: ubuntu-latest
+      name: Deploy latest validated model
+      runs-on: ubuntu-latest
 
-    steps:
+      steps:
         - name: Checkout code
           uses: actions/checkout@v4
 
