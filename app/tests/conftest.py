@@ -589,7 +589,7 @@ def mock_mlflow_client(mocker):
     return mock_client
 
 
-@pytest.fixture(autouse=True, scope="funciton")
+@pytest.fixture(autouse=True, scope="function")
 def prevent_deployment_network_calls():
     """Prevent MLflow network calls in deployment tests."""
     with mock.patch("mlflow.MlflowClient") as mock_client:
