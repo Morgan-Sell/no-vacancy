@@ -597,8 +597,9 @@ def prevent_deployment_network_calls(
     Prevent MLflow network calls in deployment tests, unless the test
     has specific MLflow mocks.
     """
-    # Skip the fixture if the testis already mocking MLflowArtifactLoader
-    if any("MlflowArtifactLoader" in str(marker) for marker in request.keywords):
+    # Skip the fixture if the testis already mocking MLflowArtifactLoader and its validator
+    test_name = request.node.name
+    if "validate_model" in test_name or "MLflowArtifactLoader" in str(request.keywords):
         yield
         return
 
