@@ -82,6 +82,8 @@ class CDPipeline:
             return None
 
     def _validate_model(self, model_version: str) -> bool:
+        # If manual validation is required, validate
         if self.config.require_manual_validation:
             return self.validator.validate(model_version)
+        # If validation isn't required, return True
         return True

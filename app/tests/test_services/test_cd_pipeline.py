@@ -255,9 +255,12 @@ class TestCDPipeline:
         pipeline.validator = MagicMock()
         pipeline.validator.validate.return_value = True
 
-        # Act & Assert
-        with pytest.raises(AttributeError):
-            pipeline._validate_model("1.0.0")
+        # Act
+        result = pipeline._validate_model("1.0.0")
+
+        # Assert
+        assert result is True
+        pipeline.validator.validate.assert_called_once("1.0.0")
 
     def test_validate_model_without_manual_validation(self):
         """Test _validate_model when manual validation is not required."""
@@ -265,9 +268,11 @@ class TestCDPipeline:
         config = CDConfig.for_staging_mlflow()  # No manual validation required
         pipeline = CDPipeline(config)
 
-        # Act & Assert
-        with pytest.raises(AttributeError):
-            result = pipeline._validate_model("1.0.0")
+        # Act
+        result = pipeline._validate_model("1.0.0")
+
+        # Assert
+        assert result is True
 
     def test_container_restart_message_formatting(self):
         """Test different container restart message formats."""
