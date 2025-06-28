@@ -260,7 +260,7 @@ class TestCDPipeline:
 
         # Assert
         assert result is True
-        pipeline.validator.validate.assert_called_once("1.0.0")
+        pipeline.validator.validate.assert_called_once_with("1.0.0")
 
     def test_validate_model_without_manual_validation(self):
         """Test _validate_model when manual validation is not required."""

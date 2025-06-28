@@ -598,8 +598,8 @@ def prevent_deployment_network_calls(
     has specific MLflow mocks.
     """
     # Skip the fixture if the testis already mocking MLflowArtifactLoader and its validator
-    test_name = request.node.name
-    if "validate_model" in test_name or "MLflowArtifactLoader" in str(request.keywords):
+    test_file = request.node.parent.name if hasattr(request.node, "parent") else ""
+    if "test_inference_deployment" in test_file or "test_cd_pipeline" in test_file:
         yield
         return
 
