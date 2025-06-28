@@ -50,4 +50,4 @@ class InferenceContainerDeployment(DeploymentStrategy):
                 }
 
         except Exception as e:
-            return {"status": "failed", "error": str(e), "conatiner_restarted": False}
+            return {"status": "failed", "error": str(e), "container_restarted": False}

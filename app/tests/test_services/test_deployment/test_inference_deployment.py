@@ -77,10 +77,8 @@ class TestInferenceContainerDeployment:
         # Assert
         assert result["status"] == "failed"
         assert result["error"] == "MLflow connection failed"
-        assert (
-            "conatiner_restarted" in result
-        )  # Note: matches the typo in original code
-        assert result["conatiner_restarted"] is False
+        assert "container_restarted" in result
+        assert result["container_restarted"] is False
 
         # MLflow should be called but subprocess should NOT be called
         mock_loader.promote_to_production.assert_called_once_with(model_version)
@@ -138,8 +136,8 @@ class TestInferenceContainerDeployment:
         # Assert
         assert result["status"] == "failed"
         assert "TimeoutExpired" in result["error"]
-        assert "conatiner_restarted" in result  # Note: matches typo in original
-        assert result["conatiner_restarted"] is False
+        assert "container_restarted" in result
+        assert result["container_restarted"] is False
 
     @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")
     def test_deploy_loader_instantiation_failure(self, mock_loader_class):
@@ -257,16 +255,16 @@ class TestInferenceContainerDeployment:
         required_failure_keys = {
             "status",
             "error",
-            "conatiner_restarted",
-        }  # Note: typo matches original
+            "container_restarted",
+        }
         assert set(result.keys()) == required_failure_keys
 
         # Assert value types
         assert isinstance(result["status"], str)
         assert isinstance(result["error"], str)
-        assert isinstance(result["conatiner_restarted"], bool)
+        assert isinstance(result["container_restarted"], bool)
         assert result["status"] == "failed"
-        assert result["conatiner_restarted"] is False
+        assert result["container_restarted"] is False
 
     @patch("subprocess.run")
     @patch("services.deployment.mlflow_deployment.MLflowArtifactLoader")

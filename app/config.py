@@ -156,7 +156,7 @@ class CDConfig:
         )
 
     @classmethod
-    def for_automated_traning(cls):
+    def for_automated_training(cls):
         """Configuration for automated training workflows."""
         return cls(
             target_environment="training",
@@ -166,7 +166,7 @@ class CDConfig:
         )
 
     @classmethod
-    def for_staging_mlfow(cls):
+    def for_staging_mlflow(cls):
         """Staging configuration - MLflow only."""
         return cls(
             target_environment="staging",

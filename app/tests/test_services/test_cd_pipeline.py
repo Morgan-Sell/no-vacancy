@@ -137,7 +137,7 @@ class TestCDPipeline:
 
         # Assert
         assert "✅ Successfully deployed model version 1.2.3" in result
-        assert f"{INFERENCE_CONTAINER} started" in result
+        assert f"{INFERENCE_CONTAINER} restarted" in result
         mock_deployment.deploy.assert_called_once_with("1.2.3")
 
     @patch("services.cd_pipeline.MLflowArtifactLoader")
