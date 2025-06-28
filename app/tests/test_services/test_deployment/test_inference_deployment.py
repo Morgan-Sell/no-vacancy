@@ -274,7 +274,7 @@ class TestInferenceContainerDeployment:
         mock_loader = MagicMock()
         mock_loader_class.return_value = mock_loader
         mock_result = MagicMock()
-        mock_result.returncode = 0
+        mock_result.return_code = 0
         mock_subprocess.return_value = mock_result
 
         deployment = InferenceContainerDeployment()

@@ -590,8 +590,18 @@ def mock_mlflow_client(mocker):
 
 
 @pytest.fixture(autouse=True, scope="function")
-def prevent_deployment_network_calls():
-    """Prevent MLflow network calls in deployment tests."""
+def prevent_deployment_network_calls(
+    request,
+):  # request is a pytest fixture. provides info about the test.
+    """
+    Prevent MLflow network calls in deployment tests, unless the test
+    has specific MLflow mocks.
+    """
+    # Skip the fixture if the testis already mocking MLflowArtifactLoader
+    if any("MlflowArtifactLoader" in str(marker) for marker in request.keywords):
+        yield
+        return
+
     with mock.patch("mlflow.MlflowClient") as mock_client:
         mock_client.return_value.transition_model_version_stage.return_value = None
         mock_client.return_value.get_registered_model.return_value = MagicMock()
