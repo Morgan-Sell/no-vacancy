@@ -135,7 +135,7 @@ class TestInferenceContainerDeployment:
 
         # Assert
         assert result["status"] == "failed"
-        assert "TimeoutExpired" in result["error"]
+        assert "timed out" in result["error"]
         assert "container_restarted" in result
         assert result["container_restarted"] is False
 
@@ -274,7 +274,7 @@ class TestInferenceContainerDeployment:
         mock_loader = MagicMock()
         mock_loader_class.return_value = mock_loader
         mock_result = MagicMock()
-        mock_result.return_code = 0
+        mock_result.returncode = 0
         mock_subprocess.return_value = mock_result
 
         deployment = InferenceContainerDeployment()
