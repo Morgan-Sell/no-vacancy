@@ -1,0 +1,78 @@
+name: CD - Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allow manual triggering
+    inputs:
+      force_deploy:
+        description: 'Force deployment even if no new validated model'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_PORT: ${{ secrets.DB_PORT }}
+  BRONZE_DB_HOST: ${{ secrets.BRONZE_DB_HOST }}
+  BRONZE_DB: ${{ secrets.BRONZE_DB }}
+  SILVER_DB_HOST: ${{ secrets.SILVER_DB_HOST }}
+  SILVER_DB: ${{ secrets.SILVER_DB }}
+  GOLD_DB_HOST: ${{ secrets.GOLD_DB_HOST }}
+  GOLD_DB: ${{ secrets.GOLD_DB }}
+  MLFLOW_DB_HOST: ${{ secrets.MLFLOW_DB_HOST }}
+  MLFLOW_DB: ${{ secrets.MLFLOW_DB }}
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+
+jobs:
+    deploy-to-production:
+    name: Deploy latest validated model
+    runs-on: ubuntu-latest
+
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+
+        - name: Set up Python
+          uses: actions/setup-python@v5
+          with:
+            python-verison: '3.11'
+
+        - name: Make setup_env.sh executable
+          run: chmod +x app/scripts/setup_env.sh
+
+        - name: Create .env file
+          run: ./app/scripts/setup_env.sh
+
+        - name: Install dependencies
+          run: |
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+
+        - name: Deploy latest validated model
+          id: deploy
+          run: ./app/scripts/deploy_inference_model.py
+          continue-on-error: true
+
+        - name: Check deployment result
+          run: |
+            if [ ${{ steps.deploy.outcome }} == 'success' ]; then
+              echo "✅ Deployment successful"
+            else
+              echo "❌ Deployment failed"
+              exit 1
+            fi
+
+        - name: Notify on failure
+          if: failure()
+          uses: actions/github-scripts@v7
+          with:
+            script: |
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '❌ Production deployment failed. Please check the logs and MLflow for validation status.'
+              })

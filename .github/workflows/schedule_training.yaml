@@ -1,0 +1,108 @@
+name: CD - Scheduled Model Training
+
+on:
+  schedule:
+    # Run every Sunday at 2 AM UTC (weekly retraining)
+    - cron: '0 2 * * 0'
+  workflow_dispatch: # Allow manual triggering
+    inputs:
+      training_reason:
+        description: 'Reason for manual training'
+        required: true
+        default: 'Manual retrain request'
+        type: string
+
+env:
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_PORT: ${{ secrets.DB_PORT }}
+  BRONZE_DB_HOST: ${{ secrets.BRONZE_DB_HOST }}
+  BRONZE_DB: ${{ secrets.BRONZE_DB }}
+  SILVER_DB_HOST: ${{ secrets.SILVER_DB_HOST }}
+  SILVER_DB: ${{ secrets.SILVER_DB }}
+  GOLD_DB_HOST: ${{ secrets.GOLD_DB_HOST }}
+  GOLD_DB: ${{ secrets.GOLD_DB }}
+  MLFLOW_DB_HOST: ${{ secrets.MLFLOW_DB_HOST }}
+  MLFLOW_DB: ${{ secrets.MLFLOW_DB }}
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+
+jobs:
+  scheduled-training:
+    name: Executed Scheduled Training
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/python@v5
+        with:
+          python-verison: '3.11'
+
+      - name: Make set_up.sh executable
+        run: chmod +x app/scripts/setup_env.sh
+
+      - name: Create .env file
+        run: ./app/scripts/setup_env.sh
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Trigger model training
+        id: training
+        run: ./app/scripts/trigger_training.sh
+        timeout-minutes: 60 # 1-hour time limit for training
+
+      - name: Check training result
+        run: |
+          if [ ${{ steps.training.outcome }} == 'success']; then
+            echo "✅ Training completed successfully"
+          else
+            echo "❌ Training failed"
+            exit 1
+          fi
+
+      - name: Create training summary
+        if: always()
+        run: |
+          echo "## Training Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ steps.training.outcome }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "- **Reason:** ${{ github.event.inputs.training_reason }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Reason:** Scheduled weekly training" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on training completion
+        if: success()
+        uses: actions/github-scripts@v7
+        with:
+          script: |
+            const message = `✅ **Model Training Completed**
+
+            - **Time:** ${new Date().toISOString()}
+            - **Trigger:** ${context.eventName === 'schedule' ? 'Scheduled' : 'Manual'}
+            - **MLflow:** ${process.env.MLFLOW_TRACKING_URI}
+
+            New model is ready for validation and deployment.`;
+
+            // You could create an issue or send a notification here
+            console.log(message);
+
+      - name: Notify on training failure
+        if: failure()
+        uses: actions/github-scripts@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '❌ Scheduled Training Failed',
+              body: `Training job failed at ${new Date().toISOString()}\n\nPlease check the workflow logs and MLflow for details.`,
+              labels: ['bug', 'training', 'urgent']
+            })
