@@ -1,0 +1,205 @@
+name: CD - Model Validation & Promotion
+
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_version:
+        description: 'Model version to validate and promote'
+        required: true
+        type: string
+      validation_notes:
+        description: 'Validation notes from data scientist'
+        required: false
+        default: 'Manual validation completed'
+        type: string
+      auto_deploy:
+        description: 'Automatically deploy after promotion to staging'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_PORT: ${{ secrets.DB_PORT }}
+  BRONZE_DB_HOST: ${{ secrets.BRONZE_DB_HOST }}
+  BRONZE_DB: ${{ secrets.BRONZE_DB }}
+  SILVER_DB_HOST: ${{ secrets.SILVER_DB_HOST }}
+  SILVER_DB: ${{ secrets.SILVER_DB }}
+  GOLD_DB_HOST: ${{ secrets.GOLD_DB_HOST }}
+  GOLD_DB: ${{ secrets.GOLD_DB }}
+  MLFLOW_DB_HOST: ${{ secrets.MLFLOW_DB_HOST }}
+  MLFLOW_DB: ${{ secrets.MLFLOW_DB }}
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+
+
+jobs:
+  validate-and-promote:
+    name: Validate Model & Promote to Staging
+    runs-on: ubuntu-latest
+    outputs:
+      promotion_successful: ${{ steps.promote.outcome }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Make setup_env.sh executable
+        run: chmod +x app/scripts/setup_env.sh
+
+      - name: Create .env file
+        run: ./app/scripts/setup_env.sh
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate model metrics
+        id: validate
+        run: |
+          cd app
+          python -c "
+          import sys
+          sys.path.append('.')
+          from services.mlflow_utils import MLflowArtifactLoader
+
+          loader = MLflowArtifactLoader()
+
+          # Check if model version exists
+          try:
+              model_details = loader.client.get_model_version(
+                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
+                  version='${{ github.event.inputs.model_version }}'
+              )
+              print(f'✅ Model version ${{ github.event.inputs.model_version }} found')
+
+              # Get model metrics
+              run = loader.client.get_run(model_details.run_id)
+              metrics = run.data.metrics
+
+              # Validation thresholds
+              min_auc = 0.85
+              test_auc = metrics.get('test_auc', 0)
+              val_auc = metrics.get('val_auc', 0)
+
+              print(f'Test AUC: {test_auc}')
+              print(f'Validation AUC: {val_auc}')
+
+              if test_auc >= min_auc and val_auc >= min_auc:
+                  print(f'✅ Model meets quality thresholds (AUC >= {min_auc})')
+              else:
+                  print(f'❌ Model does not meet quality thresholds')
+                  sys.exit(1)
+
+          except Exception as e:
+              print(f'❌ Error validating model: {e}')
+              sys.exit(1)
+          "
+
+      - name: Promote model to staging
+        id: promote
+        if: steps.validate.outcome == 'success'
+        run: |
+          cd app
+          python -c "
+          import sys
+          sys.path.append('.')
+          from services.mlflow_utils import MLflowArtifactLoader
+
+          loader = MLflowArtifactLoader()
+
+          try:
+              # Promote to staging
+              loader.client.transition_model_version_stage(
+                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
+                  version='${{ github.event.inputs.model_version }}',
+                  stage='Staging',
+                  archive_existing_versions=True
+              )
+
+              # Add validation tags
+              loader.client.set_model_version_tag(
+                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
+                  version='${{ github.event.inputs.model_version }}',
+                  key='manual_validation',
+                  value='approved'
+              )
+
+              loader.client.set_model_version_tag(
+                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
+                  version='${{ github.event.inputs.model_version }}',
+                  key='data_scientist_approved',
+                  value='true'
+              )
+
+              loader.client.set_model_version_tag(
+                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
+                  version='${{ github.event.inputs.model_version }}',
+                  key='validation_notes',
+                  value='${{ github.event.inputs.validation_notes }}'
+              )
+
+              loader.client.set_model_version_tag(
+                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
+                  version='${{ github.event.inputs.model_version }}',
+                  key='validated_by',
+                  value='${{ github.actor }}'
+              )
+
+              print(f'✅ Model version ${{ github.event.inputs.model_version }} promoted to Staging')
+
+          except Exception as e:
+              print(f'❌ Error promoting model: {e}')
+              sys.exit(1)
+          "
+
+      - name: Create validation summary
+        if: always()
+        run: |
+          echo "## Model Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Version:** ${{ github.event.inputs.model_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Validated By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Validation Status:** ${{ steps.promote.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Notes:** ${{ github.event.inputs.validatioN_notes }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
+
+  auto-deploy:
+    name: Auto-Deploy to Production
+    needs: validate-and-promote
+    runs-on: ubuntu-latest
+    if: github.event.inputs.auto_play == 'true' && needs.validate-and-promote.outputs.promotion_successful == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Make setup_env.sh executable
+        run: chmod +x app/scripts/setup_env.sh
+
+      - name: Create .env file
+        run: ./app/scripts/setup_env.sh
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "## 🚀 Auto-Deployment Completed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Version:** ${{ github.event.inputs.model_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployed By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment Time:** $(date)" >> $GITHUB_STEP_SUMMARY
