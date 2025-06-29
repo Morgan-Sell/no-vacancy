@@ -1,6 +1,10 @@
 name: CD - Scheduled Model Training
 
 on:
+  push:
+    branches:
+      - deployment # temporary for testing
+      - main
   schedule:
     # Run every Sunday at 2 AM UTC (weekly retraining)
     - cron: '0 2 * * 0'
