@@ -1,3 +1,5 @@
+from typing import Optional
+
 from services.deployment.base import DeploymentStrategy
 from services.mlflow_utils import MLflowArtifactLoader
 
@@ -12,11 +14,14 @@ class MLflowDeployment(DeploymentStrategy):
     MLflow container doesn't require restarting because the MLflow server is stateless.
     """
 
-    def deploy(self, model_version: str) -> dict:
+    def deploy(self, model_version: Optional[str] = None) -> dict:
         """
         Deploy by promoting model in MLflow only.
         Assumes inference container requests latest Production model from MLflow.
         """
+        if not model_version:
+            raise ValueError("model_version required for MLflow deployment")
+
         try:
             loader = MLflowArtifactLoader()
             loader.promote_to_production(model_version)

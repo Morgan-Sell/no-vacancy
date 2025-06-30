@@ -1,4 +1,5 @@
 import subprocess
+from typing import Optional
 
 from config import (
     DOCKER_COMPOSE_RUN_CMD,
@@ -14,7 +15,7 @@ class TrainingContainerDeployment(DeploymentStrategy):
     Used for automated retraining workflows.
     """
 
-    def deploy(self, model_version: str) -> dict:
+    def deploy(self, model_version: Optional[str] = None) -> dict:
         """
         Deploy by trigering training in training container.
         Used for scheduled retraiing or data drift scenarios.

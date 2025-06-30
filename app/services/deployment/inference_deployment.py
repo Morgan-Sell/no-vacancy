@@ -1,4 +1,5 @@
 import subprocess
+from typing import Optional
 
 from config import (
     DOCKER_COMPOSE_RESTART_CMD,
@@ -15,11 +16,14 @@ class InferenceContainerDeployment(DeploymentStrategy):
     Promotes model in MLflow and restarts only the inference container.
     """
 
-    def deploy(self, model_version: str) -> dict:
+    def deploy(self, model_version: Optional[str] = None) -> dict:
         """
         Deploy by promoting model and restarting inference container.
         Training container is unaffected.
         """
+        if not model_version:
+            raise ValueError("model_version required for inference deployment.")
+
         try:
             # Promote modle in MLflow first
             loader = MLflowArtifactLoader()
