@@ -54,7 +54,7 @@ jobs:
 
       - name: Deploy latest validated model
         id: deploy
-        run: ./app/scripts/deploy_inference_model.py
+        run: python scripts/deploy_inference_model.py
         continue-on-error: true
 
       - name: Check deployment result

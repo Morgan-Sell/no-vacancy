@@ -57,7 +57,8 @@ jobs:
 
       - name: Trigger model training
         id: training
-        run: ./app/scripts/trigger_training.sh
+        # GitHub Actions runs from the repository root
+        run: python app/scripts/trigger_training.py
         timeout-minutes: 60 # 1-hour time limit for training
 
       - name: Check training result
