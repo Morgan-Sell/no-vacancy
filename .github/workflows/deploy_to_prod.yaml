@@ -3,6 +3,7 @@ name: CD - Deploy to Production
 on:
   push:
     branches:
+      # - deployment # temporary for testing
       - main
   workflow_dispatch: # Allow manual triggering
     inputs:
@@ -67,7 +68,7 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        uses: actions/github-scripts@v7
+        uses: actions/github-script@v6
         with:
           script: |
             github.rest.issues.createComment({

@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/python@v5
+        uses: actions/setup-python@v5
         with:
           python-verison: '3.11'
 
@@ -84,7 +84,7 @@ jobs:
 
       - name: Notify on training completion
         if: success()
-        uses: actions/github-scripts@v7
+        uses: actions/github-script@v6
         with:
           script: |
             const message = `✅ **Model Training Completed**
