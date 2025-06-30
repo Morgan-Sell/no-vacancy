@@ -54,7 +54,8 @@ jobs:
 
       - name: Deploy latest validated model
         id: deploy
-        run: python scripts/deploy_inference_model.py
+        # GitHub Actions runs from the repository root
+        run: python app/scripts/deploy_inference_model.py
         continue-on-error: true
 
       - name: Check deployment result
