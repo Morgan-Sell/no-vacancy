@@ -118,6 +118,14 @@ MLFLOW_CONTAINER = "mlflow"
 # Docker compose commands
 DOCKER_COMPOSE_RESTART_CMD = ["docker", "compose", "restart"]
 DOCKER_COMPOSE_RUN_CMD = ["docker", "compose", "run", "--rm"]
+DOCKER_COMPOSE_TRAINING_CMD = [
+    "docker",
+    "compose",
+    "--profile",
+    "training",
+    "run",
+    "--rm",
+]
 
 
 # -- Continuous Deployment --

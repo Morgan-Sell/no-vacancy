@@ -2,7 +2,7 @@ import subprocess
 from typing import Optional
 
 from config import (
-    DOCKER_COMPOSE_RUN_CMD,
+    DOCKER_COMPOSE_TRAINING_CMD,
     TRAINING_CONTAINER,
     TRAINING_DEPLOYMENT_TIMEOUT,
 )
@@ -21,9 +21,12 @@ class TrainingContainerDeployment(DeploymentStrategy):
         Used for scheduled retraiing or data drift scenarios.
         """
         try:
+            # Use the specific training command that cludes the profile
+            run_cmd = DOCKER_COMPOSE_TRAINING_CMD + [TRAINING_CONTAINER]
+
             # Run training container (it will exit when training completes)
             result = subprocess.run(
-                DOCKER_COMPOSE_RUN_CMD + [TRAINING_CONTAINER],
+                run_cmd,
                 capture_output=True,
                 text=True,
                 timeout=TRAINING_DEPLOYMENT_TIMEOUT,
