@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from config import TRAINING_DEPLOYMENT_TIMEOUT
+from config import DOCKER_COMPOSE_TRAINING_CMD, TRAINING_DEPLOYMENT_TIMEOUT
 from services.deployment.base import DeploymentStrategy
 from services.deployment.training_deployment import TrainingContainerDeployment
 
@@ -35,10 +35,10 @@ class TestTrainingContainerDeployment:
 
         # Verify subprocess.run was called with correct parameters
         mock_subprocess.assert_called_once_with(
-            ["docker", "compose", "run", "--rm", "training-container"],
+            DOCKER_COMPOSE_TRAINING_CMD,
             capture_output=True,
             text=True,
-            timeout=TRAINING_DEPLOYMENT_TIMEOUT,
+            timeout=DOCKER_COMPOSE_TRAINING_CMD,
             check=True,
         )
 
@@ -107,7 +107,7 @@ class TestTrainingContainerDeployment:
         assert result["status"] == "success"
         # Verify the docker command doesn't include model version (training generates new models)
         mock_subprocess.assert_called_once_with(
-            ["docker", "compose", "run", "--rm", "training-container"],
+            DOCKER_COMPOSE_TRAINING_CMD,
             capture_output=True,
             text=True,
             timeout=TRAINING_DEPLOYMENT_TIMEOUT,

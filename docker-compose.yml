@@ -107,6 +107,7 @@ services:
     volumes:
       - ./data:/app/data # TODO: Confirm if needed given that script imports data into Bronze DB
     environment:
+      CONTAINER_TYPE: training
       DATA_DIR: ./data
       BRONZE_DB_HOST: bronze-db
       SILVER_DB_HOST: silver-db
