@@ -111,7 +111,7 @@ INFERENCE_DEPLOYMENT_TIMEOUT = 60  # 1 minute
 MLFLOW_DEPLOYMENT_TIMEOUT = 30  # 30 seconds
 
 # Container names
-TRAINING_CONTAINER = "training-test"
+TRAINING_CONTAINER = "training-container"
 INFERENCE_CONTAINER = "inference-container"
 MLFLOW_CONTAINER = "mlflow"
 
