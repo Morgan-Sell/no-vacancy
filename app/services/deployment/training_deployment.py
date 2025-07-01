@@ -17,124 +17,178 @@ class TrainingContainerDeployment(DeploymentStrategy):
 
     def deploy(self, model_version: Optional[str] = None) -> dict:
         """
-        Deploy by trigering training in training container.
-        Used for scheduled retraiing or data drift scenarios.
+        Deploy by triggering training in training container.
+        Used for scheduled retraining or data drift scenarios.
         """
+        # Validate environment
+        validation_result = self._validate_docker_environment()
+        if validation_result:
+            return validation_result
+
+        # Execute training
+        return self._execute_training_container()
+
+    def _validate_docker_environment(self) -> Optional[dict]:
+        """Validate Docker and compose environment. Returns error dict if validation fails."""
         try:
-            # Use the specific training command that includes the profile
-            cmd = DOCKER_COMPOSE_TRAINING_CMD + [TRAINING_CONTAINER]
+            # Basic environment checks
+            self._log_environment_info()
 
-            print(f"🔍 DEBUG: Executing command: {' '.join(cmd)}")
-            print(
-                f"🔍 DEBUG: Working directory: {subprocess.run(['pwd'], capture_output=True, text=True, check=False).stdout.strip()}"
-            )
-            print(
-                f"🔍 DEBUG: Docker compose version: {subprocess.run(['docker', 'compose', 'version'], capture_output=True, text=True, check=False).stdout}"
-            )
+            # Validate docker-compose file
+            if not self._validate_compose_file():
+                return {
+                    "status": "failed",
+                    "error": "Docker compose file validation failed",
+                }
 
-            # Check if docker-compose.yml exists
-            import os
-
-            if os.path.exists("docker-compose.yml"):
-                print("✅ docker-compose.yml found")
-            else:
-                print("❌ docker-compose.yml NOT found")
-                print(f"📁 Files in current directory: {os.listdir('.')}")
-
-            # Validate the docker-compose configuration
-            print("🔍 DEBUG: Validating docker-compose config...")
-            validate_result = subprocess.run(
-                ["docker", "compose", "config", "--quiet"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if validate_result.returncode != 0:
-                print(
-                    f"❌ Docker compose config validation failed: {validate_result.stderr}"
-                )
-            else:
-                print("✅ Docker compose config is valid")
-
-            # List available services
-            print("🔍 DEBUG: Available services:")
-            services_result = subprocess.run(
-                ["docker", "compose", "config", "--services"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            print(f"Services: {services_result.stdout}")
-
-            # Check if training-container service exists
-            if "training-container" not in services_result.stdout:
+            # Check if training container exists
+            if not self._check_training_container_exists():
                 return {
                     "status": "failed",
                     "error": "training-container service not found in docker-compose.yml",
-                    "available_services": services_result.stdout.strip().split("\n"),
+                    "available_services": self._get_available_services(),
                 }
 
-            # Run training container (it will exit when training completes)
-            print("🚀 Starting training container...")
+            return None  # No errors
+
+        except Exception as e:
+            return {
+                "status": "failed",
+                "error": f"Environment validation failed: {str(e)}",
+            }
+
+    def _execute_training_container(self) -> dict:
+        """Execute the training container and return results."""
+        try:
+            cmd = DOCKER_COMPOSE_TRAINING_CMD + [TRAINING_CONTAINER]
+            print(f"🚀 Executing: {' '.join(cmd)}")
+
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=TRAINING_DEPLOYMENT_TIMEOUT,
-                check=False,  # Handle return codes manually for better error messages
+                check=False,
             )
 
-            print(f"🔍 DEBUG: Return code: {result.returncode}")
-            print("🔍 DEBUG: Command completed")
-
-            # Always print stdout and stderr for debugging
-            if result.stdout:
-                print("📝 STDOUT:")
-                print("=" * 50)
-                print(result.stdout)
-                print("=" * 50)
-
-            if result.stderr:
-                print("⚠️ STDERR:")
-                print("=" * 50)
-                print(result.stderr)
-                print("=" * 50)
-
-            if result.returncode == 0:
-                return {
-                    "status": "success",
-                    "action": "training_triggered",
-                    "message": "Training completed successfully.",
-                    "stdout": result.stdout,
-                    "stderr": result.stderr,
-                }
-            else:
-                return {
-                    "status": "failed",
-                    "error": f"Training container exited with code {result.returncode}",
-                    "action": "training_failed",
-                    "stdout": result.stdout,
-                    "stderr": result.stderr,
-                    "return_code": result.returncode,
-                }
+            return self._process_training_result(result)
 
         except subprocess.TimeoutExpired as e:
             return {
                 "status": "failed",
                 "error": f"Training timed out after {TRAINING_DEPLOYMENT_TIMEOUT} seconds",
-                "stdout": e.stdout if e.stdout else "",
-                "stderr": e.stderr if e.stderr else "",
+                "stdout": getattr(e, "stdout", ""),
+                "stderr": getattr(e, "stderr", ""),
             }
-
-        except FileNotFoundError as e:
-            return {
-                "status": "failed",
-                "error": f"Docker compose command not found: {e}. Make sure Docker is installed and running.",
-            }
-
         except Exception as e:
             return {
                 "status": "failed",
                 "error": f"Unexpected error: {str(e)}",
-                "exception_type": type(e).__name__,
             }
+
+    def _log_environment_info(self) -> None:
+        """Log basic environment information for debugging."""
+        import os
+
+        print(f"🔍 Working directory: {os.getcwd()}")
+        print(f"🔍 Docker compose file exists: {os.path.exists('docker-compose.yml')}")
+
+        # Get Docker version
+        try:
+            docker_version = subprocess.run(
+                ["docker", "compose", "version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            print(f"🔍 Docker Compose version: {docker_version.stdout.strip()}")
+        except Exception:
+            print("⚠️ Could not get Docker Compose version")
+
+    def _validate_compose_file(self) -> bool:
+        """Validate docker-compose file syntax."""
+        try:
+            result = subprocess.run(
+                ["docker", "compose", "config", "--quiet"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+            is_valid = result.returncode == 0
+            print(f"✅ Docker compose config valid: {is_valid}")
+            return is_valid
+        except Exception:
+            print("❌ Docker compose config validation failed")
+            return False
+
+    def _check_training_container_exists(self) -> bool:
+        """Check if training-container service exists in compose file."""
+        try:
+            # Check with training profile
+            result = subprocess.run(
+                ["docker", "compose", "--profile", "training", "config", "--services"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+
+            services = result.stdout.strip().split("\n")
+            exists = TRAINING_CONTAINER in services
+            print(f"🔍 Training container exists: {exists}")
+            print(f"🔍 Available services with training profile: {services}")
+
+            return exists
+        except Exception as e:
+            print(f"❌ Could not check training container: {e}")
+            return False
+
+    def _get_available_services(self) -> list:
+        """Get list of available services."""
+        try:
+            result = subprocess.run(
+                ["docker", "compose", "--profile", "training", "config", "--services"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+            return result.stdout.strip().split("\n") if result.stdout.strip() else []
+        except Exception:
+            return []
+
+    def _process_training_result(self, result: subprocess.CompletedProcess) -> dict:
+        """Process the result of training container execution."""
+        print(f"🔍 Training exit code: {result.returncode}")
+
+        if result.stdout:
+            print("📝 STDOUT:")
+            print("=" * 50)
+            print(result.stdout)
+            print("=" * 50)
+
+        if result.stderr:
+            print("⚠️ STDERR:")
+            print("=" * 50)
+            print(result.stderr)
+            print("=" * 50)
+
+        if result.returncode == 0:
+            return {
+                "status": "success",
+                "action": "training_triggered",
+                "message": "Training completed successfully.",
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+            }
+
+        return {
+            "status": "failed",
+            "error": f"Training container exited with code {result.returncode}",
+            "action": "training_failed",
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "return_code": result.returncode,
+        }
