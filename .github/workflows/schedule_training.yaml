@@ -42,7 +42,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-verison: '3.11'
+          python-version: '3.11'
 
       - name: Make set_up.sh executable
         run: chmod +x app/scripts/setup_env.sh
@@ -63,7 +63,7 @@ jobs:
 
       - name: Check training result
         run: |
-          if [ ${{ steps.training.outcome }} == 'success']; then
+          if [ "${{ steps.training.outcome }}" == "success" ]; then
             echo "✅ Training completed successfully"
           else
             echo "❌ Training failed"
