@@ -116,9 +116,6 @@ services:
     # Run once and exit (for manual training)
     profiles:
       - training
-    # Define behavior here. "What should this container do in this evnvironment?"
-    command: /bin/bash -c "python scripts/import_csv_to_postgres.py && \
-                          python services/training_orchestrator.py"
 
   inference-container:
     build:
