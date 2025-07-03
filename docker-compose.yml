@@ -46,6 +46,9 @@ services:
   test-db:
     image: postgres:latest
     container_name: test-db
+    profiles:
+      - training
+      - testing
     env_file:
       - .env
     environment:
