@@ -57,19 +57,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ADD THE DEBUG STEP HERE ↓
-      - name: Debug Docker Build
-        run: |
-          echo "=== Testing Docker Build ==="
-          echo "Files in root:"
-          ls -la
-          echo "Files in app/:"
-          ls -la app/
-          echo "=== Test Building Training Container ==="
-          docker build -f Dockerfile.training -t debug-training . --progress=plain
-        continue-on-error: true  # Don't fail the workflow if this fails
-
-
       - name: Trigger model training
         id: training
         # GitHub Actions runs from the repository root

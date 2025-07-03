@@ -23,22 +23,13 @@ class CDPipeline:
         # Factory Pattern - Deployment strategy bsed on config
         self.deployment = self._create_deployment_strategy()
 
-        print(f"🔍 DEBUG: CDPipeline initialized with mode: {config.deployment_mode}")
-        print(f"🔍 DEBUG: Target environment: {config.target_environment}")
-        print(
-            f"🔍 DEBUG: Manual validation required: {config.require_manual_validation}"
-        )
-
     def _create_deployment_strategy(self):
         """Factory method to create appropriate deployment strategy."""
         if self.config.deployment_mode == DeploymentMode.INFERENCE_CONTAINER_RESTART:
-            print("🔍 DEBUG: Creating InferenceContainerDeployment strategy")
             return InferenceContainerDeployment()
         elif self.config.deployment_mode == DeploymentMode.TRAINING_CONTAINER_RUN:
-            print("🔍 DEBUG: Creating TrainingContainerDeployment strategy")
             return TrainingContainerDeployment()
         elif self.config.deployment_mode == DeploymentMode.MLFLOW_ONLY:
-            print("🔍 DEBUG: Creating MLflowDeployment strategy")
             return MLflowDeployment()
         else:
             raise ValueError(f"Unknown deployment mode: {self.config.deployment_mode}")
@@ -61,8 +52,6 @@ class CDPipeline:
         """Handle training container deployment workflow."""
         print("🎯 Executing training workflow...")
         deployment_result = self.deployment.deploy()
-
-        print(f"🔍 DEBUG: Deployment result: {deployment_result}")
 
         if deployment_result["status"] == "success":
             return "✅ Training completed successfully"

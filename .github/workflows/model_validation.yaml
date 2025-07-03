@@ -34,6 +34,7 @@ env:
   MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
   TEST_DB_HOST: ${{ secrets.TEST_DB_HOST }}
   TEST_DB: ${{ secrets.TEST_DB }}
+  MLFLOW_EXPERIMENT_NAME: NoVacancyModelTraining
 
 
 jobs:
@@ -171,12 +172,13 @@ jobs:
           echo "- **Validation Status:** ${{ steps.promote.outcome }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Notes:** ${{ github.event.inputs.validatioN_notes }}" >> $GITHUB_STEP_SUMMARY
           echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
 
   auto-deploy:
     name: Auto-Deploy to Production
     needs: validate-and-promote
     runs-on: ubuntu-latest
-    if: github.event.inputs.auto_play == 'true' && needs.validate-and-promote.outputs.promotion_successful == 'success'
+    if: github.event.inputs.auto_deploy == 'true' && needs.validate-and-promote.outputs.promotion_successful == 'success'
 
     steps:
       - name: Checkout code
