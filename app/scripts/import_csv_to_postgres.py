@@ -153,7 +153,7 @@ async def main():
         wait_for_db(TEST_DB_HOST, DB_PORT)
 
     # Create tables if needed
-    asyncio.run(init_all_databases())
+    await init_all_databases()
 
     # Connect the Bronze DB to perform SQL operations
     conn_bronze = psycopg2.connect(
