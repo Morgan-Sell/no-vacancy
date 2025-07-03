@@ -117,6 +117,8 @@ services:
       SILVER_DB_HOST: silver-db
       GOLD_DB_HOST: gold-db
       MLFLOW_TRACKING_URI: http://mlflow:5000
+      TEST_DB_HOST: test-db          # Add this line
+      TEST_DB_PORT: 5432
     # Run once and exit (for manual training)
     profiles:
       - training
