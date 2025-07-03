@@ -525,12 +525,12 @@ def test_db_conn():
 @pytest.fixture(autouse=True)
 def mock_mlflow():
     with mock.patch("services.trainer.mlflow") as mock_ml:
-        mock_ml.set_experiment.return_vale = None
+        mock_ml.set_experiment.return_value = None
         mock_ml.start_run.return_value.__enter__.return_value = mock.Mock()
-        mock_ml.log_params.return_vale = None
-        mock_ml.log_metric.return_vale = None
+        mock_ml.log_params.return_value = None
+        mock_ml.log_metric.return_value = None
         mock_ml.sklearn.log_model.return_value = None
-        yield
+        yield mock_ml
 
 
 @pytest.fixture
@@ -587,3 +587,23 @@ def mock_mlflow_client(mocker):
     mock_joblib_load.return_value = mock_processor
 
     return mock_client
+
+
+@pytest.fixture(autouse=True, scope="function")
+def prevent_deployment_network_calls(
+    request,
+):  # request is a pytest fixture. provides info about the test.
+    """
+    Prevent MLflow network calls in deployment tests, unless the test
+    has specific MLflow mocks.
+    """
+    # Skip the fixture if the testis already mocking MLflowArtifactLoader and its validator
+    test_file = request.node.parent.name if hasattr(request.node, "parent") else ""
+    if "test_inference_deployment" in test_file or "test_cd_pipeline" in test_file:
+        yield
+        return
+
+    with mock.patch("mlflow.MlflowClient") as mock_client:
+        mock_client.return_value.transition_model_version_stage.return_value = None
+        mock_client.return_value.get_registered_model.return_value = MagicMock()
+        yield mock_client
