@@ -18,6 +18,10 @@ on:
         required: false
         default: true
         type: boolean
+  # Temporary for testing
+  push:
+    branches:
+      - deployment
 
 env:
   DB_USER: ${{ secrets.DB_USER }}

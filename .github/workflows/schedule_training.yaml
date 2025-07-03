@@ -3,7 +3,7 @@ name: CD - Scheduled Model Training
 on:
   push:
     branches:
-      - deployment # temporary for testing
+      # - deployment # Only use for testing
       - main
   schedule:
     # Run every Sunday at 2 AM UTC (weekly retraining)
