@@ -142,7 +142,7 @@ def wait_for_db(host, port, timeout=30):
     raise TimeoutError(f"❌ Timed out waiting for {host}:{port}")
 
 
-def main():
+async def main():
     # Wait for all DBs to be available
     wait_for_db(BRONZE_DB_HOST, DB_PORT)
     wait_for_db(SILVER_DB_HOST, DB_PORT)
@@ -194,4 +194,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
