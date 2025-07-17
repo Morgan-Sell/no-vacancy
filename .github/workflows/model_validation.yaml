@@ -16,12 +16,14 @@ on:
       auto_deploy:
         description: 'Automatically deploy after promotion to staging'
         required: false
-        default: true
+        default: false # Set to false for testing
         type: boolean
-  # Temporary for testing
+  # Temporary for testing on deployment branch
   push:
     branches:
       - deployment
+    paths:
+      - '.github/workflows/model_validation.yaml' # Only trigger when workflow changes
 
 env:
   DB_USER: ${{ secrets.DB_USER }}
