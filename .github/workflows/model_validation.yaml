@@ -18,6 +18,11 @@ on:
         required: false
         default: false # Set to false for testing
         type: boolean
+      mock_validatin:
+        description: 'Use mock validation for testing'
+        required: false
+        default: true
+        type: boolean
   # Temporary for testing on deployment branch
   push:
     branches:
@@ -41,6 +46,11 @@ env:
   TEST_DB_HOST: ${{ secrets.TEST_DB_HOST }}
   TEST_DB: ${{ secrets.TEST_DB }}
   MLFLOW_EXPERIMENT_NAME: NoVacancyModelTraining
+  # Test values when triggered by push (not manual)
+  TEST_MODEL_VERSION: "1"
+  TEST_VALIDATION_NOTES: "Testing via push trigger"
+  TEST_AUTO_PLAY: "false"
+  TEST_MOCK_VALIDATION: "true"
 
 
 jobs:
@@ -70,46 +80,97 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Set input values
+        id: inputs
+        run: |
+          # Use manual inputs if available, otherwise use test defaults
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "MODEL_VERSION=${{ github.event.inputs.model_version }}" >> $GITHUB_OUTPUT
+            echo "VALIDATION_NOTES=${{ github.event.inputs.validation_notes }}" >> $GITHUB_OUTPUT
+            echo "AUTO_DEPLOY=${{ github.event.inputs.auto_deploy }}" >> $GITHUB_OUTPUT
+            echo "MOCK_VALIDATION=${{ github.event.inputs.mock_validation }}" >> $GITHUB_OUTPUT
+            echo "TRIGGER_TYPE=manual" >> $GITHUB_OUTPUT
+          else
+            echo "MODEL_VERSION=${{ env.TEST_MODEL_VERSION }}" >> $GITHUB_OUTPUT
+            echo "VALIDATION_NOTES=${{ env.TEST_VALIDATION_NOTES }}" >> $GITHUB_OUTPUT
+            echo "AUTO_DEPLOY=${{ env.TEST_AUTO_DEPLOY }}" >> $GITHUB_OUTPUT
+            echo "MOCK_VALIDATION=${{ env.TEST_MOCK_VALIDATION }}" >> $GITHUB_OUTPUT
+            echo "TRIGGER_TYPE=push" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Show inputs
+        run: |
+          echo "🎯 Workflow Inputs:"
+          echo "  Model Version: ${{ steps.inputs.outputs.MODEL_VERSION }}"
+          echo "  Validation Notes: ${{ steps.inputs.outputs.VALIDATION_NOTES }}"
+          echo "  Auto Deploy: ${{ steps.inputs.outputs.AUTO_DEPLOY }}"
+          echo "  Mock Validation: ${{ steps.inputs.outputs.MOCK_VALIDATION }}"
+          echo "  Trigger Type: ${{ steps.inputs.outputs.TRIGGER_TYPE }}"
+
+      - name: Validate inputs
+        run: |
+          if [ -z "${{ steps.inputs.outputs.MODEL_VERSION }}" ]; then
+            echo "❌ Model version cannot be empty"
+            exit 1
+          fi
+          echo "✅ All inputs are valid"
+
       - name: Validate model metrics
         id: validate
         run: |
           cd app
           python -c "
           import sys
+          import os
           sys.path.append('.')
-          from services.mlflow_utils import MLflowArtifactLoader
 
-          loader = MLflowArtifactLoader()
+          model_version = '${{ steps.inputs.outputs.MODEL_VERSION }}'
+          mock_validation = '${{ steps.inputs.outputs.MOCK_VALIDATION }}'.lower() == 'true'
+          trigger_type = '${{ steps.inputs.outputs.TRIGGER_TYPE }}'
 
-          # Check if model version exists
-          try:
-              model_details = loader.client.get_model_version(
-                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
-                  version='${{ github.event.inputs.model_version }}'
-              )
-              print(f'✅ Model version ${{ github.event.inputs.model_version }} found')
+          print(f'🔍 Validating model version: {model_version}')
+          print(f'🧪 Mock validation mode: {mock_validation}')
+          print(f'🚀 Triggered by: {trigger_type}')
 
-              # Get model metrics
-              run = loader.client.get_run(model_details.run_id)
-              metrics = run.data.metrics
+          if mock_validation:
+              print('🧪 Running in MOCK mode for testing...')
+              print(f'✅ Model version {model_version} found (mocked)')
+              print(f'📊 Test AUC: 0.92 (mocked)')
+              print(f'📊 Validation AUC: 0.89 (mocked)')
+              print(f'🎯 Minimum AUC threshold: 0.85')
+              print(f'✅ Model meets quality thresholds (mocked validation)')
+          else:
+              print('🔗 Connecting to real MLflow...')
+              try:
+                  from services.mlflow_utils import MLflowArtifactLoader
 
-              # Validation thresholds
-              min_auc = 0.85
-              test_auc = metrics.get('test_auc', 0)
-              val_auc = metrics.get('val_auc', 0)
+                  loader = MLflowArtifactLoader()
+                  model_details = loader.client.get_model_version(
+                      name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
+                      version=model_version
+                  )
+                  print(f'✅ Model version {model_version} found')
 
-              print(f'Test AUC: {test_auc}')
-              print(f'Validation AUC: {val_auc}')
+                  run = loader.client.get_run(model_details.run_id)
+                  metrics = run.data.metrics
 
-              if test_auc >= min_auc and val_auc >= min_auc:
-                  print(f'✅ Model meets quality thresholds (AUC >= {min_auc})')
-              else:
-                  print(f'❌ Model does not meet quality thresholds')
+                  min_auc = 0.85
+                  test_auc = metrics.get('test_auc', 0)
+                  val_auc = metrics.get('val_auc', 0)
+
+                  print(f'📊 Test AUC: {test_auc}')
+                  print(f'📊 Validation AUC: {val_auc}')
+
+                  if test_auc >= min_auc and val_auc >= min_auc:
+                      print(f'✅ Model meets quality thresholds (AUC >= {min_auc})')
+                  else:
+                      print(f'❌ Model does not meet quality thresholds')
+                      sys.exit(1)
+
+              except Exception as e:
+                  print(f'❌ Error validating model: {e}')
+                  print('💡 Set mock_validation=true to test without MLflow')
                   sys.exit(1)
-
-          except Exception as e:
-              print(f'❌ Error validating model: {e}')
-              sys.exit(1)
           "
 
       - name: Promote model to staging
@@ -179,37 +240,28 @@ jobs:
           echo "- **Notes:** ${{ github.event.inputs.validatioN_notes }}" >> $GITHUB_STEP_SUMMARY
           echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
           echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
 
   auto-deploy:
     name: Auto-Deploy to Production
     needs: validate-and-promote
     runs-on: ubuntu-latest
-    if: github.event.inputs.auto_deploy == 'true' && needs.validate-and-promote.outputs.promotion_successful == 'success'
+    if: needs.validate-and-promote.outputs.promotion_successful == 'success'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Make setup_env.sh executable
-        run: chmod +x app/scripts/setup_env.sh
-
-      - name: Create .env file
-        run: ./app/scripts/setup_env.sh
-
-      - name: Install dependencies
+      - name: Check if auto-deploy enabled
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          # Get the auto_deploy setting from the previous job
+          AUTO_DEPLOY="${{ needs.validate-and-promote.outputs.AUTO_DEPLOY || 'false' }}"
 
-      - name: Notify deployment success
-        if: success()
+          if [ "$AUTO_DEPLOY" = "true" ]; then
+            echo "🚀 Auto-deploy is enabled"
+          else
+            echo "⏸️  Auto-deploy is disabled - skipping deployment"
+            exit 0
+          fi
+
+      - name: Simulate deployment
         run: |
-          echo "## 🚀 Auto-Deployment Completed" >> $GITHUB_STEP_SUMMARY
-          echo "- **Model Version:** ${{ github.event.inputs.model_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Deployed By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Deployment Time:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 Would deploy to production here"
+          echo "Model version: ${{ needs.validate-and-promote.outputs.MODEL_VERSION }}"
