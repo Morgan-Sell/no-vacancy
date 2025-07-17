@@ -1,6 +1,5 @@
 name: CD - Model Validation & Promotion
 
-
 on:
   workflow_dispatch:
     inputs:
@@ -16,19 +15,18 @@ on:
       auto_deploy:
         description: 'Automatically deploy after promotion to staging'
         required: false
-        default: false # Set to false for testing
+        default: false
         type: boolean
-      mock_validatin:
+      mock_validation:
         description: 'Use mock validation for testing'
         required: false
         default: true
         type: boolean
-  # Temporary for testing on deployment branch
   push:
     branches:
       - deployment
     paths:
-      - '.github/workflows/model_validation.yaml' # Only trigger when workflow changes
+      - '.github/workflows/model_validation.yaml'
 
 env:
   DB_USER: ${{ secrets.DB_USER }}
@@ -46,12 +44,11 @@ env:
   TEST_DB_HOST: ${{ secrets.TEST_DB_HOST }}
   TEST_DB: ${{ secrets.TEST_DB }}
   MLFLOW_EXPERIMENT_NAME: NoVacancyModelTraining
-  # Test values when triggered by push (not manual)
+  # Test values for when triggered by push (not manual)
   TEST_MODEL_VERSION: "1"
   TEST_VALIDATION_NOTES: "Testing via push trigger"
-  TEST_AUTO_PLAY: "false"
+  TEST_AUTO_DEPLOY: "false"
   TEST_MOCK_VALIDATION: "true"
-
 
 jobs:
   validate-and-promote:
@@ -180,66 +177,53 @@ jobs:
           cd app
           python -c "
           import sys
+          import os
           sys.path.append('.')
-          from services.mlflow_utils import MLflowArtifactLoader
 
-          loader = MLflowArtifactLoader()
+          model_version = '${{ steps.inputs.outputs.MODEL_VERSION }}'
+          mock_validation = '${{ steps.inputs.outputs.MOCK_VALIDATION }}'.lower() == 'true'
 
-          try:
-              # Promote to staging
-              loader.client.transition_model_version_stage(
-                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
-                  version='${{ github.event.inputs.model_version }}',
-                  stage='Staging',
-                  archive_existing_versions=True
-              )
+          if mock_validation:
+              print('🧪 MOCK: Simulating model promotion...')
+              print(f'✅ Model version {model_version} promoted to Staging (mocked)')
+              print(f'🏷️  Added validation tags (mocked)')
+          else:
+              print('🔗 Real MLflow promotion...')
+              try:
+                  from services.mlflow_utils import MLflowArtifactLoader
+                  loader = MLflowArtifactLoader()
 
-              # Add validation tags
-              loader.client.set_model_version_tag(
-                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
-                  version='${{ github.event.inputs.model_version }}',
-                  key='manual_validation',
-                  value='approved'
-              )
+                  loader.client.transition_model_version_stage(
+                      name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
+                      version=model_version,
+                      stage='Staging',
+                      archive_existing_versions=True
+                  )
 
-              loader.client.set_model_version_tag(
-                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
-                  version='${{ github.event.inputs.model_version }}',
-                  key='data_scientist_approved',
-                  value='true'
-              )
+                  loader.client.set_model_version_tag(
+                      name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
+                      version=model_version,
+                      key='manual_validation',
+                      value='approved'
+                  )
 
-              loader.client.set_model_version_tag(
-                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
-                  version='${{ github.event.inputs.model_version }}',
-                  key='validation_notes',
-                  value='${{ github.event.inputs.validation_notes }}'
-              )
+                  print(f'✅ Model version {model_version} promoted to Staging')
 
-              loader.client.set_model_version_tag(
-                  name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
-                  version='${{ github.event.inputs.model_version }}',
-                  key='validated_by',
-                  value='${{ github.actor }}'
-              )
-
-              print(f'✅ Model version ${{ github.event.inputs.model_version }} promoted to Staging')
-
-          except Exception as e:
-              print(f'❌ Error promoting model: {e}')
-              sys.exit(1)
+              except Exception as e:
+                  print(f'❌ Error promoting model: {e}')
+                  sys.exit(1)
           "
 
       - name: Create validation summary
         if: always()
         run: |
-          echo "## Model Validation Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Model Version:** ${{ github.event.inputs.model_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Model Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Version:** ${{ steps.inputs.outputs.MODEL_VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Validated By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Validation Status:** ${{ steps.promote.outcome }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Notes:** ${{ github.event.inputs.validatioN_notes }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Notes:** ${{ steps.inputs.outputs.VALIDATION_NOTES }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger:** ${{ steps.inputs.outputs.TRIGGER_TYPE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mode:** ${{ steps.inputs.outputs.MOCK_VALIDATION == 'true' && 'Mock Testing' || 'Real MLflow' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
 
   auto-deploy:
