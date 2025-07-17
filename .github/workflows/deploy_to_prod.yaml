@@ -41,7 +41,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-verison: '3.11'
+          python-version: '3.11'
 
       - name: Make setup_env.sh executable
         run: chmod +x app/scripts/setup_env.sh
@@ -62,7 +62,7 @@ jobs:
 
       - name: Check deployment result
         run: |
-          if [ ${{ steps.deploy.outcome }} == 'success' ]; then
+          if [ "${{ steps.deploy.outcome }}" == 'success' ]; then
             echo "✅ Deployment successful"
           else
             echo "❌ Deployment failed"
