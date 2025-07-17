@@ -24,7 +24,8 @@ on:
         type: boolean
   push:
     branches:
-      - deployment
+      # - deployment
+      - main
     paths:
       - '.github/workflows/model_validation.yaml'
 
@@ -55,6 +56,8 @@ jobs:
     name: Validate Model & Promote to Staging
     runs-on: ubuntu-latest
     outputs:
+      # Refers to the result status of the 'promote' id step
+      # Potential results: success; failure; cancelled; and skipped
       promotion_successful: ${{ steps.promote.outcome }}
 
     steps:
@@ -80,7 +83,8 @@ jobs:
       - name: Set input values
         id: inputs
         run: |
-          # Use manual inputs if available, otherwise use test defaults
+          # Use manual inputs provided by data scientist, if available
+          # Otherwise use test defaults
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "MODEL_VERSION=${{ github.event.inputs.model_version }}" >> $GITHUB_OUTPUT
             echo "VALIDATION_NOTES=${{ github.event.inputs.validation_notes }}" >> $GITHUB_OUTPUT
