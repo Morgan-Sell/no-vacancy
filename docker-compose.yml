@@ -113,12 +113,26 @@ services:
     environment:
       CONTAINER_TYPE: training
       DATA_DIR: ./data
+      # Database connection details
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Database names
+      BRONZE_DB: ${BRONZE_DB}
+      SILVER_DB: ${SILVER_DB}
+      GOLD_DB: ${GOLD_DB}
+      MLFLOW_DB: ${MLFLOW_DB}
+      # Host configurations
       BRONZE_DB_HOST: bronze-db
       SILVER_DB_HOST: silver-db
       GOLD_DB_HOST: gold-db
       MLFLOW_TRACKING_URI: http://mlflow:5000
-      TEST_DB_HOST: test-db          # Add this line
-      TEST_DB_PORT: 5432
+      # Test database
+      TEST_DB_HOST: test-db
+      TEST_DB_PORT: ${TEST_DB_PORT}
+      TEST_DB_USER: ${TEST_DB_USER}
+      TEST_DB_PASSWORD: ${TEST_DB_PASSWORD}
+      TEST_DB: ${TEST_DB}
     # Run once and exit (for manual training)
     profiles:
       - training
