@@ -5,6 +5,10 @@ on:
     branches:
       # - deployment # Only use for testing
       - main
+    paths:
+      - 'app/services/**'
+      - 'app/schemas/**'
+      - 'requirements.txt'
   schedule:
     # Run every Sunday at 2 AM UTC (weekly retraining)
     - cron: '0 2 * * 0'
@@ -33,83 +37,81 @@ env:
   TEST_DB: ${{ secrets.TEST_DB }}
 
 jobs:
-  scheduled-training:
-    name: Executed Scheduled Training
+  setup-infrastructure:
+    name: Setup Training Infrastructure
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Create environment file
+        runs: |
+          chmod +x app/scripts/setup_env.sh
+          ./app/scripts/setup_env.sh
 
-      - name: Make set_up.sh executable
-        run: chmod +x app/scripts/setup_env.sh
-
-      - name: Create .env file
-        run: ./app/scripts/setup_env.sh
-
-      - name: Install dependencies
+      - name: Start infrastructure services
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          echo "🚀 Starting infrastructure services..."
+          docker compose up -d --build
 
-      - name: Trigger model training
+          # Wait for services to ready
+          echo "⏳ Waiting for services to be ready..."
+          sleep 30
+
+          # Health check
+          for service in bronze-db silver-db gold-db mlflow; do
+            if docker compose ps $service | grep -q "running"; then
+              echo "✅ $service is running."
+            else
+              echo "❌ $service failed to start."
+              docker compose logs $service
+              exit 1
+            fi
+          done
+
+  execute-training:
+    name: Execute Model Training
+    needs: setup-infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create environment file
+        runs: |
+          chmod +x app/scripts/setup_env.sh
+          ./app/scripts/setup_env.sh
+
+      - name: Run training container
         id: training
-        # GitHub Actions runs from the repository root
-        run: python app/scripts/trigger_training.py
-        timeout-minutes: 60 # 1-hour time limit for training
-
-      - name: Check training result
         run: |
-          if [ "${{ steps.training.outcome }}" == "success" ]; then
-            echo "✅ Training completed successfully"
+          echo "🚀 Starting model training..."
+
+          # Run training with timeout
+          timeout 3600 docker compose --profile training run --rm training-container python services/trainer.py
+
+          if [ $? -eq 0 ]; then
+            echo "✅ Training completed successfully."
+          elif [ $? -eq 124 ]; then
+            echo "❌ Training timed out after 1 hour."
+            exit 1
           else
-            echo "❌ Training failed"
+            echo "❌ Training failed."
             exit 1
           fi
 
-      - name: Create training summary
-        if: always()
+      - name: Verify model artifacts
         run: |
-          echo "## Training Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Triggered:** $(date)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status:** ${{ steps.training.outcome }}" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "- **Reason:** ${{ github.event.inputs.training_reason }}" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "- **Reason:** Scheduled weekly training" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 Verifying model artifacts..."
 
-      - name: Notify on training completion
-        if: success()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const message = `✅ **Model Training Completed**
+          # Check if MLflow has new model
+          docker compose --profile training run --rm training-container python -c "
+          import sys
+          sys.path.append('.')
+          from services.mflow_utils import MLflowArtifactLoader
+          from services import MLFLOW_EXPERIMENT_NAME
 
-            - **Time:** ${new Date().toISOString()}
-            - **Trigger:** ${context.eventName === 'schedule' ? 'Scheduled' : 'Manual'}
-            - **MLflow:** ${process.env.MLFLOW_TRACKING_URI}
-
-            New model is ready for validation and deployment.`;
-
-            // You could create an issue or send a notification here
-            console.log(message);
-
-      - name: Notify on training failure
-        if: failure()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '❌ Scheduled Training Failed',
-              body: `Training job failed at ${new Date().toISOString()}\n\nPlease check the workflow logs and MLflow for details.`,
-              labels: ['bug', 'training', 'urgent']
-            })
+          try:
+            "
