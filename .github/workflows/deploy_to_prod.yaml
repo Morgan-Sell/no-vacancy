@@ -30,9 +30,12 @@ env:
   TEST_DB: ${{ secrets.TEST_DB }}
 
 jobs:
-  deploy-to-production:
-    name: Deploy latest validated model
+  check-validated-model:
+    name: Check for validated model
     runs-on: ubuntu-latest
+    outputs:
+      model_version: ${{ steps.check.outputs.model_version }}
+      has_model: ${{ steps.check.outputs.has_model }}
 
     steps:
       - name: Checkout code
@@ -43,40 +46,104 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Make setup_env.sh executable
-        run: chmod +x app/scripts/setup_env.sh
-
-      - name: Create .env file
-        run: ./app/scripts/setup_env.sh
+      - name: Setup environment variables
+        run: |
+          chmod +x app/scripts/setup_env.sh
+          ./app/scripts/setup_env.sh
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Deploy latest validated model
-        id: deploy
-        # GitHub Actions runs from the repository root
-        run: python app/scripts/deploy_inference_model.py
-        continue-on-error: true
-
-      - name: Check deployment result
+      - name: Check for validated model
+        id: check
         run: |
-          if [ "${{ steps.deploy.outcome }}" == 'success' ]; then
-            echo "✅ Deployment successful"
+          cd app
+          if MODEL_VERSION=${python scripts/check_validated_model.py 2>/dev/null}; then
+            echo "model_version=$MODEL_VERSION" >> $GITHUB_OUTPUT
+            echo "has_model=true" >> $GITHUB_OUTPUT
+            echo "✅ Found validated model version: $MODEL_VERSION"
           else
-            echo "❌ Deployment failed"
+            echo "has_model=false" >> $GITHUB_OUTPUT
+            echo "❌ No validated model found."
+          fi
+
+  deploy-to-production:
+    name: Deploy to Production
+    needs: check-validated-model
+    runs-on: ubuntu-latest
+    if: needs.check-validated-model.outputs.has_model == "true" || github.event.inputs.force_deploy == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup environment variables
+        run: |
+          chmod +x app/scripts/setup_env.sh
+          ./app/scripts/setup_env.sh
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Promote model to production
+        if: needs.check-validated-model.outputs.has_model == 'true'
+        run: |
+          cd app
+          python scripts/promote_model.py ${{ needs.check-validated-model.outputs.model_version }}
+
+      - name: Start infrastructure
+        run: |
+          docker compose up -d
+          sleep 30 # Wait for services to be ready
+
+      - name: Validate deployment
+        run: |
+          # Wait for MLflow to register the model promotion
+          sleep 10
+
+          # Test the inference container can load the new model
+          echo "Testing model loading..."
+          RESPONSE=$(curl -s -X POST http://localhost:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{"data": [{"number_of_adults": 2, "number_of_children": 1, "number_of_weekend_nights": 1, "number_of_week_nights": 2, "type_of_meal": "Meal Plan 1", "car_parking_space": 0, "room_type": "Room_Type 1", "lead_time": 30, "market_segment_type": "Online", "is_repeat_guest": 0, "num_previous_cancellations": 0, "num_previous_bookings_not_canceled": 0, "special_requests": 1, "average_price": 100.0, "month_of_reservation": "Jan", "day_of_week": "Monday"}]}')
+
+          if echo "$RESPONSE" | grep -q "predictions"; then
+            echo "✅ Inference container successfully loaded new model"
+            echo "Model version in response: $(echo "$RESPONSE" | grep -o '"version":"[^"]*"')"
+          else
+            echo "❌ Model loading test failed."
+            echo "Response: $RESPONSE"
             exit 1
           fi
 
-      - name: Notify on failure
-        if: failure()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ Production deployment failed. Please check the logs and MLflow for validation status.'
-            })
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Version:** ${{ needs.check-validated-model.outputs.model_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ** Deployed By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
+
+  notify-on-no-model:
+    name: Notify when no model to deploy
+    needs: check-validated-model
+    runs-on: ubuntu-latest
+    if: needs.check-validated-model.outputs.has_model == 'false' && github.event.inputs.force_deploy != 'true'
+
+    steps:
+      - name: No deployment needed
+        run: |
+          echo "ℹ️ No validated models found in Staging - skipping deployment"
+          echo "## ℹ️ No Deployment Needed" >> $GITHUB_STEP_SUMMARY
+          echo "No validated models found in MLflow Staging stage." >> $GITHUB_STEP_SUMMARY
+          echo "Use the Model Validation workflow to rpomote a model first." >> $GITHUB_STEP_SUMMARY
