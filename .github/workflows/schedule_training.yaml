@@ -114,4 +114,63 @@ jobs:
           from services import MLFLOW_EXPERIMENT_NAME
 
           try:
-            "
+            loader = MLflowArtifactLoader()
+            versions = loader.client.get_latest_version(name=MLFLOW_EXPERIMENT_NAME, stages=['None'])
+            if versions:
+              print(f'✅ Found new model version: {versions[0].version}')
+            else:
+              print('❌ No new model version found.')
+              sys.exit(1)
+          except Exception as e:
+            print(f'❌ Error checking MLflow: {e}')
+            sys.exit(1)
+          "
+
+      - name: Create training summary
+        if: always()
+        run: |
+          REASON="${{ github.event.inputs.training_reason || 'Scheduled weekly training' }}"
+          STATUS="${{ steps.training.outcome }}"
+
+          echo "## 🎯 Training Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reason:** $REASON" >> $GITHUB_STEP_SUMMARY
+          echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$STATUS" = "success" ]; then
+            echo "- **Next Step:** Use Model Validation workflow to promote model" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "🧹 Cleaning up infrastructure..."
+          docker compose down -v --remove-orphans || true
+
+  notify-completion:
+    name: Notify Training Completion
+    needs: [setup-infrastructure, execute-training]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Notify success
+        if: needs.execute-training.result == 'success'
+        run: |
+          echo "✅ Training completed successfully!"
+          echo "New model is ready for validation and deployment."
+          echo "Check MLflow: ${{ env.MLFLOW_TRACKING_URI }}"
+
+      - name: Notify failure
+        if: needs.execute-training.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '❌ Scheduled Training Failed,
+              body: 'Training job failed at ${new Date().toISOString()}\n\nPlease check the workflow logs and MLflow for details. \n\n**MLflow:** ${process.env.MLFLOW_TRACKING_URI}'
+              labels: ['bug', 'training', 'urgent']
+            })
