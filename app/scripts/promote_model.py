@@ -25,7 +25,7 @@ def main():
         loader = MLflowArtifactLoader()
         loader.promote_to_production(model_version)
 
-        print(f"Successfully promoted model version {model_version} tp Production.")
+        print(f"Successfully promoted model version {model_version} to Production.")
         sys.exit(0)
 
     except Exception as e:

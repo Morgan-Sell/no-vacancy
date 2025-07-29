@@ -22,12 +22,6 @@ on:
         required: false
         default: true
         type: boolean
-  push:
-    branches:
-      # - deployment
-      - main
-    paths:
-      - '.github/workflows/model_validation.yaml'
 
 env:
   DB_USER: ${{ secrets.DB_USER }}
@@ -45,11 +39,6 @@ env:
   TEST_DB_HOST: ${{ secrets.TEST_DB_HOST }}
   TEST_DB: ${{ secrets.TEST_DB }}
   MLFLOW_EXPERIMENT_NAME: NoVacancyModelTraining
-  # Test values for when triggered by push (not manual)
-  TEST_MODEL_VERSION: "1"
-  TEST_VALIDATION_NOTES: "Testing via push trigger"
-  TEST_AUTO_DEPLOY: "false"
-  TEST_MOCK_VALIDATION: "true"
 
 jobs:
   validate-model:
@@ -126,10 +115,10 @@ jobs:
       - name: Promote model to staging
         run: |
           cd app
-          # For real MLflow, we'd rpomote to Staging first
+          # For real MLflow, promote to Staging first
           if [ "${{ github.event.inputs.mock_validation }}" = "true" ]; then
-            echo "MOCK: Model ${{ github.event.inputs.model_version }} promoted to Staging"
-          else:
+            echo "🧪 MOCK: Model ${{ github.event.inputs.model_version }} promoted to Staging"
+          else
             python -c "
             import sys
             sys.path.append('.')
@@ -137,7 +126,7 @@ jobs:
 
             loader = MLflowArtifactLoader()
             loader.client.transition_model_version_stage(
-                name='${{ env.MLFLOW_EXPERIMENT_NAME}}',
+                name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
                 version='${{ github.event.inputs.model_version }}',
                 stage='Staging',
                 archive_existing_versions=True
@@ -157,7 +146,7 @@ jobs:
       - name: Create validation summary
         run: |
           echo "## 📊 Model Validation Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Model Version:** $ {{ github.event.inputs.model_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Version:** ${{ github.event.inputs.model_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Validated By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
           echo "- **Notes:** ${{ github.event.inputs.validation_notes }}" >> $GITHUB_STEP_SUMMARY
@@ -178,11 +167,11 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const { data: workflow } = await github.rest.createWorkflowDispatch({
+            const { data: workflow } = await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'deploy_to_prod.yaml',
               ref: context.ref
-            }):
+            });
 
             console.log('🚀 Triggered production deployment workflow');

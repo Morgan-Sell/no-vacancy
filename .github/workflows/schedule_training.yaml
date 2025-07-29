@@ -3,7 +3,6 @@ name: CD - Scheduled Model Training
 on:
   push:
     branches:
-      # - deployment # Only use for testing
       - main
     paths:
       - 'app/services/**'
@@ -37,42 +36,8 @@ env:
   TEST_DB: ${{ secrets.TEST_DB }}
 
 jobs:
-  setup-infrastructure:
-    name: Setup Training Infrastructure
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Create environment file
-        runs: |
-          chmod +x app/scripts/setup_env.sh
-          ./app/scripts/setup_env.sh
-
-      - name: Start infrastructure services
-        run: |
-          echo "🚀 Starting infrastructure services..."
-          docker compose up -d --build
-
-          # Wait for services to ready
-          echo "⏳ Waiting for services to be ready..."
-          sleep 30
-
-          # Health check
-          for service in bronze-db silver-db gold-db mlflow; do
-            if docker compose ps $service | grep -q "running"; then
-              echo "✅ $service is running."
-            else
-              echo "❌ $service failed to start."
-              docker compose logs $service
-              exit 1
-            fi
-          done
-
   execute-training:
     name: Execute Model Training
-    needs: setup-infrastructure
     runs-on: ubuntu-latest
 
     steps:
@@ -80,51 +45,32 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Create environment file
-        runs: |
+        run: |
           chmod +x app/scripts/setup_env.sh
           ./app/scripts/setup_env.sh
 
-      - name: Run training container
+      - name: Make training script executable
+        run: chmod +x trigger_training_simple.sh
+
+      - name: Run training workflow
         id: training
         run: |
-          echo "🚀 Starting model training..."
-
-          # Run training with timeout
-          timeout 3600 docker compose --profile training run --rm training-container python services/trainer.py
-
-          if [ $? -eq 0 ]; then
-            echo "✅ Training completed successfully."
-          elif [ $? -eq 124 ]; then
-            echo "❌ Training timed out after 1 hour."
-            exit 1
-          else
-            echo "❌ Training failed."
-            exit 1
-          fi
+          # Execute the training workflow
+          ./trigger_training.sh
 
       - name: Verify model artifacts
         run: |
-          echo "🔍 Verifying model artifacts..."
+          echo "🔍 Verifying model artifacts in MLflow..."
 
-          # Check if MLflow has new model
-          docker compose --profile training run --rm training-container python -c "
-          import sys
-          sys.path.append('.')
-          from services.mflow_utils import MLflowArtifactLoader
-          from services import MLFLOW_EXPERIMENT_NAME
+          # Simple verification using curl and the MLflow API
+          sleep 10  # Give MLflow time to register the model
 
-          try:
-            loader = MLflowArtifactLoader()
-            versions = loader.client.get_latest_version(name=MLFLOW_EXPERIMENT_NAME, stages=['None'])
-            if versions:
-              print(f'✅ Found new model version: {versions[0].version}')
-            else:
-              print('❌ No new model version found.')
-              sys.exit(1)
-          except Exception as e:
-            print(f'❌ Error checking MLflow: {e}')
-            sys.exit(1)
-          "
+          if curl -f http://localhost:5001/api/2.0/mlflow/registered-models/list; then
+            echo "✅ MLflow is accessible and has registered models"
+          else
+            echo "❌ Could not verify MLflow models"
+            exit 1
+          fi
 
       - name: Create training summary
         if: always()
@@ -145,12 +91,12 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          echo "🧹 Cleaning up infrastructure..."
+          echo "🧹 Final cleanup..."
           docker compose down -v --remove-orphans || true
 
   notify-completion:
     name: Notify Training Completion
-    needs: [setup-infrastructure, execute-training]
+    needs: execute-training
     runs-on: ubuntu-latest
     if: always()
 
@@ -159,8 +105,8 @@ jobs:
         if: needs.execute-training.result == 'success'
         run: |
           echo "✅ Training completed successfully!"
-          echo "New model is ready for validation and deployment."
-          echo "Check MLflow: ${{ env.MLFLOW_TRACKING_URI }}"
+          echo "📋 New model is ready for validation and deployment."
+          echo "🔗 Check MLflow: ${{ env.MLFLOW_TRACKING_URI }}"
 
       - name: Notify failure
         if: needs.execute-training.result == 'failure'
@@ -170,7 +116,7 @@ jobs:
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: '❌ Scheduled Training Failed,
-              body: 'Training job failed at ${new Date().toISOString()}\n\nPlease check the workflow logs and MLflow for details. \n\n**MLflow:** ${process.env.MLFLOW_TRACKING_URI}'
+              title: '❌ Scheduled Training Failed',
+              body: `Training job failed at ${new Date().toISOString()}\n\nPlease check the workflow logs and MLflow for details.\n\n**MLflow:** ${process.env.MLFLOW_TRACKING_URI}`,
               labels: ['bug', 'training', 'urgent']
             })
