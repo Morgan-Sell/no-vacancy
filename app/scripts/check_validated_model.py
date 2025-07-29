@@ -23,7 +23,7 @@ def main():
             sys.exit(1)
 
         # Output model version to stdout for GitHub Actions to capture
-        print(metadata["version"])
+        print("✅ Model version found in Staging: ", metadata["version"])
         sys.exit(0)
 
     except Exception as e:
