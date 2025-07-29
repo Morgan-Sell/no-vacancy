@@ -60,7 +60,7 @@ jobs:
         id: check
         run: |
           cd app
-          if MODEL_VERSION=${python scripts/check_validated_model.py 2>/dev/null}; then
+          if MODEL_VERSION=$(python scripts/check_validated_model.py 2>/dev/null); then
             echo "model_version=$MODEL_VERSION" >> $GITHUB_OUTPUT
             echo "has_model=true" >> $GITHUB_OUTPUT
             echo "✅ Found validated model version: $MODEL_VERSION"
@@ -73,7 +73,7 @@ jobs:
     name: Deploy to Production
     needs: check-validated-model
     runs-on: ubuntu-latest
-    if: needs.check-validated-model.outputs.has_model == "true" || github.event.inputs.force_deploy == 'true'
+    if: needs.check-validated-model.outputs.has_model == 'true' || github.event.inputs.force_deploy == 'true'
 
     steps:
       - name: Checkout code
