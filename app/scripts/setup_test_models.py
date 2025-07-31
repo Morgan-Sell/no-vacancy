@@ -28,10 +28,14 @@ def setup_test_models():
 
         # Get the latest model (should be in Production from trainer.py)
         latest_version = max(all_versions, key=lambda x: int(x.version))
+        print(f"Found model version: {latest_version.version}")
 
-        print(
-            f"Found model version: {latest_version.version} in {latest_version.current_stage}"
-        )
+        # Check if staging alias already exists
+        staging_model = loader.get_model_by_alias("staging")
+        if staging_model:
+            print(f"Model version {staging_model.version} already has staging alias.")
+            print("✅ CD pipeline is ready to test!")
+            return True
 
         # If it's in Production, create a copy by transitioning to Staging
         if latest_version.current_stage == "Production":

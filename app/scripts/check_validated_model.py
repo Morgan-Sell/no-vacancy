@@ -16,14 +16,14 @@ def main():
     """Check for latest validated model  in Staging."""
     try:
         loader = MLflowArtifactLoader()
-        metadata = loader.get_artifact_metadata("Staging")
+        model_version = loader.get_model_by_alias("staging")
 
-        if not metadata or not metadata.get("version"):
+        if not model_version:
             print("No validated models found in Staging", file=sys.stderr)
             sys.exit(1)
 
         # Output model version to stdout for GitHub Actions to capture
-        print("✅ Model version found in Staging: ", metadata["version"])
+        print("Model version found in Staging: ", model_version.version)
         sys.exit(0)
 
     except Exception as e:
