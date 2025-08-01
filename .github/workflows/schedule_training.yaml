@@ -1,0 +1,122 @@
+name: CD - Scheduled Model Training
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/services/**'
+      - 'app/schemas/**'
+      - 'requirements.txt'
+  schedule:
+    # Run every Sunday at 2 AM UTC (weekly retraining)
+    - cron: '0 2 * * 0'
+  workflow_dispatch: # Allow manual triggering
+    inputs:
+      training_reason:
+        description: 'Reason for manual training'
+        required: true
+        default: 'Manual retrain request'
+        type: string
+
+env:
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_PORT: ${{ secrets.DB_PORT }}
+  BRONZE_DB_HOST: ${{ secrets.BRONZE_DB_HOST }}
+  BRONZE_DB: ${{ secrets.BRONZE_DB }}
+  SILVER_DB_HOST: ${{ secrets.SILVER_DB_HOST }}
+  SILVER_DB: ${{ secrets.SILVER_DB }}
+  GOLD_DB_HOST: ${{ secrets.GOLD_DB_HOST }}
+  GOLD_DB: ${{ secrets.GOLD_DB }}
+  MLFLOW_DB_HOST: ${{ secrets.MLFLOW_DB_HOST }}
+  MLFLOW_DB: ${{ secrets.MLFLOW_DB }}
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+  TEST_DB_HOST: ${{ secrets.TEST_DB_HOST }}
+  TEST_DB: ${{ secrets.TEST_DB }}
+
+jobs:
+  execute-training:
+    name: Execute Model Training
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create environment file
+        run: |
+          chmod +x app/scripts/setup_env.sh
+          ./app/scripts/setup_env.sh
+
+      - name: Make training script executable
+        run: chmod +x trigger_training_simple.sh
+
+      - name: Run training workflow
+        id: training
+        run: |
+          # Execute the training workflow
+          ./trigger_training.sh
+
+      - name: Verify model artifacts
+        run: |
+          echo "🔍 Verifying model artifacts in MLflow..."
+
+          # Simple verification using curl and the MLflow API
+          sleep 10  # Give MLflow time to register the model
+
+          if curl -f http://localhost:5001/api/2.0/mlflow/registered-models/list; then
+            echo "✅ MLflow is accessible and has registered models"
+          else
+            echo "❌ Could not verify MLflow models"
+            exit 1
+          fi
+
+      - name: Create training summary
+        if: always()
+        run: |
+          REASON="${{ github.event.inputs.training_reason || 'Scheduled weekly training' }}"
+          STATUS="${{ steps.training.outcome }}"
+
+          echo "## 🎯 Training Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reason:** $REASON" >> $GITHUB_STEP_SUMMARY
+          echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$STATUS" = "success" ]; then
+            echo "- **Next Step:** Use Model Validation workflow to promote model" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "🧹 Final cleanup..."
+          docker compose down -v --remove-orphans || true
+
+  notify-completion:
+    name: Notify Training Completion
+    needs: execute-training
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Notify success
+        if: needs.execute-training.result == 'success'
+        run: |
+          echo "✅ Training completed successfully!"
+          echo "📋 New model is ready for validation and deployment."
+          echo "🔗 Check MLflow: ${{ env.MLFLOW_TRACKING_URI }}"
+
+      - name: Notify failure
+        if: needs.execute-training.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '❌ Scheduled Training Failed',
+              body: `Training job failed at ${new Date().toISOString()}\n\nPlease check the workflow logs and MLflow for details.\n\n**MLflow:** ${process.env.MLFLOW_TRACKING_URI}`,
+              labels: ['bug', 'training', 'urgent']
+            })

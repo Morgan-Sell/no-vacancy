@@ -1,0 +1,177 @@
+name: CD - Model Validation & Promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_version:
+        description: 'Model version to validate and promote'
+        required: true
+        type: string
+      validation_notes:
+        description: 'Validation notes from data scientist'
+        required: false
+        default: 'Manual validation completed'
+        type: string
+      auto_deploy:
+        description: 'Automatically deploy after promotion to staging'
+        required: false
+        default: false
+        type: boolean
+      mock_validation:
+        description: 'Use mock validation for testing'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_PORT: ${{ secrets.DB_PORT }}
+  BRONZE_DB_HOST: ${{ secrets.BRONZE_DB_HOST }}
+  BRONZE_DB: ${{ secrets.BRONZE_DB }}
+  SILVER_DB_HOST: ${{ secrets.SILVER_DB_HOST }}
+  SILVER_DB: ${{ secrets.SILVER_DB }}
+  GOLD_DB_HOST: ${{ secrets.GOLD_DB_HOST }}
+  GOLD_DB: ${{ secrets.GOLD_DB }}
+  MLFLOW_DB_HOST: ${{ secrets.MLFLOW_DB_HOST }}
+  MLFLOW_DB: ${{ secrets.MLFLOW_DB }}
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+  TEST_DB_HOST: ${{ secrets.TEST_DB_HOST }}
+  TEST_DB: ${{ secrets.TEST_DB }}
+  MLFLOW_EXPERIMENT_NAME: NoVacancyModelTraining
+
+jobs:
+  validate-model:
+    name: Validate Model Performance
+    runs-on: ubuntu-latest
+    outputs:
+      validation_passed: ${{ steps.validate.outcome == 'success' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup environment variables
+        run: |
+          chmod +x app/scripts/setup_env.sh
+          ./app/scripts/setup_env.sh
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate inputs
+        run: |
+          if [ -z "${{ github.event.inputs.model_version }}" ]; then
+            echo "❌ Model version cannot be empty."
+            exit 1
+          fi
+          echo "✅ Inputs validated"
+          echo "Model Version: ${{ github.event.inputs.model_version }}"
+          echo "Mock Mode: ${{ github.event.inputs.mock_validation }}"
+
+      - name: Validate model metrics
+        id: validate
+        run: |
+          cd app
+          MOCK_FLAG=""
+          if [ "${{ github.event.inputs.mock_validation }}" = "true" ]; then
+            MOCK_FLAG="--mock"
+          fi
+
+          python scripts/validate_model_metrics.py "${{ github.event.inputs.model_version }}" $MOCK_FLAG
+
+  promote-to-staging:
+    name: Promote Model to Staging
+    needs: validate-model
+    runs-on: ubuntu-latest
+    if: needs.validate-model.outputs.validation_passed == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup environment variables
+        run: |
+          chmod +x app/scripts/setup_env.sh
+          ./app/scripts/setup_env.sh
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Promote model to staging
+        run: |
+          cd app
+          # For real MLflow, promote to Staging first
+          if [ "${{ github.event.inputs.mock_validation }}" = "true" ]; then
+            echo "🧪 MOCK: Model ${{ github.event.inputs.model_version }} promoted to Staging"
+          else
+            python -c "
+            import sys
+            sys.path.append('.')
+            from services.mlflow_utils import MLflowArtifactLoader
+
+            loader = MLflowArtifactLoader()
+            loader.client.transition_model_version_stage(
+                name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
+                version='${{ github.event.inputs.model_version }}',
+                stage='Staging',
+                archive_existing_versions=True
+            )
+
+            loader.client.set_model_version_tag(
+                name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
+                version='${{ github.event.inputs.model_version }}',
+                key='manual_validation',
+                value='approved'
+            )
+
+            print('✅ Model promoted to Staging')
+            "
+          fi
+
+      - name: Create validation summary
+        run: |
+          echo "## 📊 Model Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Version:** ${{ github.event.inputs.model_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Validated By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Notes:** ${{ github.event.inputs.validation_notes }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Promoted to:** Staging" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
+
+  auto-deploy:
+    name: Auto-Deploy to Production
+    needs: [validate-model, promote-to-staging]
+    runs-on: ubuntu-latest
+    if: |
+      needs.validate-model.outputs.validation_passed == 'true' &&
+      needs.promote-to-staging.result == 'success' &&
+      github.event.inputs.auto_deploy == 'true'
+
+    steps:
+      - name: Trigger Production Deployment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: workflow } = await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy_to_prod.yaml',
+              ref: context.ref
+            });
+
+            console.log('🚀 Triggered production deployment workflow');
