@@ -617,8 +617,8 @@ def prevent_deployment_network_calls(
 def mock_mlflow_artifact_setup():
     """Setup MLflow mocks for MLflowArtifactLoader tests."""
     with (
-        patch("mlflow_utils.mlflow.set_tracking_uri") as mock_set_uri,
-        patch("mlflow_utils.mlflow.MlflowClient") as mock_client_class,
+        patch("services.mlflow_utils.mlflow.set_tracking_uri") as mock_set_uri,
+        patch("services.mlflow_utils.mlflow.MlflowClient") as mock_client_class,
     ):
 
         mock_client = MagicMock()
