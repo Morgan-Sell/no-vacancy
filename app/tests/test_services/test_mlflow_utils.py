@@ -7,163 +7,245 @@ import joblib
 
 
 class TestMLflowArtifactLoader:
-    @pytest.fixture
-    def loader(self, mock_mlflow_client, mocker):
-        """Create MLFlowArtifactLoader instance with mocked MLflow."""
+    """Essential tests for MLflowArtifactLoader."""
 
-        mocker.patch.object(mlflow, "set_tracking_uri")
-        mocker.patch.object(mlflow, "MlflowClient")
+    def test_init_sets_tracking_uri_and_client(self, mock_mlflow_artifact_setup):
+        """Test that initialization properly sets tracking URI and creates client."""
+        mock_set_uri, mock_client_class = mock_mlflow_artifact_setup
 
-        loader = MLflowArtifactLoader()
-        loader.client = mock_mlflow_client.return_value
-        return loader
+        with patch.dict(os.environ, {"MLFLOW_TRACKING_URI": "http://test:5000"}):
+            loader = MLflowArtifactLoader()
 
-    def test_load_pipeline_artifacts_by_stage_sucesss(
-        self, loader, mock_mlflow_pipeline, mock_mlflow_processor, mocker
+            mock_set_uri.assert_called_once_with("http://test:5000")
+            mock_client_class.assert_called_once()
+            assert loader.client == mock_client_class.return_value
+
+    def test_load_pipeline_artifacts_by_alias_success(
+        self, mlflow_loader, mock_model_version
     ):
+        """Test successful loading of pipeline artifacts by alias."""
         # Arrange
-        mock_version = MagicMock()
-        mock_version.run_id = "test_run_id"
-        mock_version.version = "23"
-        loader.client.get_latest_versions.return_value = [mock_version]
+        mock_client = mlflow_loader.client
+        mock_client.get_model_version_by_alias.return_value = mock_model_version
 
-        mock_load_model = mocker.patch.object(mlflow.sklearn, "load_model")
-        mock_download = mocker.patch.object(mlflow.artifacts, "download_artifacts")
-        mock_joblib_load = mocker.patch.object(joblib, "load")
+        mock_pipeline = MagicMock()
+        mock_processor = MagicMock()
 
-        mock_load_model.return_value = mock_mlflow_pipeline
-        mock_download.return_value = "/tmp/no_vacancy_processor.pkl"
-        mock_joblib_load.return_value = mock_mlflow_processor
-
-        # Act
-        pipeline, processor, model_version = loader.load_pipeline_artifacts_by_stage(
-            "Production"
-        )
-
-        # Assert
-        loader.client.get_latest_versions.assert_called_once_with(
-            MLFLOW_EXPERIMENT_NAME, stages=["Production"]
-        )
-        mock_load_model.assert_called_once_with(
-            model_uri=f"models:/{MLFLOW_EXPERIMENT_NAME}/Production"
-        )
-        mock_download.assert_called_once_with(
-            run_id="test_run_id", artifact_path=MLFLOW_PROCESSOR_PATH
-        )
-        mock_joblib_load.assert_called_once_with("/tmp/no_vacancy_processor.pkl")
-
-        # Assert
-        assert pipeline == mock_mlflow_pipeline
-        assert processor == mock_mlflow_processor
-        assert model_version == "23"
-
-    def test_load_pipeline_artifacts_by_version_success(
-        self, loader, mock_mlflow_pipeline, mock_mlflow_processor, mocker
-    ):
-        # Arrange
-        mock_version_obj = MagicMock()
-        mock_version_obj.run_id = "forest-gump"
-        loader.client.get_model_version.return_value = mock_version_obj
-
-        mock_load_model = mocker.patch.object(mlflow.sklearn, "load_model")
-        mock_download = mocker.patch.object(mlflow.artifacts, "download_artifacts")
-        mock_joblib_load = mocker.patch.object(joblib, "load")
-
-        mock_load_model.return_value = mock_mlflow_pipeline
-        mock_download.return_value = "/tmp/no_vacancy_processor.pkl"
-        mock_joblib_load.return_value = mock_mlflow_processor
-
-        # Act
-        pipeline, processor = loader.load_pipeline_artifacts_by_version("36")
-
-        # Assert
-        loader.client.get_model_version.assert_called_once_with(
-            name=MLFLOW_EXPERIMENT_NAME, version="36"
-        )
-        mock_load_model.assert_called_once_with(
-            model_uri=f"models:/{MLFLOW_EXPERIMENT_NAME}/36"
-        )
-        mock_download.assert_called_once_with(
-            run_id="forest-gump", artifact_path=MLFLOW_PROCESSOR_PATH
-        )
-
-        assert pipeline == mock_mlflow_pipeline
-        assert processor == mock_mlflow_processor
-
-    def test_get_artifact_metadata_success(self, loader):
-        # Arrange
-        mock_version = MagicMock()
-        mock_version.version = "84"
-        mock_version.run_id = "hemmingway"
-        mock_version.current_stage = "Production"
-        mock_version.creation_timestamp = 1234567890
-
-        mock_run = MagicMock()
-        mock_run.data.metrics = {"accuracy": 0.93, "auc": 0.88}
-        mock_run.info.artifact_uri = "s3://bucket/path/to/artifacts"
-
-        loader.client.get_latest_versions.return_value = [mock_version]
-        loader.client.get_run.return_value = mock_run
-
-        # Act
-        metadata = loader.get_artifact_metadata("Production")
-
-        # Assert
-        expected_metadata = {
-            "version": "84",
-            "run_id": "hemmingway",
-            "stage": "Production",
-            "metrics": {"accuracy": 0.93, "auc": 0.88},
-            "artifacts": "s3://bucket/path/to/artifacts",
-            "created_at": 1234567890,
-        }
-        assert metadata == expected_metadata
-
-    @pytest.mark.parametrize(
-        "tags,stage,expected",
-        [
-            ({"manual_validation": "approved"}, "Staging", True),
-            ({"data_scientist_approved": "true"}, "Staging", True),
-            ({"validated": "true"}, "Staging", True),
-            ({"ready_for_production": "true"}, "Staging", True),
-            ({"manual_validation": "approved"}, "Production", False),  # Wrong stage
-            ({"manual_validation": "rejected"}, "Staging", False),  # Not approved
-            ({}, "Staging", False),  # No validation tags
-        ],
-    )
-    def test_check_manual_validation_status(self, loader, tags, stage, expected):
-        # Arrange
-        mock_model_details = MagicMock()
-        mock_model_details.tags = tags
-        mock_model_details.current_stage = stage
-        loader.client.get_model_version.return_value = mock_model_details
-
-        # Act
-        result = loader.check_manual_validation_status("42")
-
-        # Assert
-        assert result == expected
-
-    def test_promote_to_production(self, loader):
-        # Act
-        loader.promote_to_production("777")
-
-        # Assert
-        loader.client.transition_model_version_stage.assert_called_once_with(
-            name=MLFLOW_EXPERIMENT_NAME,
-            version="777",
-            stage="Production",
-            archive_existing_versions=True,
-        )
-
-    def test_get_latest_production_model(self, loader):
-        # Arrange
-        with patch.object(loader, "get_artifact_metadata") as mock_get_metadata:
-            mock_get_metadata.return_value = {"version": "13"}
+        with (
+            patch("mlflow_utils.mlflow.sklearn.load_model", return_value=mock_pipeline),
+            patch(
+                "mlflow_utils.mlflow.artifacts.download_artifacts",
+                return_value="/tmp/fake_processor.pkl",
+            ),
+            patch("joblib.load", return_value=mock_processor),
+        ):
 
             # Act
-            version = loader.get_latest_production_model()
+            pipeline, processor, version = (
+                mlflow_loader.load_pipeline_artifacts_by_alias("production")
+            )
 
             # Assert
-            mock_get_metadata.assert_called_once_with(stage="Production")
-            assert version == "13"
+            assert pipeline == mock_pipeline
+            assert processor == mock_processor
+            assert version == "7"
+
+    def test_load_pipeline_artifacts_by_alias_no_model_found(self, mlflow_loader):
+        """Test error handling when no model is found."""
+        # Arrange
+        mlflow_loader.client.get_model_version_by_alias.return_value = None
+
+        # Act & Assert
+        with pytest.raises(
+            RuntimeError, match="No model version found with alias 'staging'"
+        ):
+            mlflow_loader.load_pipeline_artifacts_by_alias("staging")
+
+    def test_promote_to_production_success(
+        self, mlflow_loader, mock_model_version, capsys
+    ):
+        """Test successful promotion to production."""
+        # Arrange
+        mlflow_loader.client.get_model_version_by_alias.return_value = (
+            mock_model_version
+        )
+
+        # Act
+        mlflow_loader.promote_to_production("9")
+
+        # Assert
+        mlflow_loader.client.set_registered_model_alias.assert_called_with(
+            name=MLFLOW_EXPERIMENT_NAME, alias="production", version="9"
+        )
+
+        captured = capsys.readouterr()
+        assert "✅ Model version 9 promoted to production" in captured.out
+
+    def test_promote_to_production_no_existing_production(self, mlflow_loader, capsys):
+        """Test promotion when no existing production model exists."""
+        # Arrange
+        mlflow_loader.client.get_model_version_by_alias.return_value = None
+
+        # Act
+        mlflow_loader.promote_to_production("11")
+
+        # Assert
+        mlflow_loader.client.delete_registered_model_alias.assert_not_called()
+        mlflow_loader.cleint.set_registered_model_alias.assert_called_with(
+            name=MLFLOW_EXPERIMENT_NAME, alias="production", version="11"
+        )
+
+    def test_check_manual_validation_status_approved(self, mlflow_loader):
+        """Test validation status check for approved model."""
+        # Arrange
+        mock_version = MagicMock()
+        mock_version.tags = {"validation_status": "approved"}
+        mock_version.version = "5"
+        mock_version.alias = ["staging"]
+
+        mlflow_loader.client.get_model_version_by_alias.return_value = mock_version
+        mlflow_loader.client.get_model_version.return_value = mock_version
+
+        # Act
+        is_validated = mlflow_loader.check_manual_validation_status_by_alias("staging")
+
+        # Assert
+        assert is_validated is True
+
+    def test_check_manual_validation_status_not_approved(self, mlflow_loader):
+        """Test validation status check non-approved model."""
+        # Arrange
+        mock_version = MagicMock()
+        mock_version.tags = {"validation_status", "pending"}
+        mock_version.version = "3"
+        mock_version.alias = ["staging"]
+
+        mlflow_loader.client.get_model_version_by_alias.return_value = mock_version
+        mlflow_loader.client.get_model_version.return_value = mock_version
+
+        # Act
+        is_validated = mlflow_loader.check_manual_validation_status_by_alias("staging")
+
+        # Assert
+        assert is_validated is False
+
+    @pytest.mark.parametrize(
+        "tag_key,tag_value",
+        [
+            ("validation_status", "approved"),
+            ("model_approval", "approved"),
+            ("deployment_approval", "approved"),
+            ("ModelApprovalStatus", "Approved"),
+        ],
+    )
+    def test_check_manual_validation_various_tags(
+        self, mlflow_loader, tag_key, tag_value
+    ):
+        """Test validation status with various approval tag formats."""
+        # Arrange
+        mock_version = MagicMock()
+        mock_version.tags = {tag_key: tag_value}
+        mock_version.version = "5"
+        mock_version.aliases = ["staging"]
+
+        mlflow_loader.client.get_model_version_by_alias.return_value = mock_version
+        mlflow_loader.client.get_model_version.return_value = mock_version
+
+        # Act
+        is_validated = mlflow_loader.check_manual_validation_status_by_alias("staging")
+
+        # Assert
+        assert is_validated is True
+
+    def test_get_artifact_metadata_by_alias_success(
+        self, mlflow_loader, mock_model_version
+    ):
+        """Test successful retrieval of artifact metadata"""
+        # Arrange
+        mlflow_loader.client.get_model_version_by_alias.return_value = (
+            mock_model_version
+        )
+
+        mock_run = MagicMock()
+        mock_run.data.metrics = {"auc": 0.95, "accuracy": 0.89}
+        mock_run.info.artifact_uri = "s3://bucket/artifacts"
+        mlflow_loader.client.get_run.return_value = mock_run
+
+        # Act
+        metadata = mlflow_loader.get_artifact_metadata_by_alias("production")
+
+        # Assert
+        assert metadata["version"] == "5"
+        assert metadata["alias"] == "production"
+        assert metadata["metrics"]["auc"] == 0.95
+        assert metadata["artifacts"] == "s3://bucket/artifacts"
+
+    def test_list_all_aliases_success(self, mlflow_loader):
+        """Test successful listing of all aliases."""
+        # Arrange
+        mock_version1 = MagicMock()
+        mock_version1.version = "18"
+        mock_version1.aliases = ["production", "latest"]
+
+        mock_version2 = MagicMock()
+        mock_version2.version = "19"
+        mock_version2.aliases = ["staging"]
+
+        mlflow_loader.client.serach_model_version.return_value = [
+            mock_version1,
+            mock_version2,
+        ]
+
+        # Act
+        aliases_map = mlflow_loader.list_all_aliases()
+
+        # Assert
+        expected_map = {"production": "5", "latest": "5", "staging": "4"}
+        assert aliases_map == expected_map
+
+    def test_exception_handling_returns_appropriate_defaults(self, mlflow_loader):
+        """Test that methods handle exceptions gracefully."""
+        # Arrange
+        mlflow_loader.client.get_model_version_by_alias.side_effect = Exception(
+            "MLflow error"
+        )
+        mlflow_loader.client.search_model_versions.side_effect = Exception(
+            "Search failed"
+        )
+
+        # Act & Assert
+        assert mlflow_loader.get_model_by_alias("production") is None
+        assert mlflow_loader.list_all_aliases() == {}
+        assert mlflow_loader.get_model_aliases("6") == []
+
+
+class TestMLflowArtifactLoaderIntegration:
+    """Integration test for complete workflow."""
+
+    def test_model_promotion_workflow(self, mlflow_loader, capsys):
+        """Test complete workflow: validation check -> production promotion."""
+        # Arrange
+        staging_version = MagicMock()
+        staging_version.version = "7"
+        staging_version.tags = {"validation_status": "approved"}
+        staging_version.aliases = ["staging"]
+
+        mlflow_loader.client.get_model_version_by_alias.side_effect = [
+            staging_version,  # For validaton check
+            None,  # For production promotion (no existing)
+        ]
+        mlflow_loader.client.get_model_version.return_value = staging_version
+
+        # Act
+        is_validated = mlflow_loader.check_manual_validation_status_by_alias("staging")
+        assert is_validated is True
+
+        mlflow_loader.promote_to_production("9")
+
+        # Assert
+        mlflow_loader.client.set_registered_model_alias.assert_called_with(
+            name=MLFLOW_EXPERIMENT_NAME, alias="production", version="9"
+        )
+
+        captured = capsys.readouterr()
+        assert "✅ Model version 9 promoted to production" in captured.out

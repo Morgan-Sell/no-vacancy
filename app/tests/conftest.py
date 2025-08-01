@@ -5,12 +5,13 @@ import tempfile
 import time
 from pathlib import Path
 from unittest import mock
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
 import psycopg2
 import pytest
+from services.mlflow_utils import MLflowArtifactLoader
 from config import TEST_DB, TEST_DB_HOST, TEST_DB_PASSWORD, TEST_DB_PORT, TEST_DB_USER
 from feature_engine.encoding import OneHotEncoder
 from feature_engine.imputation import CategoricalImputer
@@ -607,3 +608,39 @@ def prevent_deployment_network_calls(
         mock_client.return_value.transition_model_version_stage.return_value = None
         mock_client.return_value.get_registered_model.return_value = MagicMock()
         yield mock_client
+
+
+# ------ MLflowArtifactLoader Fixtures ------
+
+
+@pytest.fixture
+def mock_mlflow_artifact_setup():
+    """Setup MLflow mocks for MLflowArtifactLoader tests."""
+    with (
+        patch("mlflow_utils.mlflow.set_tracking_uri") as mock_set_uri,
+        patch("mlflow_utils.mlflow.MlflowClient") as mock_client_class,
+    ):
+
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        yield mock_set_uri, mock_client_class
+
+
+@pytest.fixture
+def mlflow_loader(mock_mlflow_artifact_setup):
+    """Create MLflowArtifactLoader instance with mocked client."""
+    return MLflowArtifactLoader()
+
+
+@pytest.fixture
+def mock_model_version():
+    """Create a mock model version object for testing."""
+    mock_version = MagicMock()
+    mock_version.run_id = "test_run_id"
+    mock_version.version = "7"
+    mock_version.create_timestamp = 1234567890
+    mock_version.description = "Test model version"
+    mock_version.tags = {"validation_status": "approved"}
+    mock_version.aliases = ["production", "latest"]
+    return mock_version
