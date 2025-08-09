@@ -197,7 +197,7 @@ class TestMLflowArtifactLoader:
         mock_version2.version = "19"
         mock_version2.aliases = ["staging"]
 
-        mlflow_loader.client.search_model_version.return_value = [
+        mlflow_loader.client.search_model_versions.return_value = [
             mock_version1,
             mock_version2,
         ]

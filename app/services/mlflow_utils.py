@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import joblib
 import mlflow
+from config import get_logger
 from services import MLFLOW_EXPERIMENT_NAME, MLFLOW_PROCESSOR_PATH, MLFLOW_TRACKING_URI
 
 
@@ -16,6 +17,7 @@ class MLflowArtifactLoader:
         # Use os.getenv to improve testability and flexibility for CLI overrides
         mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", MLFLOW_TRACKING_URI))
         self.client = mlflow.MlflowClient()
+        self.logger = get_logger(logger_name=__name__)
 
     def load_pipeline_artifacts_by_alias(
         self, alias: str = "production"
@@ -250,7 +252,8 @@ class MLflowArtifactLoader:
 
             return aliases_map
 
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Failed to list aliases: {e}")
             # Return empty dict because no aliases existing is a valid state
             return {}
 
