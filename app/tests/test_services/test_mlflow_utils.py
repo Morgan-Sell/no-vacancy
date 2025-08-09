@@ -4,6 +4,7 @@ from services.mlflow_utils import MLflowArtifactLoader
 from services import MLFLOW_EXPERIMENT_NAME, MLFLOW_PROCESSOR_PATH
 import mlflow
 import joblib
+import os
 
 
 class TestMLflowArtifactLoader:
@@ -32,9 +33,12 @@ class TestMLflowArtifactLoader:
         mock_processor = MagicMock()
 
         with (
-            patch("mlflow_utils.mlflow.sklearn.load_model", return_value=mock_pipeline),
             patch(
-                "mlflow_utils.mlflow.artifacts.download_artifacts",
+                "services.mlflow_utils.mlflow.sklearn.load_model",
+                return_value=mock_pipeline,
+            ),
+            patch(
+                "services.mlflow_utils.mlflow.artifacts.download_artifacts",
                 return_value="/tmp/fake_processor.pkl",
             ),
             patch("joblib.load", return_value=mock_processor),
@@ -91,7 +95,7 @@ class TestMLflowArtifactLoader:
 
         # Assert
         mlflow_loader.client.delete_registered_model_alias.assert_not_called()
-        mlflow_loader.cleint.set_registered_model_alias.assert_called_with(
+        mlflow_loader.client.set_registered_model_alias.assert_called_with(
             name=MLFLOW_EXPERIMENT_NAME, alias="production", version="11"
         )
 
@@ -101,7 +105,7 @@ class TestMLflowArtifactLoader:
         mock_version = MagicMock()
         mock_version.tags = {"validation_status": "approved"}
         mock_version.version = "5"
-        mock_version.alias = ["staging"]
+        mock_version.aliases = ["staging"]
 
         mlflow_loader.client.get_model_version_by_alias.return_value = mock_version
         mlflow_loader.client.get_model_version.return_value = mock_version
@@ -118,7 +122,7 @@ class TestMLflowArtifactLoader:
         mock_version = MagicMock()
         mock_version.tags = {"validation_status", "pending"}
         mock_version.version = "3"
-        mock_version.alias = ["staging"]
+        mock_version.aliases = ["staging"]
 
         mlflow_loader.client.get_model_version_by_alias.return_value = mock_version
         mlflow_loader.client.get_model_version.return_value = mock_version
@@ -175,7 +179,9 @@ class TestMLflowArtifactLoader:
         metadata = mlflow_loader.get_artifact_metadata_by_alias("production")
 
         # Assert
-        assert metadata["version"] == "5"
+        assert (
+            metadata["version"] == "7"
+        )  # from mock_model_version fixture in conftest.py
         assert metadata["alias"] == "production"
         assert metadata["metrics"]["auc"] == 0.95
         assert metadata["artifacts"] == "s3://bucket/artifacts"
@@ -191,7 +197,7 @@ class TestMLflowArtifactLoader:
         mock_version2.version = "19"
         mock_version2.aliases = ["staging"]
 
-        mlflow_loader.client.serach_model_version.return_value = [
+        mlflow_loader.client.search_model_version.return_value = [
             mock_version1,
             mock_version2,
         ]
@@ -200,7 +206,7 @@ class TestMLflowArtifactLoader:
         aliases_map = mlflow_loader.list_all_aliases()
 
         # Assert
-        expected_map = {"production": "5", "latest": "5", "staging": "4"}
+        expected_map = {"production": "18", "latest": "18", "staging": "19"}
         assert aliases_map == expected_map
 
     def test_exception_handling_returns_appropriate_defaults(self, mlflow_loader):
