@@ -218,6 +218,9 @@ class TestMLflowArtifactLoader:
         mlflow_loader.client.search_model_versions.side_effect = Exception(
             "Search failed"
         )
+        mlflow_loader.get_model_version.side_effect = Exception(
+            "Get model version failed"
+        )
 
         # Act & Assert
         assert mlflow_loader.get_model_by_alias("production") is None
