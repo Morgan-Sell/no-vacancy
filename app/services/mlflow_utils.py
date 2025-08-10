@@ -106,6 +106,12 @@ class MLflowArtifactLoader:
                 print(f"Removing production alias from version {current_prod.version}")
                 self.delete_model_alias("production")
 
+            # Remove staging alias from the model being promoted
+            current_staging = self.get_model_by_alias("staging")
+            if current_staging and current_staging.version == model_version:
+                print(f"Removing staging alias from version {model_version}")
+                self.delete_model_alias("staging")
+
             # Set new production alias
             self.set_model_alias(model_version, "production")
             print(f"✅ Model version {model_version} promoted to production")
