@@ -9,9 +9,9 @@ on:
       - 'app/services/**'
       - 'app/schemas/**'
       - 'requirements.txt'
-  schedule:
-    # Run every Sunday at 2 AM UTC (weekly retraining)
-    - cron: '0 2 * * 0'
+  # schedule:
+  #   # Run every Sunday at 2 AM UTC (weekly retraining)
+  #   - cron: '0 2 * * 0'
   workflow_dispatch: # Allow manual triggering
     inputs:
       training_reason:
