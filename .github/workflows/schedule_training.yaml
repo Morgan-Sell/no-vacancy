@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - deployment # temporary for testing
     paths:
       - 'app/services/**'
       - 'app/schemas/**'
