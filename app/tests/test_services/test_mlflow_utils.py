@@ -218,7 +218,7 @@ class TestMLflowArtifactLoader:
         mlflow_loader.client.search_model_versions.side_effect = Exception(
             "Search failed"
         )
-        mlflow_loader.get_model_version.side_effect = Exception(
+        mlflow_loader.client.get_model_version.side_effect = Exception(
             "Get model version failed"
         )
 
