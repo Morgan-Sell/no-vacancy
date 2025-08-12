@@ -173,3 +173,6 @@ logs/
 
 # Pickle files
 models/
+
+# File required to run CD pipeline locally using act
+.secrets

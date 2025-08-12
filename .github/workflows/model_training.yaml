@@ -1,4 +1,4 @@
-name: CD - Scheduled Model Training
+name: CD - Model Training
 
 on:
   push:
@@ -45,13 +45,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create environment file
+      - name: Setup local environment
         run: |
           chmod +x app/scripts/setup_env.sh
           ./app/scripts/setup_env.sh
 
       - name: Make training script executable
-        run: chmod +x trigger_training_simple.sh
+        run: chmod +x trigger_training.sh
 
       - name: Run training workflow
         id: training

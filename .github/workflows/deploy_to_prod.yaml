@@ -3,7 +3,7 @@ name: CD - Deploy to Production
 on:
   push:
     branches:
-      - deployment # temporary for testing
+      #- deployment # temporary for testing
       - main
   workflow_dispatch: # Allow manual triggering
     inputs:
