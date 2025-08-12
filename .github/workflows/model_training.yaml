@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - deployment # temporary for testing
+     # - deployment # temporary for testing
     paths:
       - 'app/services/**'
       - 'app/schemas/**'
@@ -85,15 +85,29 @@ jobs:
           echo "- **Reason:** $REASON" >> $GITHUB_STEP_SUMMARY
           echo "- **MLflow:** ${{ env.MLFLOW_TRACKING_URI }}" >> $GITHUB_STEP_SUMMARY
 
-          if [ "$STATUS" = "success" ]; then
-            echo "- **Next Step:** Use Model Validation workflow to promote model" >> $GITHUB_STEP_SUMMARY
-          fi
-
       - name: Cleanup
         if: always()
         run: |
           echo "🧹 Final cleanup..."
           docker compose down -v --remove-orphans || true
+
+  trigger-validation:
+    name: Trigger Model Validation
+    needs: execute-training
+    runs-on: ubuntu-latest
+    if: needs.execute-training.result == 'success'
+
+    steps:
+      - name: Trigger validation workflow
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'trigger-validation'
+            });
+            console.log('✅ Triggered model validation workflow');
 
   notify-completion:
     name: Notify Training Completion

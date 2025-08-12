@@ -23,6 +23,10 @@ on:
         default: true
         type: boolean
 
+  # Auto-trigger when called by training workflow, i.e., model_training.yaml
+  repository_dispatch:
+    types: [trigger-validation]
+
 env:
   DB_USER: ${{ secrets.DB_USER }}
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -49,6 +53,7 @@ jobs:
         options: --user root
     outputs:
       validation_passed: ${{ steps.validate.outcome == 'success' }}
+      model_version: ${{ steps.get-version.outputs.model_version }} # Required for promote-to-staging
 
     steps:
       - name: Checkout code
@@ -68,26 +73,51 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Validate inputs
+      - name: Get model version to validate
+        id: get-version
         run: |
-          if [ -z "${{ github.event.inputs.model_version }}" ]; then
-            echo "❌ Model version cannot be empty."
-            exit 1
+          cd app
+          if [ -n "${{ github.event.inputs.model_version }}" ]; then
+            # Manual trigger - use provided version
+            MODEL_VERSION="${{ github.event.inputs.model_version }}"
+            echo "Using manual input: $MODEL_VERSION"
+          else
+            # Auto-trigger - get latest production model
+            MODEL_VERSION=$(python -c "
+            import sys
+            sys.path.append('.')
+            from services.mlflow_utils import MLflowArtifactLoader
+            try:
+              loader = MLflowArtifactLoader()
+              metadata = loader.get_artifact_metadata_by_alias('production')
+              print(metadata.get('version', ''))
+            except:
+              print('')
+            ")
+
+            if [ -z "$MODEL_VERSION" ]; then
+              echo "❌ No model version found"
+              exit 1
+            fi
+            echo "Using latest production: $MODEL_VERSION"
           fi
-          echo "✅ Inputs validated"
-          echo "Model Version: ${{ github.event.inputs.model_version }}"
-          echo "Mock Mode: ${{ github.event.inputs.mock_validation }}"
+
+          echo "model_version=$MODEL_VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Model version: $MODEL_VERSION"
 
       - name: Validate model metrics
         id: validate
         run: |
           cd app
+          MODEL_VERSION="${{ steps.get-version.outputs.model_version }}"
           MOCK_FLAG=""
           if [ "${{ github.event.inputs.mock_validation }}" = "true" ]; then
             MOCK_FLAG="--mock"
           fi
 
-          python scripts/validate_model_metrics.py "${{ github.event.inputs.model_version }}" $MOCK_FLAG
+          echo "Validating model version: $MODEL_VERSION"
+          python scripts/validate_model_metrics.py "$MODEL_VERSION" $MOCK_FLAG
+
 
   promote-to-staging:
     name: Promote Model to Staging
@@ -119,38 +149,42 @@ jobs:
       - name: Promote model to staging
         run: |
           cd app
+          MODEL_VERSION="${{ steps.validate-model.outputs.model_version }}"
+
           # For real MLflow, promote to Staging first
           if [ "${{ github.event.inputs.mock_validation }}" = "true" ]; then
-            echo "🧪 MOCK: Model ${{ github.event.inputs.model_version }} promoted to Staging"
+            echo "🧪 MOCK: Model $MODEL_VERSION promoted to Staging"
           else
             python -c "
             import sys
             sys.path.append('.')
             from services.mlflow_utils import MLflowArtifactLoader
 
-            loader = MLflowArtifactLoader()
+            loader = MLlowArtifactLoader()
+            model_version = '$MODEL_VERSION'
+
             loader.client.transition_model_version_stage(
                 name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
-                version='${{ github.event.inputs.model_version }}',
+                version=model_version,
                 stage='Staging',
                 archive_existing_versions=True
             )
 
             loader.client.set_model_version_tag(
                 name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
-                version='${{ github.event.inputs.model_version }}',
+                version=model_version,
                 key='manual_validation',
                 value='approved'
             )
 
-            print('✅ Model promoted to Staging')
+            print(f'✅ Model {model_version} promoted to Staging')
             "
           fi
 
       - name: Create validation summary
         run: |
           echo "## 📊 Model Validation Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Model Version:** ${{ github.event.inputs.model_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Version:** ${{ github.validate-model.outputs.model_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Validated By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
           echo "- **Notes:** ${{ github.event.inputs.validation_notes }}" >> $GITHUB_STEP_SUMMARY
