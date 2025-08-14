@@ -27,7 +27,7 @@ echo "Waiting for services to be ready..."
 for service in bronze-db silver-db gold-db mlflow-db mlflow test-db; do
     echo "Waiting for $service..."
     for i in {1..30}; do
-        if docker compose ps $service | grep -q "running"; then
+        if docker compose ps $service | grep -qE "(running|Up)"; then
             echo "✅ $service is ready"
             break
         fi

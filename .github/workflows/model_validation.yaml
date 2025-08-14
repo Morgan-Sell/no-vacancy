@@ -47,21 +47,17 @@ env:
 jobs:
   validate-model:
     name: Validate Model Performance
+    # Use ubuntu because Alpine has compatibility issues with SciPy
     runs-on: ubuntu-latest
-    container:
-        image: python:3.11-alpine
-        options: --user root
-    outputs:
-      validation_passed: ${{ steps.validate.outcome == 'success' }}
-      model_version: ${{ steps.get-version.outputs.model_version }} # Required for promote-to-staging
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install system dependencies
-        run: |
-          apk add --no-cache bash git build-base postgresql-dev
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: Setup environment variables
         run: |
