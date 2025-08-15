@@ -28,15 +28,17 @@ jobs:
   lint:
     name: Lint with Ruff, Black, and MyPy
     runs-on: ubuntu-latest
+    container:
+        image: python:3.11-alpine
+        options: --user root
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Install system dependencies
+        run: |
+          apk add --no-cache bash git
 
       - name: Make setup_env.sh executable
         run: chmod +x app/scripts/setup_env.sh
@@ -55,15 +57,19 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
+    container:
+        image: python:3.11-alpine
+        options: --user root
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Install system dependencies
+        # build-base enables compiling of Python packages with C extensions
+        # libffi-dev: some Python packages use FFI to call C libraries
+        run: |
+          apk add --no-cache bash git build-base postgres-dev libffi-dev
 
       - name: Make setup_env.sh executable
         run: chmod +x app/scripts/setup_env.sh

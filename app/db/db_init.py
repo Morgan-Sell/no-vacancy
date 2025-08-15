@@ -1,3 +1,5 @@
+import os
+
 from config import (
     BRONZE_DB,
     BRONZE_DB_HOST,
@@ -61,6 +63,15 @@ async def init_all_databases():
     async with gold_db.create_engine().begin() as conn:
         await conn.run_sync(gold.Base.metadata.create_all)
 
-    # test_db is used integration tests. Uses the same schema as bronze_db.
-    async with test_db.create_engine().begin() as conn:
-        await conn.run_sync(bronze.Base.metadata.create_all)
+    # Skip test_db in training environments
+    container_type = os.getenv("CONTAINER_TYPE")
+
+    if container_type != "training":
+        try:
+
+            # test_db is used integration tests. Uses the same schema as bronze_db.
+            async with test_db.create_engine().begin() as conn:
+                await conn.run_sync(bronze.Base.metadata.create_all)
+
+        except Exception as e:
+            print(f"⚠️ Test DB initialization skipped: {e}")

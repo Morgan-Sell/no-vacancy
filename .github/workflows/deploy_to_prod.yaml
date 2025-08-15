@@ -1,0 +1,164 @@
+name: CD - Deploy to Production
+
+on:
+  push:
+    branches:
+      #- deployment # temporary for testing
+      - main
+  workflow_dispatch: # Allow manual triggering
+    inputs:
+      force_deploy:
+        description: 'Force deployment even if no new validated model'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_PORT: ${{ secrets.DB_PORT }}
+  BRONZE_DB_HOST: ${{ secrets.BRONZE_DB_HOST }}
+  BRONZE_DB: ${{ secrets.BRONZE_DB }}
+  SILVER_DB_HOST: ${{ secrets.SILVER_DB_HOST }}
+  SILVER_DB: ${{ secrets.SILVER_DB }}
+  GOLD_DB_HOST: ${{ secrets.GOLD_DB_HOST }}
+  GOLD_DB: ${{ secrets.GOLD_DB }}
+  MLFLOW_DB_HOST: ${{ secrets.MLFLOW_DB_HOST }}
+  MLFLOW_DB: ${{ secrets.MLFLOW_DB }}
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+  TEST_DB_HOST: ${{ secrets.TEST_DB_HOST }}
+  TEST_DB: ${{ secrets.TEST_DB }}
+
+jobs:
+  check-validated-model:
+    name: Check for validated model
+    runs-on: ubuntu-latest
+    outputs:
+      model_version: ${{ steps.check.outputs.model_version }}
+      has_model: ${{ steps.check.outputs.has_model }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup environment variables
+        run: |
+          chmod +x app/scripts/setup_env.sh
+          ./app/scripts/setup_env.sh
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check for validated model
+        id: check
+        run: |
+          cd app
+
+          # Override MLflow URI when running locally with act (simulate GitHub)
+          if [ "${{ github.actor }}" = "nektos/act" ]; then
+            export MLFLOW_TRACKING_URI=http://localhost:5001
+            echo "Using localhost MLflow for act testing"
+          fi
+
+
+          if MODEL_VERSION=$(python scripts/check_validated_model.py 2>/dev/null); then
+            echo "model_version=$MODEL_VERSION" >> $GITHUB_OUTPUT
+            echo "has_model=true" >> $GITHUB_OUTPUT
+            echo "✅ Found validated model version: $MODEL_VERSION"
+          else
+            echo "has_model=false" >> $GITHUB_OUTPUT
+            echo "❌ No validated model found."
+          fi
+
+  deploy-to-production:
+    name: Deploy to Production
+    needs: check-validated-model
+    runs-on: ubuntu-latest
+    if: needs.check-validated-model.outputs.has_model == 'true' || github.event.inputs.force_deploy == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup environment variables
+        run: |
+          chmod +x app/scripts/setup_env.sh
+          ./app/scripts/setup_env.sh
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Promote model to production
+        if: needs.check-validated-model.outputs.has_model == 'true'
+        run: |
+          cd app
+
+          # Override MLflow URI when running locally with act (simulate GitHub)
+          if [ "${{ github.actor }}" = "nektos/act" ]; then
+            export MLFLOW_TRACKING_URI=http://localhost:5001
+            echo "Using localhost MLflow for act testing"
+          fi
+
+          python scripts/promote_model.py ${{ needs.check-validated-model.outputs.model_version }}
+
+      - name: Start infrastructure
+        run: |
+          docker compose up -d --build
+          sleep 30 # Wait for services to be ready
+
+      - name: Validate deployment
+        run: |
+          # Wait for MLflow to register the model promotion
+          sleep 10
+
+          # Test the inference container can load the new model
+          echo "Testing model loading..."
+          RESPONSE=$(curl -s -X POST http://localhost:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{"data": [{"number_of_adults": 2, "number_of_children": 1, "number_of_weekend_nights": 1, "number_of_week_nights": 2, "type_of_meal": "Meal Plan 1", "car_parking_space": 0, "room_type": "Room_Type 1", "lead_time": 30, "market_segment_type": "Online", "is_repeat_guest": 0, "num_previous_cancellations": 0, "num_previous_bookings_not_canceled": 0, "special_requests": 1, "average_price": 100.0, "month_of_reservation": "Jan", "day_of_week": "Monday"}]}')
+
+          if echo "$RESPONSE" | grep -q "predictions"; then
+            echo "✅ Inference container successfully loaded new model"
+            echo "Model version in response: $(echo "$RESPONSE" | grep -o '"version":"[^"]*"')"
+          else
+            echo "❌ Model loading test failed."
+            echo "Response: $RESPONSE"
+            exit 1
+          fi
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Version:** ${{ needs.check-validated-model.outputs.model_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ** Deployed By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
+
+  notify-on-no-model:
+    name: Notify when no model to deploy
+    needs: check-validated-model
+    runs-on: ubuntu-latest
+    if: needs.check-validated-model.outputs.has_model == 'false' && github.event.inputs.force_deploy != 'true'
+
+    steps:
+      - name: No deployment needed
+        run: |
+          echo "ℹ️ No validated models found in Staging - skipping deployment"
+          echo "## ℹ️ No Deployment Needed" >> $GITHUB_STEP_SUMMARY
+          echo "No validated models found in MLflow Staging stage." >> $GITHUB_STEP_SUMMARY
+          echo "Use the Model Validation workflow to rpomote a model first." >> $GITHUB_STEP_SUMMARY
