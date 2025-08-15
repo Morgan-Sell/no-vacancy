@@ -49,6 +49,9 @@ jobs:
     name: Validate Model Performance
     # Use ubuntu because Alpine has compatibility issues with SciPy
     runs-on: ubuntu-latest
+    outputs:
+      validation_passed: ${{ steps.validate.outputs.validation_passed }}
+      model_version: ${{ steps.get-version.outputs.model_version }}
 
     steps:
       - name: Checkout code
@@ -105,6 +108,14 @@ jobs:
         id: validate
         run: |
           cd app
+
+          # Override MLflow URI when running locally with act (simulates GitHub)
+          if [ "${{ github.actor }}" = "nektos/act" ]; then
+            export MLFLOW_TRACKING_URI=http://localhost:5001
+            echo "Using localhost MLflow for act testing"
+          fi
+
+          # Handle mock validation flag
           MODEL_VERSION="${{ steps.get-version.outputs.model_version }}"
           MOCK_FLAG=""
           if [ "${{ github.event.inputs.mock_validation }}" = "true" ]; then
@@ -114,23 +125,24 @@ jobs:
           echo "Validating model version: $MODEL_VERSION"
           python scripts/validate_model_metrics.py "$MODEL_VERSION" $MOCK_FLAG
 
+          # Required to promote model to staging
+          echo "validation_passed=true" >> $GITHUB_OUTPUT
+
 
   promote-to-staging:
     name: Promote Model to Staging
     needs: validate-model
     runs-on: ubuntu-latest
-    container:
-      image: python:3.11-alpine
-      options: --user root
     if: needs.validate-model.outputs.validation_passed == 'true'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: |
-          apk add --no-cache bash git build-base postgresql-dev
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: Setup environment variables
         run: |
@@ -145,42 +157,25 @@ jobs:
       - name: Promote model to staging
         run: |
           cd app
-          MODEL_VERSION="${{ steps.validate-model.outputs.model_version }}"
 
-          # For real MLflow, promote to Staging first
+          # Override MLflow URI when running locally with act (simulate Github)
+          if [ "${{ github.actor }}" = "nektos/act" ]; then
+            export MLFLOW_TRACKING_URI=http://localhost:5001
+            echo "Using localhost MLflow for act testing"
+          fi
+
+          MODEL_VERSION="${{ needs.validate-model.outputs.model_version }}"
+
           if [ "${{ github.event.inputs.mock_validation }}" = "true" ]; then
             echo "🧪 MOCK: Model $MODEL_VERSION promoted to Staging"
           else
-            python -c "
-            import sys
-            sys.path.append('.')
-            from services.mlflow_utils import MLflowArtifactLoader
-
-            loader = MLlowArtifactLoader()
-            model_version = '$MODEL_VERSION'
-
-            loader.client.transition_model_version_stage(
-                name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
-                version=model_version,
-                stage='Staging',
-                archive_existing_versions=True
-            )
-
-            loader.client.set_model_version_tag(
-                name='${{ env.MLFLOW_EXPERIMENT_NAME }}',
-                version=model_version,
-                key='manual_validation',
-                value='approved'
-            )
-
-            print(f'✅ Model {model_version} promoted to Staging')
-            "
+            python scripts/promote_to_staging.py "$MODEL_VERSION"
           fi
 
       - name: Create validation summary
         run: |
           echo "## 📊 Model Validation Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Model Version:** ${{ github.validate-model.outputs.model_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Version:** ${{ needs.validate-model.outputs.model_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Validated By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
           echo "- **Notes:** ${{ github.event.inputs.validation_notes }}" >> $GITHUB_STEP_SUMMARY

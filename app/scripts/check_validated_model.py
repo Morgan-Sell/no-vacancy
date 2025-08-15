@@ -22,8 +22,8 @@ def main():
             print("No validated models found in Staging", file=sys.stderr)
             sys.exit(1)
 
-        # Output model version to stdout for GitHub Actions to capture
-        print("Model version found in Staging: ", model_version.version)
+        # Output ONLY the version number to stdout
+        print(model_version.version)
         sys.exit(0)
 
     except Exception as e:

@@ -60,6 +60,14 @@ jobs:
         id: check
         run: |
           cd app
+
+          # Override MLflow URI when running locally with act (simulate GitHub)
+          if [ "${{ github.actor }}" = "nektos/act" ]; then
+            export MLFLOW_TRACKING_URI=http://localhost:5001
+            echo "Using localhost MLflow for act testing"
+          fi
+
+
           if MODEL_VERSION=$(python scripts/check_validated_model.py 2>/dev/null); then
             echo "model_version=$MODEL_VERSION" >> $GITHUB_OUTPUT
             echo "has_model=true" >> $GITHUB_OUTPUT
@@ -98,6 +106,13 @@ jobs:
         if: needs.check-validated-model.outputs.has_model == 'true'
         run: |
           cd app
+
+          # Override MLflow URI when running locally with act (simulate GitHub)
+          if [ "${{ github.actor }}" = "nektos/act" ]; then
+            export MLFLOW_TRACKING_URI=http://localhost:5001
+            echo "Using localhost MLflow for act testing"
+          fi
+
           python scripts/promote_model.py ${{ needs.check-validated-model.outputs.model_version }}
 
       - name: Start infrastructure
