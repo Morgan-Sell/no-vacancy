@@ -28,9 +28,6 @@ jobs:
   lint:
     name: Lint with Ruff, Black, and MyPy
     runs-on: ubuntu-latest
-    container:
-        image: python:3.11-alpine
-        options: --user root
 
     steps:
       - name: Checkout code
@@ -57,9 +54,6 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    container:
-        image: python:3.11-alpine
-        options: --user root
 
     steps:
       - name: Checkout code
