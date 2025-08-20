@@ -33,15 +33,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup environment variables
         run: |
-          apk add --no-cache bash git
-
-      - name: Make setup_env.sh executable
-        run: chmod +x app/scripts/setup_env.sh
-
-      - name: Create .env file
-        run: ./app/scripts/setup_env.sh
+          chmod +x app/scripts/setup_env.sh
+          ./app/scripts/setup_env.sh
 
       - name: Install dependencies
         run: |
@@ -59,17 +59,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        # build-base enables compiling of Python packages with C extensions
-        # libffi-dev: some Python packages use FFI to call C libraries
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup environment variables
         run: |
-          apk add --no-cache bash git build-base postgres-dev libffi-dev
+          chmod +x app/scripts/setup_env.sh
+          ./app/scripts/setup_env.sh
 
-      - name: Make setup_env.sh executable
-        run: chmod +x app/scripts/setup_env.sh
-
-      - name: Create .env file
-        run: ./app/scripts/setup_env.sh
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Install dependencies
         run: |
