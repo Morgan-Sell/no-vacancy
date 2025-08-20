@@ -1,5 +1,7 @@
 # Docker Compose file for the NoVacancy application
+# docker-compose is used as an orchestrator. Dockerfile perform the behaviors.
 services:
+  # Database Services (Always Available)
   bronze-db:
     image: postgres:latest
     container_name: bronze-db
@@ -42,19 +44,6 @@ services:
     volumes:
       - gold_data:/var/lib/postgresql/data
 
-  test-db:
-    image: postgres:latest
-    container_name: test-db
-    env_file:
-      - .env
-    environment:
-      POSTGRES_USER: ${TEST_DB_USER}
-      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD}
-      POSTGRES_DB: ${TEST_DB}
-    ports:
-      - "5436:5432"
-    # volumes as test data should not persist
-
 
   mlflow-db:
     image: postgres:latest
@@ -71,6 +60,7 @@ services:
       - mlflow_data:/var/lib/postgresql/data
 
 
+# MLflow Service (Always Available)
   mlflow:
     build:
       context: .
@@ -91,12 +81,82 @@ services:
       "--host", "0.0.0.0"
     ]
 
-
-  app:
-    build: .
-    container_name: novacancy-app
+  # Test Database (Training Profile Only)
+  test-db:
+    image: postgres:latest
+    container_name: test-db
+    profiles:
+      - training
+      - testing
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${TEST_DB_USER}
+      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD}
+      POSTGRES_DB: ${TEST_DB}
     ports:
-      - "8000:8000"
+      - "5436:5432"
+    # volumes as test data should not persist
+
+
+  # Training Container (Training Profile Only)
+  training-container:
+    build:
+      context: .
+      dockerfile: Dockerfile.training
+    container_name: novacancy-training
+    profiles:
+      - training
+    depends_on:
+      - bronze-db
+      - silver-db
+      - gold-db
+      - mlflow-db
+      - mlflow
+      - test-db
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data # TODO: Confirm if needed given that script imports data into Bronze DB
+    environment:
+      CONTAINER_TYPE: training
+      DATA_DIR: ./data
+      # Database connection details
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Database names
+      BRONZE_DB: ${BRONZE_DB}
+      SILVER_DB: ${SILVER_DB}
+      GOLD_DB: ${GOLD_DB}
+      MLFLOW_DB: ${MLFLOW_DB}
+      # Host configurations
+      BRONZE_DB_HOST: bronze-db
+      SILVER_DB_HOST: silver-db
+      GOLD_DB_HOST: gold-db
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      # Test database
+      TEST_DB_HOST: test-db
+      TEST_DB_PORT: ${TEST_DB_PORT}
+      TEST_DB_USER: ${TEST_DB_USER}
+      TEST_DB_PASSWORD: ${TEST_DB_PASSWORD}
+      TEST_DB: ${TEST_DB}
+
+  training-test:
+    image: python:3.12-slim
+    container_name: training-test
+    command: echo "Training test works"
+    profiles:
+      - training
+
+
+  inference-container:
+    build:
+      context: .
+      dockerfile: Dockerfile.inference
+    container_name: novacancy-inference
+    ports:
+      - 8000:8000
     depends_on:
       - bronze-db
       - silver-db
@@ -105,42 +165,13 @@ services:
       - mlflow
     env_file:
       - .env
-    volumes:
-      - ./data:/app/data # Mount data directory to read data into Bronze DB
-
     environment:
-      # General app configuration
-      DATA_DIR: ./data
-
-      # Bronze DB
       BRONZE_DB_HOST: bronze-db
-      BRONZE_DB_PORT: ${DB_PORT}
-      BRONZE_DB_NAME: ${BRONZE_DB}
-      BRONZE_DB_USER: ${DB_USER}
-      BRONZE_DB_PASSWORD: ${DB_PASSWORD}
-      BRONZE_TABLE: raw_data
-
-      # Silver DB
       SILVER_DB_HOST: silver-db
-      SILVER_DB_PORT: ${DB_PORT}
-      SILVER_DB_NAME: ${SILVER_DB}
-      SILVER_DB_USER: ${DB_USER}
-      SILVER_DB_PASSWORD: ${DB_PASSWORD}
-      SILVER_TRAIN_TABLE: train_data
-      SILVER_VALIDATION_TEST_TABLE: validation_test_data
-
-      # Gold DB
       GOLD_DB_HOST: gold-db
-      GOLD_DB_PORT: ${DB_PORT}
-      GOLD_DB_NAME: ${GOLD_DB}
-      GOLD_DB_USER: ${DB_USER}
-      GOLD_DB_PASSWORD: ${DB_PASSWORD}
-      GOLD_TRAIN_TABLE: train_results
-      GOLD_VALIDATION_TABLE: validation_results
-      GOLD_TEST_TABLE: test_results
-
-    command: /bin/bash -c "python scripts/import_csv_to_postgres.py && \
-                          uvicorn main:app --host 0.0.0.0 --port 8000"
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    # Always running
+    restart: unless-stopped
 
 volumes:
   bronze_data:

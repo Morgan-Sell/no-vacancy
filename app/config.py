@@ -1,6 +1,8 @@
 import logging
 import os
 import sys
+from dataclasses import dataclass
+from enum import Enum
 from logging.handlers import TimedRotatingFileHandler
 from os.path import abspath, dirname, join
 
@@ -100,3 +102,92 @@ RAW_DATA_FILE_PATH = os.path.join(DATA_DIR, "bookings_raw.csv")
 # Storage
 CSV_HASH_TABLE = "csv_hashes"
 RAW_DATA_TABLE = "raw_data"
+
+# -- Docker Config --
+
+# Timeout configurations (in seconds)
+TRAINING_DEPLOYMENT_TIMEOUT = 3600  # 1 hour
+INFERENCE_DEPLOYMENT_TIMEOUT = 60  # 1 minute
+MLFLOW_DEPLOYMENT_TIMEOUT = 30  # 30 seconds
+
+# Container names
+TRAINING_CONTAINER = "training-container"
+INFERENCE_CONTAINER = "inference-container"
+MLFLOW_CONTAINER = "mlflow"
+
+# Docker compose commands
+DOCKER_COMPOSE_RESTART_CMD = ["docker", "compose", "restart"]
+DOCKER_COMPOSE_RUN_CMD = ["docker", "compose", "run", "--rm"]
+DOCKER_COMPOSE_TRAINING_CMD = [
+    "docker",
+    "compose",
+    "--profile",
+    "training",
+    "run",
+    "--rm",
+]
+
+
+# -- Continuous Deployment --
+
+
+class DeploymentMode(Enum):
+    """Deployment modes for different container strategies."""
+
+    INFERENCE_CONTAINER_RESTART = "inference_container_restart"
+    TRAINING_CONTAINER_RUN = "training_container_run"
+    MLFLOW_ONLY = "mlflow_only"
+    KUBERNETES = "kubernetes"  # Placeholder for future addtions
+
+
+@dataclass
+class CDConfig:
+    """
+    Configuration for Continuous Deployment (CD) settings.
+    """
+
+    target_environment: str
+    require_manual_validation: bool
+    deployment_mode: DeploymentMode
+    inference_container_name: str = "inference-container"
+    training_container_name: str = "training-container"
+    mlflow_container_name: str = "mlflow"
+
+    @classmethod
+    def for_production_inference(cls):
+        """Production configuration with container restart."""
+        return cls(
+            target_environment="production",
+            require_manual_validation=True,
+            deployment_mode=DeploymentMode.INFERENCE_CONTAINER_RESTART,
+            inference_container_name="inference-container",
+        )
+
+    @classmethod
+    def for_automated_training(cls):
+        """Configuration for automated training workflows."""
+        return cls(
+            target_environment="training",
+            require_manual_validation=False,
+            deployment_mode=DeploymentMode.TRAINING_CONTAINER_RUN,
+            training_container_name="training-container",
+        )
+
+    @classmethod
+    def for_staging_mlflow(cls):
+        """Staging configuration - MLflow only."""
+        return cls(
+            target_environment="staging",
+            require_manual_validation=False,
+            deployment_mode=DeploymentMode.MLFLOW_ONLY,
+        )
+
+    @classmethod
+    def for_development_training(cls):
+        """Development configuration for training experiments."""
+        return cls(
+            target_environment="development",
+            require_manual_validation=False,
+            deployment_mode=DeploymentMode.TRAINING_CONTAINER_RUN,
+            training_container_name="training-container",
+        )

@@ -1,10 +1,5 @@
-# Dockerfile (keep this as-is, but add a comment)
-# This is the all-in-one development container
-# For production, use Dockerfile.training and Dockerfile.prediction
-
-# Python image
+# Container setup for model training
 FROM python:3.12-slim
-
 
 # Set the working directory
 WORKDIR /app
@@ -20,7 +15,6 @@ RUN apt-get update && \
 
 # Copy dependencies
 COPY requirements.txt .
-COPY pyproject.toml .
 
 # Install Python dependencies and clean stale cache
 RUN pip install --upgrade pip && \
@@ -28,11 +22,7 @@ RUN pip install --upgrade pip && \
     find /app -name "__pycache__" -exec rm -rf {} + || true
 
 # Copy the application code
-COPY app /app
+COPY app/ .
 
-# Expose API port
-EXPOSE 8000
-
-# Default to prediction service, but can be overridden
-# Start FastAPI server
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run training orchestrator (which coordinates data import + training)
+CMD ["/bin/bash", "-c", "python scripts/import_csv_to_postgres.py && python services/training_orchestrator.py"]

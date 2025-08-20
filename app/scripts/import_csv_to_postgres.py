@@ -1,12 +1,18 @@
 import asyncio
 import csv
 import hashlib
+import os
 import re
 import socket
+import sys
 import time
 from datetime import datetime
+from pathlib import Path
 
 import psycopg2
+
+# Add app directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import (
     BRONZE_DB,
     BRONZE_DB_HOST,
@@ -136,15 +142,18 @@ def wait_for_db(host, port, timeout=30):
     raise TimeoutError(f"❌ Timed out waiting for {host}:{port}")
 
 
-def main():
+async def main():
     # Wait for all DBs to be available
     wait_for_db(BRONZE_DB_HOST, DB_PORT)
     wait_for_db(SILVER_DB_HOST, DB_PORT)
     wait_for_db(GOLD_DB_HOST, DB_PORT)
-    wait_for_db(TEST_DB_HOST, DB_PORT)
+
+    # Only wait for test-db if the app is performing CI
+    if os.getenv("CI"):
+        wait_for_db(TEST_DB_HOST, DB_PORT)
 
     # Create tables if needed
-    asyncio.run(init_all_databases())
+    await init_all_databases()
 
     # Connect the Bronze DB to perform SQL operations
     conn_bronze = psycopg2.connect(
@@ -185,4 +194,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

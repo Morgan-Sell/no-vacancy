@@ -88,7 +88,8 @@ DATA_PATHS = {
 SILVER_DB_TARGET_VARIABLE = "is_cancellation"
 
 # -- MLflow Tracking --
-MLFLOW_TRACKING_URI = "http://mlfow:50000"
+MLFLOW_TRACKING_URI = "http://mlflow:5000"
 MLFLOW_PROCESSOR_JOBLIB = "processor.joblib"
 MLFLOW_PROCESSOR_PATH = f"processor/{MLFLOW_PROCESSOR_JOBLIB}"
 MLFLOW_EXPERIMENT_NAME = "NoVacancyModelTraining"
+MLFLOW_AUC_THRESHOLD = 0.85
