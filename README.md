@@ -1,11 +1,32 @@
-# NoVacancy Feature Branch History
-A ML application that predicts whether someone will cancel their hotel reservation.
-
-## Overview
-Includes the installation steps for each feature branch.
+# NoVacancy
+NoVacancy is a machine learning application that predicts hotel reservation cancellations using historical booking data. The dataset is sourced from [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S2352340918315191) and contains approximately 36,000 reservations from two hotels (one resort, one urban) with arrival dates between July 1, 2015, and August 31, 2017. The dataset includes 17 features, with cancellation status serving as the binary target variable.
 
 
-## Installation & Running the App
+### Technology Stack
+NoVacancy is built on a modular, containerized architecture featuring:
+
+- **API Framework**: FastAPI for RESTful prediction services
+- **Data Storage**: PostgreSQL with medallion architecture (Bronze/Silver/Gold layers)
+- **ML Operations**: MLflow for experiment tracking and model registry
+- **Infrastructure**: Docker Compose for container orchestration
+- **CI/CD**: GitHub Actions for automated linting, testing and deployment
+- **Database Migrations**: Alembic for schema version control
+- **Orchestration**: Airflow for workflow management and scheduling (in progress)
+
+### Data Science Foundation
+The machine learning pipeline and preprocessing strategies are based on comprehensive exploratory data analysis available in the [EDA notebook](https://github.com/Morgan-Sell/no-vacancy/blob/analysis/no_vacancy_eda.ipynb).
+
+## System Architecture
+
+The system implements a [medallion architecture](https://www.databricks.com/glossary/medallion-architecture) with integrated MLOps workflows, enabling automated model training, validation, and deployment with human oversight for production model promotion.
+
+<p align="center">
+   <img src="./img/no_vacancy_architecture.png" alt="NoVacancy Architecture" width="600"/>
+</p>
+
+
+
+## Feature Branch History
 
 
 ### `ci-pipe-v2`
