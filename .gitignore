@@ -176,3 +176,6 @@ models/
 
 # File required to run CD pipeline locally using act
 .secrets
+
+# Metadata files
+.DS_Store
