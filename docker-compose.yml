@@ -173,8 +173,54 @@ services:
     # Always running
     restart: unless-stopped
 
+  airflow:
+    image: apache/airflow:2.8.1-python3.11
+    container_name: airflow
+    depends_on:
+      - bronze-db
+      - silver-db
+      - gold-db
+      - mlflow
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      PYTHONPATH: "/opt/airflow/app"
+      BRONZE_DB_PATH: bronze-db
+      SILVER_DB_HOST: silver-db
+      GOLD_DB_HOST: gold-db
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app:/opt/airflow/app
+      - ./app/airflow/dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+      - airflow_data:/opt/airflow
+    command: >
+      bash -c "
+        pip install -r /opt/airflow/app/ ../requirements.txt &&
+        airflow db init &&
+        airflow users create \
+          --username admin \
+          --password \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com || true &&
+        airflow webserver --port 8080 &
+        airflow scheduler
+      "
+    profiles:
+      - airflow
+      - training
+
 volumes:
   bronze_data:
   silver_data:
   gold_data:
   mlflow_data:
+  airflow_data:

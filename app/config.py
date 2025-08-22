@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
+from datetime import timedelta
 from enum import Enum
 from logging.handlers import TimedRotatingFileHandler
 from os.path import abspath, dirname, join
@@ -191,3 +192,13 @@ class CDConfig:
             deployment_mode=DeploymentMode.TRAINING_CONTAINER_RUN,
             training_container_name="training-container",
         )
+
+
+# -- Orchestration --
+DAG_DEFAULT_ARGS = {
+    "owner": "mickey-mouse",
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
+    "email_on_failure": False,
+    "email_on_retry": False,
+}
