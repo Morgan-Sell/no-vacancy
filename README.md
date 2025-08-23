@@ -37,9 +37,9 @@ Implemented a CI pipeline with GitHub Actions for automated linting and testing.
     git clone https://github.com/Morgan-Sell/no-vacancy.git
    ```
 
-2. Switch to `mlflow` feature branch.
+2. Switch to `ci-pipe-v2` feature branch.
    ```
-   git checkout mlflow
+   git checkout ci-pipe-v2
    ```
 
 3. Add the following GitHub secrets:
