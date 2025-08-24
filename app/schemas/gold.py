@@ -3,16 +3,11 @@ from sqlalchemy import Column, Date, Float, Integer, String
 from sqlalchemy.orm import DeclarativeBase
 
 
-class Base(DeclarativeBase):
-    """
-    Base class for SQLAlchemy models.
-    This approach makes Base a class, which can be inherited by other models.
-    """
-
+class GoldBase(DeclarativeBase):
     pass
 
 
-class Predictions(Base):
+class Predictions(GoldBase):
     __tablename__ = "predictions"
 
     booking_id = Column(String, primary_key=True, nullable=False)

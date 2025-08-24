@@ -22,7 +22,7 @@ target_db = os.environ.get("ALEMBIC_TARGET_DB", "bronze")
 
 df_map = {
     "bronze": (
-        bronze.Base.metadata,
+        bronze.BronzeBase.metadata,
         AsyncPostgresDB(
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
@@ -32,7 +32,7 @@ df_map = {
         ).build_url(async_mode=False),
     ),
     "silver": (
-        silver.Base.metadata,
+        silver.SilverBase.metadata,
         AsyncPostgresDB(
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
@@ -42,7 +42,7 @@ df_map = {
         ).build_url(async_mode=False),
     ),
     "gold": (
-        gold.Base.metadata,
+        gold.GoldBase.metadata,
         AsyncPostgresDB(
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
