@@ -218,17 +218,17 @@ services:
     ports:
       - "8080:8080"
     volumes:
+      - airflow_data:/opt/airflow
       - .:/opt/airflow/project
       - ./app/airflow/dags:/opt/airflow/dags
       - ./data:/opt/airflow/data
-      - airflow_data:/opt/airflow
+
     command: >
       bash -c "
       airflow db migrate &&
       airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com || true &&
-      airflow webserver --port 8080 &
       airflow scheduler &
-      wait
+      airflow webserver --port 8080
       "
     profiles:
       - airflow

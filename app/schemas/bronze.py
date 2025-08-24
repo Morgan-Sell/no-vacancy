@@ -2,16 +2,11 @@ from sqlalchemy import Column, Float, Integer, String
 from sqlalchemy.orm import DeclarativeBase
 
 
-class Base(DeclarativeBase):
-    """
-    Base class for SQLAlchemy models.
-    This approach makes Base a class, which can be inherited by other models.
-    """
-
+class BronzeBase(DeclarativeBase):
     pass
 
 
-class RawData(Base):
+class RawData(BronzeBase):
     """
     Bronze table for raw data storage.
     """

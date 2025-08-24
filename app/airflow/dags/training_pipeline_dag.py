@@ -1,74 +1,109 @@
-import asyncio
 import sys
 from datetime import datetime
-from pathlib import Path
 
 from airflow import DAG
+from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, "/opt/airflow/project/app")
 from config import DAG_DEFAULT_ARGS
-from scripts.import_csv_to_postgres import main as import_data
-from services import MLFLOW_AUC_THRESHOLD
-from services.mlflow_utils import MLflowArtifactLoader
-from services.trainer import train_pipeline
+from services import MLFLOW_AUC_THRESHOLD, MLFLOW_EXPERIMENT_NAME, MLFLOW_TRACKING_URI
 
 dag = DAG(
     "training_pipeline",
     default_args=DAG_DEFAULT_ARGS,
-    description="ML Training Pipeline",
+    description="NoVacancy ML Training Pipeline",
     schedule_interval="@weekly",
     start_date=datetime(2025, 1, 1),
     catchup=False,
     max_active_runs=1,
+    tags=["machine-learning", "training", "novacancy"],
 )
 
 
-def import_csv_data(**context):
-    """Import raw data from CSV"""
-    import_data()
-    return "Data imported"
+def validate_model_artifacts(**context):
+    """Lightweight validation using HTTP request to MLflow API"""
 
+    import requests
 
-def train_model(**context):
-    """Execute NoVacancyDataProcessing and NoVacancyPipeline"""
-    asyncio.run(train_pipeline())
-    return "Model trained"
-
-
-def validate_artifacts(**context):
-    """Validate training artifacts in MLflow"""
-    loader = MLflowArtifactLoader()
-    metadata = loader.get_artifact_metadata_by_alias("production")
-
-    if not metadata or not metadata.get("version"):
-        raise Exception("No model artifacts found")
-
-    # Check performance
-    metrics = metadata.get("metrics", {})
-    test_auc = metrics.get("test_auc", 0)
-
-    if test_auc < MLFLOW_AUC_THRESHOLD:
-        raise Exception(
-            f"Model AUC of {test_auc} is below {MLFLOW_AUC_THRESHOLD} threshold"
+    try:
+        # Get the latest production model via MLflow REST API
+        response = requests.get(
+            f"{MLFLOW_TRACKING_URI}/api/2.0/mlflow/model-versions/search",
+            params={
+                "filter": f"name={MLFLOW_EXPERIMENT_NAME}/api/2.0/mlflow/model-versions/search",
+                "params": {
+                    "filter": "name='MLFLOW_EXPERIMENT_NAME'",
+                    "max_results": 1,
+                    "order_by": ["version_number DESC"],
+                },
+            },
         )
 
-    print(f"✅ Validation passed - Version: {metadata['version']}")
-    return "Validation passed"
+        if response.status_code != 200:  # noqa: PLR2004
+            raise Exception(f"MLflow API error: {response.status_code}")
+
+        data = response.json()
+        model_versions = data.get("model_versions", [])
+
+        data = response.json()
+        model_versions = data.get("model_versions", [])
+
+        if not model_versions:
+            raise Exception("No model versions found in MLflow")
+
+        latest_version = model_versions[0]
+        run_id = latest_version["run_id"]
+
+        # Get run metrics
+        metrics_response = requests.get(
+            f"{MLFLOW_TRACKING_URI}/api/2.0/mlflow/runs/get", params={"run_id": run_id}
+        )
+
+        if metrics_response.status_code != 200:  # noqa: PLR2004
+            raise Exception(f"Failed to get run metrics: {metrics_response.status}")
+
+        run_data = metrics_response.json()
+        metrics = run_data["run"]["data"]["metrics"]
+
+        test_auc = float(metrics.get("test_auc", 0))
+        val_auc = float(metrics.get("val_auc", 0))
+
+        print(f"Model Version: {latest_version['version']}")
+        print(f"Test AUC: {test_auc}")
+        print(f"Validation AUC: {val_auc}")
+        print(f"Required threshold: {MLFLOW_AUC_THRESHOLD}")
+
+        if test_auc < MLFLOW_AUC_THRESHOLD:
+            raise Exception(
+                f"Model Test AUC ({test_auc}) below threshold ({MLFLOW_AUC_THRESHOLD})"
+            )
+
+        print(f"✅ Validation passed - Version: {latest_version['version']}")
+        return "Validation passed"
+
+    except requests.RequestException as e:
+        raise Exception(f"Failed to connect to MLflow: {e}") from e
 
 
-# Define tasks with single responsibilities
-import_task = PythonOperator(
-    task_id="import_data",
-    python_callable=import_csv_data,
+# Task #1: Import CSV data to Bronze database
+import_data_task = BashOperator(
+    task_id="import_csv_data",
+    bash_command="docker exec novacancy-training python scripts/import_csv_to_postgres.py",
     dag=dag,
 )
 
-train_task = PythonOperator(task_id="train_model", python_callable=train_model, dag=dag)
-
-validate_task = PythonOperator(
-    task_id="validate_artifacts", python_callable=validate_artifacts, dag=dag
+# Task #2: Traing the model (data processing + model training)
+traing_task_bash = BashOperator(
+    task_id="train_model",
+    bash_command="""
+    docker exec novacancy-training python services/trainer.py
+    """,
+    dag=dag,
 )
-
-# Linear pipeline
-import_task >> train_task >> validate_task
+# Task 2: Lightweight validation using MLflow REST API
+validation_task = PythonOperator(
+    task_id="validate_model_artifacts",
+    python_callable=validate_model_artifacts,
+    dag=dag,
+)

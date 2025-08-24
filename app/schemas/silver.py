@@ -2,16 +2,11 @@ from sqlalchemy import Column, Float, Integer, String
 from sqlalchemy.orm import DeclarativeBase
 
 
-class Base(DeclarativeBase):
-    """
-    Base class for SQLAlchemy models.
-    This approach makes Base a class, which can be inherited by other models.
-    """
-
+class SilverBase(DeclarativeBase):
     pass
 
 
-class TrainValidationData(Base):
+class TrainValidationData(SilverBase):
     __tablename__ = "train_validation_data"
 
     booking_id = Column(String, primary_key=True)
@@ -65,7 +60,7 @@ class TrainValidationData(Base):
     is_cancellation = Column(Integer, nullable=False)
 
 
-class TestData(Base):
+class TestData(SilverBase):
     __tablename__ = "test_data"
 
     booking_id = Column(String, primary_key=True)
