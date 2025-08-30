@@ -6,7 +6,8 @@
 # Excludes dev tools and Airflow to keep images small & stable.
 # ============================
 
-Pygments==2.19.1
+# Let Airflow constraints choose a compatible version for the DAG job
+Pygments>=2.18,<3.0
 SQLAlchemy==2.0.40
 annotated-types==0.7.0
 anyio==4.8.0
