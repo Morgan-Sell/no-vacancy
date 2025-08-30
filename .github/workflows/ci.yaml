@@ -83,7 +83,9 @@ jobs:
             # dev.txt includes base.txt
             pip install -r requirements/dev.txt
           else
-            pip install -r requirements/dev.txt -r requirements/airflow.txt
+          # Install only what's required for DAG parsing tests b/c of airflow constraints
+            pip install -r requirements/airflow.txt \
+                        pytest==8.3.4 pytest-cov==6.1.1 pytest-mock==3.14.0
           fi
 
       - name: Run tests and code coverage
