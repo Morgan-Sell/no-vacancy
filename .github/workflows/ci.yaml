@@ -77,15 +77,21 @@ jobs:
 
       - name: Install dependencies
         run: |
-
           python -m pip install --upgrade pip
           if [ "${{ matrix.kind }}" = "unit" ]; then
             # dev.txt includes base.txt
             pip install -r requirements/dev.txt
           else
-          # Install only what's required for DAG parsing tests b/c of airflow constraints
-            pip install -r requirements/airflow.txt \
-                        pytest==8.3.4 pytest-cov==6.1.1 pytest-mock==3.14.0
+            # Use Airflow’s constraints to lock a known-good dep set and avoid resolver conflicts in CI.
+            AF=2.9.3
+            PY=3.11
+            CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AF}/constraints-${PY}.txt"
+
+            # Airflow world
+            pip install -r requirements/airflow.txt
+
+            # Test runners compatible with Airflow constraints
+            pip install -c "${CONSTRAINT_URL}" pytest pytest-cov pytest-mock
           fi
 
       - name: Run tests and code coverage
