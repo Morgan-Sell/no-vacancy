@@ -7,7 +7,7 @@ from airflow.operators.python import PythonOperator
 
 sys.path.insert(0, "/opt/airflow/project/app")
 from config import DAG_DEFAULT_ARGS
-from services import MLFLOW_AUC_THRESHOLD, MLFLOW_EXPERIMENT_NAME, MLFLOW_TRACKING_URI
+from services import MLFLOW_AUC_THRESHOLD, MLFLOW_TRACKING_URI
 
 dag = DAG(
     "training_pipeline",
@@ -31,12 +31,9 @@ def validate_model_artifacts(**context):
         response = requests.get(
             f"{MLFLOW_TRACKING_URI}/api/2.0/mlflow/model-versions/search",
             params={
-                "filter": f"name={MLFLOW_EXPERIMENT_NAME}/api/2.0/mlflow/model-versions/search",
-                "params": {
-                    "filter": "name='MLFLOW_EXPERIMENT_NAME'",
-                    "max_results": 1,
-                    "order_by": ["version_number DESC"],
-                },
+                "filter": "name='MLFLOW_EXPERIMENT_NAME'",
+                "max_results": 1,
+                "order_by": ["version_number DESC"],
             },
         )
 
@@ -93,17 +90,40 @@ import_data_task = BashOperator(
     dag=dag,
 )
 
-# Task #2: Traing the model (data processing + model training)
-traing_task_bash = BashOperator(
+# Task #2: Traing the model (data processing + model training + MLflow saving)
+training_task = BashOperator(
     task_id="train_model",
     bash_command="""
     docker exec novacancy-training python services/trainer.py
     """,
     dag=dag,
 )
-# Task 2: Lightweight validation using MLflow REST API
+
+# Task 3: Generate predictions on test data and save to Gold DB
+predict_task = BashOperator(
+    task_id="generate_predictions",
+    bash_command="docker exec novacancy-training python services/predictor.py",
+    dag=dag,
+)
+
+# Task 4: Lightweight validation using MLflow REST API
 validation_task = PythonOperator(
     task_id="validate_model_artifacts",
     python_callable=validate_model_artifacts,
     dag=dag,
 )
+
+# Task 5: Cleanup and final status
+cleanup_task = BashOperator(
+    task_id="cleanup_and_notify",
+    bash_command="""
+    echo "🎉 Training pipeline completed successfully!"
+    echo "📊 Model artifacts saved to MLflow"
+    echo "🔮 Validation saved to Gold database"
+    echo "🔬 Ready for Data Scientist validation"
+    """,
+    dag=dag,
+)
+
+# Defin task dependencies - Linear pipeline as requested
+import_data_task >> training_task >> predict_task >> validation_task >> cleanup_task
