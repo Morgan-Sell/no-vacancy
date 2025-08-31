@@ -1,7 +1,7 @@
 import pytest
 
 
-@pytest.fixture(autouser=True)
+@pytest.fixture(autouse=True)
 def mock_mlflow():
     """
     Override the global autouse of MLflow mock in tests/conftest.py.
