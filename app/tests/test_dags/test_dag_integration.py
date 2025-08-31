@@ -10,7 +10,8 @@ from scripts.import_csv_to_postgres import main as import_csv_data
 from services.trainer import train_pipeline
 from services.predictor import make_prediction
 
-from airflow.dags.training_pipeline_dag import validate_model_artifacts
+# DAGs live in /opt/airflow/dags; import the module directly
+from training_pipeline_dag import validate_model_artifacts
 
 logger = get_logger(logger_name=__name__)
 

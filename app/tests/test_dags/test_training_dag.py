@@ -3,13 +3,13 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime
 from airflow.models import DagBag
 from airflow.utils.state import DagRunState, TaskInstanceState
-from airflow.utils.type import DagRunType
+from airflow.utils.types import DagRunType
 
 
 @pytest.fixture(scope="module")
 def dag_bag(self):
     """Load the DAG for testing"""
-    return DagBag(dag_folder="app/airflow/dags", include_examples=False)
+    return DagBag(dag_folder="app/dags", include_examples=False)
 
 
 class TestTrainingPiplelineDAG:

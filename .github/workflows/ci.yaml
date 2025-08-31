@@ -76,7 +76,8 @@ jobs:
 
       - name: Run tests and code coverage
         run: |
-          pytest --cov=app --cov-report=xml --cov-report=html -q -k "not test_dags"
+          pytest --cov=app --cov-report=xml --cov-report=html -q \
+                 --ignore=app/tests/test_dags
 
       - name: Validate DAGs with official Airflow image
         run: |
@@ -90,5 +91,9 @@ jobs:
             -v "${GITHUB_WORKSPACE}/app/dags:/opt/airflow/dags:ro" \
             -v "${GITHUB_WORKSPACE}:/opt/airflow/project:ro" \
             apache/airflow:${AF}-python${PY} \
-            bash -lc "pip install -c ${CONSTRAINT_URL} apache-airflow-providers-postgres && \
-                      airflow db init && airflow dags list"
+            bash -lc "
+              pip install -c ${CONSTRAINT_URL} apache-airflow-providers-postgres pytest pytest-cov pytest-mock &&
+              airflow db init &&
+              airflow dags list &&
+              pytest -q /opt/airflow/project/app/tests/test_dags
+            "
