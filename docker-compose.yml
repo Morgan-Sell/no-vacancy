@@ -174,70 +174,48 @@ services:
     restart: unless-stopped
 
   airflow-db:
-    image: postgres:latest
-    container_name: airflow-db
-    env_file:
-      - .env
+    image: postgres:14
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
-    ports:
-      - "5439:5432"
     volumes:
       - airflow_db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d airflow"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
 
-  airflow:
-    image: apache/airflow:2.8.1-python3.11
-    container_name: airflow
+  airflow-webserver:
+    build: ./airflow
     depends_on:
-      - bronze-db
-      - silver-db
-      - gold-db
-      - mlflow
       - airflow-db
-    env_file:
-      - .env
     environment:
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@airflow-db:5432/airflow
-      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      PYTHONPATH: "/opt/airflow/project/app"
-      BRONZE_DB_PATH: bronze-db
-      SILVER_DB_HOST: silver-db
-      GOLD_DB_HOST: gold-db
-      MLFLOW_TRACKING_URI: http://mlflow:5000
-      # install the Postgres driver at container start
-      _PIP_ADDITIONAL_REQUIREMENTS: "psycopg2-binary==2.9.9"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+    volumes:
+      - ./app/dags:/opt/airflow/dags:ro
+      - ./:/opt/airflow/project:ro          # DAG imports repo code
+      - airflow_logs:/opt/airflow/logs
+      - /var/run/docker.sock:/var/run/docker.sock # Required for DockerOperator
     ports:
       - "8080:8080"
-    volumes:
-      - airflow_data:/opt/airflow
-      - .:/opt/airflow/project
-      - ./app/airflow/dags:/opt/airflow/dags
-      - ./data:/opt/airflow/data
+    commands: webserver
 
-    command: >
-      bash -c "
-      airflow db migrate &&
-      airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com || true &&
-      airflow scheduler &
-      airflow webserver --port 8080
-      "
-    profiles:
-      - airflow
-      - training
+  airflow-scheduler:
+    build: ./airflow
+    depends_on:
+      - airflow-db
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    volumes:
+      - ./app/dags:/opt/airflow/dags:ro
+      - ./:/opt/airflow/project:ro
+      - airflow_logs:/opt/airflow/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: scheduler
+
 
 volumes:
   bronze_data:
   silver_data:
   gold_data:
   mlflow_data:
-  airflow_data:
   airflow_db_data:
+  airflow_logs:

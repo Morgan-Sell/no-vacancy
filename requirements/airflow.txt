@@ -20,3 +20,5 @@
 
 apache-airflow[postgres]==2.9.3
 -c https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.11.txt
+apache-airflow-providers-docker
+apache-airflow-providers-postgres

@@ -4,20 +4,45 @@ from datetime import datetime
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
+from airflow.providers.docker.operators.docker import DockerOperator
+from docker.types import Mount
 
 sys.path.insert(0, "/opt/airflow/project/app")
 from config import DAG_DEFAULT_ARGS
-from services import MLFLOW_AUC_THRESHOLD, MLFLOW_TRACKING_URI
+from services import MLFLOW_AUC_THRESHOLD, MLFLOW_EXPERIMENT_NAME, MLFLOW_TRACKING_URI
+
+# Image contains trainingn runtime (python & deps)
+TRAINING_IMAGE = "novacancy-training:latest"
+
+# Mount the repo so the scripts are visible inside the task containers
+PROJECT_DIR = "/opt/ariflow/project"
+
 
 dag = DAG(
     "training_pipeline",
     default_args=DAG_DEFAULT_ARGS,
     description="NoVacancy ML Training Pipeline",
-    schedule_interval="@weekly",
+    schedule="@weekly",
     start_date=datetime(2025, 1, 1),
     catchup=False,
     max_active_runs=1,
     tags=["machine-learning", "training", "novacancy"],
+)
+
+
+common = dict(
+    image=TRAINING_IMAGE,
+    docker_url="unix://var/run/docker.sock",
+    network_mode="novacancy_default",
+    auto_remove=True,
+    mounts=[
+        # Read-only of repo so scripts can be executed
+        Mount(source=PROJECT_DIR, target=PROJECT_DIR, type="bind", read_only=True),
+    ],
+    environments={
+        # Gives tasks the variables that are required
+        "MFLOW_TRACKING_URI": MLFLOW_TRACKING_URI,
+    },
 )
 
 
@@ -31,7 +56,7 @@ def validate_model_artifacts(**context):
         response = requests.get(
             f"{MLFLOW_TRACKING_URI}/api/2.0/mlflow/model-versions/search",
             params={
-                "filter": "name='MLFLOW_EXPERIMENT_NAME'",
+                "filter": f"name={MLFLOW_EXPERIMENT_NAME}",
                 "max_results": 1,
                 "order_by": ["version_number DESC"],
             },
@@ -84,25 +109,26 @@ def validate_model_artifacts(**context):
 
 
 # Task #1: Import CSV data to Bronze database
-import_data_task = BashOperator(
+import_data_task = DockerOperator(
     task_id="import_csv_data",
-    bash_command="docker exec novacancy-training python scripts/import_csv_to_postgres.py",
+    command=f"python {PROJECT_DIR}/scripts/import_csv_to_postgres.py",
+    **common,
     dag=dag,
 )
 
 # Task #2: Traing the model (data processing + model training + MLflow saving)
-training_task = BashOperator(
+training_task = DockerOperator(
     task_id="train_model",
-    bash_command="""
-    docker exec novacancy-training python services/trainer.py
-    """,
+    command=f"python {PROJECT_DIR}/services/predictor.py",
+    **common,
     dag=dag,
 )
 
 # Task 3: Generate predictions on test data and save to Gold DB
-predict_task = BashOperator(
+predict_task = DockerOperator(
     task_id="generate_predictions",
-    bash_command="docker exec novacancy-training python services/predictor.py",
+    command=f"python {PROJECT_DIR}/services/predictor.py",
+    **common,
     dag=dag,
 )
 

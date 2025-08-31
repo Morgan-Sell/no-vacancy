@@ -54,12 +54,6 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    strategy:
-      # Two reasons for matrix split:
-      #   1. Faster feedback - unit tests don't waste time installing Airflow
-      #   2. Isolation - Airflow DAG parsing is test separately with its own deps
-      matrix:
-        kind: [unit, dag]
 
     steps:
       - name: Checkout code
@@ -78,31 +72,23 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ "${{ matrix.kind }}" = "unit" ]; then
-            # dev.txt includes base.txt
-            pip install -r requirements/dev.txt
-          else
-            # Use Airflow’s constraints to lock a known-good dep set and avoid resolver conflicts in CI.
-            AF=2.9.3
-            PY=3.11
-            CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AF}/constraints-${PY}.txt"
-
-            # Airflow world
-            pip install -r requirements/airflow.txt
-
-            # Test runners compatible with Airflow constraints
-            pip install -c "${CONSTRAINT_URL}" pytest pytest-cov pytest-mock
-          fi
+          pip install -r requirements/dev.txt
 
       - name: Run tests and code coverage
-        env:
-          AIRFLOW_HOME: ${{ runner.temp }}/airflow
-          AIRFLOW__CORE__DAGS_FOLDER: ${{ github.workspace}}/app/dags # Where to find DAG defintions
         run: |
-          # create a temp directory so tests don't pollute the repo
-          mkdir -p "$AIRFLOW_HOME"
-          if [ "${{ matrix.kind }}" = "unit" ]; then
-            pytest --cov=app --cov-report=xml --cov-report=html -q -k "not test_airflow"
-          else
-            pytest -q app/tests/test_airflow
-          fi
+          pytest --cov=app --cov-report=xml --cov-report=html -q -k "not test_dags"
+
+      - name: Validate DAGs with official Airflow image
+        run: |
+          AF=2.9.3; PY=3.11
+          CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AF}/constraints-${PY}.txt"
+
+          docker run --rm \
+            -e AIRFLOW__CORE__LOAD_EXAMPLES=false \
+            -e AIRFLOW__DATABASE__SQL_ALCHEMY_CONN="sqlite:////tmp/airflow.db" \
+            -e PYTHONPATH=/opt/airflow/project/app \
+            -v "${GITHUB_WORKSPACE}/app/dags:/opt/airflow/dags:ro" \
+            -v "${GITHUB_WORKSPACE}:/opt/airflow/project:ro" \
+            apache/airflow:${AF}-python${PY} \
+            bash -lc "pip install -c ${CONSTRAINT_URL} apache-airflow-providers-postgres && \
+                      airflow db init && airflow dags list"
