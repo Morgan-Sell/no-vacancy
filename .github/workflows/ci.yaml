@@ -92,8 +92,11 @@ jobs:
             -v "${GITHUB_WORKSPACE}:/opt/airflow/project:ro" \
             apache/airflow:${AF}-python${PY} \
             bash -lc "
-              pip install -c ${CONSTRAINT_URL} apache-airflow-providers-postgres pytest pytest-cov pytest-mock &&
-              airflow db init &&
-              airflow dags list &&
+              pip install -c ${CONSTRAINT_URL} \
+                apache-airflow-providers-postgres \
+                apache-airflow-providers-docker \
+                pytest pytest-cov pytest-mock && \
+              airflow db init && \
+              airflow dags list && \
               pytest -q /opt/airflow/project/app/tests/test_dags
             "
