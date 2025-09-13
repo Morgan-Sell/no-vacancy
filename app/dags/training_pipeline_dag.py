@@ -39,7 +39,7 @@ common = dict(
         # Read-only of repo so scripts can be executed
         Mount(source=PROJECT_DIR, target=PROJECT_DIR, type="bind", read_only=True),
     ],
-    environments={
+    environment={
         # Gives tasks the variables that are required
         "MFLOW_TRACKING_URI": MLFLOW_TRACKING_URI,
     },
