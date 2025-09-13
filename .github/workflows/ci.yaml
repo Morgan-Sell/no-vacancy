@@ -95,8 +95,8 @@ jobs:
               pip install -c ${CONSTRAINT_URL} \
                 apache-airflow-providers-postgres \
                 apache-airflow-providers-docker \
-                pytest pytest-cov pytest-mock && \
+                -r /opt/airflow/project/requirements/dev.txt && \
               airflow db init && \
-              airflow dags list && \
+              airflow dags list || (airflow dags list-import-errors && exit 1) && \
               pytest -q /opt/airflow/project/app/tests/test_dags
             "
