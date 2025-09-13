@@ -15,6 +15,7 @@ NoVacancy is built on a modular, containerized architecture featuring:
 - **Data Validation**: Great Expecations for pipeline-level data quality checks (planned)
 - **Model Monitoring**: Evidently AI for drift detection and performance monitoring (planned)
 
+
 ### Data Science Foundation
 The machine learning pipeline and preprocessing strategies are based on comprehensive exploratory data analysis available in the [EDA notebook](https://github.com/Morgan-Sell/no-vacancy/blob/analysis/no_vacancy_eda.ipynb).
 
@@ -39,9 +40,9 @@ Implemented a CI pipeline with GitHub Actions for automated linting and testing.
     git clone https://github.com/Morgan-Sell/no-vacancy.git
    ```
 
-2. Switch to `mlflow` feature branch.
+2. Switch to `ci-pipe-v2` feature branch.
    ```
-   git checkout mlflow
+   git checkout ci-pipe-v2
    ```
 
 3. Add the following GitHub secrets:
