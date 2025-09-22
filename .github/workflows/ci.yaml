@@ -79,24 +79,24 @@ jobs:
           pytest --cov=app --cov-report=xml --cov-report=html -q \
                  --ignore=app/tests/test_dags
 
+      - name: Build custom Airflow image for testing
+        run: |
+          docker build -f Dockerfile.airflow -t test-airflow:latest
+
       - name: Validate DAGs with official Airflow image
         run: |
-          AF=2.9.3; PY=3.11
-          CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AF}/constraints-${PY}.txt"
-
           docker run --rm \
             -e AIRFLOW__CORE__LOAD_EXAMPLES=false \
             -e AIRFLOW__DATABASE__SQL_ALCHEMY_CONN="sqlite:////tmp/airflow.db" \
             -e PYTHONPATH=/opt/airflow/project/app \
             -v "${GITHUB_WORKSPACE}/app/dags:/opt/airflow/dags:ro" \
             -v "${GITHUB_WORKSPACE}:/opt/airflow/project:ro" \
-            apache/airflow:${AF}-python${PY} \
+            test-airflow:latest \
             bash -lc "
               set -e
-              pip install -r /opt/airflow/project/requirements/airflow.txt && \
-              pip install pytest pytest-cov pytest-mock && \
-              airflow db init && \
+              airflow db migrate && \
               airflow dags list || (airflow dags list-import-errors && exit 1) && \
               pytest -q /opt/airflow/project/app/tests/test_dags \
-                --confcutdir=/opt/airflow/project/app/tests/test_dags
+                --confcutdir=/opt/airflow/project/app/tests/test_dags \
+                --override-ini='addopts='
             "
