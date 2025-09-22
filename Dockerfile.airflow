@@ -1,14 +1,17 @@
 # Container setup for Airflow (orchestration)
 FROM apache/airflow:2.9.3-python3.11
 
-# Providers + any extras, always under Airflow constraints
+# Install Airflow providers with constraints
 COPY requirements/airflow.txt /opt/airflow/requirements.txt
 RUN pip install --no-cache-dir -r /opt/airflow/requirements.txt
 
-# If DAGs import your repo modules:
-COPY ./opt/airflow/project
+# Copy application code for DAG imports
+COPY app/ /opt/airflow/project/app
+COPY requirements/base.txt /opt/airflow/project/requirements/base.txt
 
-# For dev/CI use '-e'; for prod prefer pinned non-editable: 'pip install /opt/airflow/project'
-RUN pip install --no-cache -e /opt/airflow/project
+# Install ONLY core dependencies (not dev tools)
+RUN pip install --no-cache-dir -r /opt/airflow/project/requirements/base.txt
 
+# Set Python path so DAGs can import modules
+ENV PYTHONPATH="/opt/airflow/project/app"
 ENV AIRFLOW__CORE__LOAD_EXAMPLES=false
