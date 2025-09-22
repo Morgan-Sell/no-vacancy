@@ -6,10 +6,6 @@ Tests DAG structure and basic functionality without importing full application s
 import pytest
 from airflow.models import DagBag
 
-from app.config import get_logger
-
-logger = get_logger(logger_name=__name__)
-
 
 class TestDAGStructure:
     """Test DAG structure without heavy application dependencies."""
