@@ -81,7 +81,7 @@ jobs:
 
       - name: Build custom Airflow image for testing
         run: |
-          docker build -f Dockerfile.airflow -t test-airflow:latest
+          docker build -f Dockerfile.airflow -t test-airflow:latest .
 
       - name: Validate DAGs with official Airflow image
         run: |
