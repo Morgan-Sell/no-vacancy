@@ -7,7 +7,7 @@ from airflow.utils.types import DagRunType
 
 
 @pytest.fixture(scope="module")
-def dag_bag(self):
+def dag_bag():
     """Load the DAG for testing"""
     return DagBag(dag_folder="app/dags", include_examples=False)
 
@@ -39,7 +39,7 @@ class TestTrainingPiplelineDAG:
 
         # Check linear dependencies
         import_task = dag.get_task("import_csv_data")
-        train_task = dag.get_task("train_model")
+        train_task = dag.get_task("training_pipeline")
         predict_task = dag.get_task("generate_predictions")
         validate_task = dag.get_task("validate_model_artifacts")
         cleanup_task = dag.get_task("cleanup_and_notify")
@@ -69,7 +69,7 @@ class TestTrainingPiplelineDAG:
             "run": {"data": {"metrics": {"test_auc": 0.92, "val_auc": 0.89}}}
         }
 
-        mock_get.side_effect = [mock_versions_response, mock_metric_response]
+        mock_get.side_effect = [mock_versions_response, mock_metrics_response]
 
         # Exectuve the task function
         result = task.python_callable()
@@ -77,16 +77,16 @@ class TestTrainingPiplelineDAG:
         assert result == "Validation passed"
         assert mock_get.call_count == 2
 
-    @patch("request.get")
+    @patch("requests.get")
     def test_validate_model_artifacts_fails_threshold(self, mock_get, dag_bag):
         """Test model validation fails when AUC below threshold"""
-        dag = dag_bag.get_dag("trainig_pipeline")
+        dag = dag_bag.get_dag("training_pipeline")
         task = dag.get_task("validate_model_artifacts")
 
         # Mock MLflow response with poor performance
         mock_versions_response = MagicMock()
         mock_versions_response.status_code = 200
-        mock_versions_respoonse.json.return_value = {
+        mock_versions_response.json.return_value = {
             "model_versions": [{"version": "3", "run_id": "test-run-456"}]
         }
 
@@ -149,7 +149,7 @@ class TestDAGExecution:
 
     def test_task_retry_configuration(self, dag_bag):
         """Test DAG metadata is correct"""
-        dag = dag_bag.get_dab("training_pipeline")
+        dag = dag_bag.get_dag("training_pipeline")
 
         assert "machine-learning" in dag.tags
         assert "training" in dag.tags
