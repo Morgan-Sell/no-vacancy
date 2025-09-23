@@ -27,12 +27,12 @@ class TestDAGStructure:
         assert dag is not None, "training_pipeline DAG not found"
 
     def test_training_pipeline_structure(self, dag_bag):
-        """Test traht all expected tasks exist"""
-        dag = dag_bag.get_dag("trainig_pipeline")
+        """Test that all expected tasks exist"""
+        dag = dag_bag.get_dag("training_pipeline")
 
         expected_tasks = [
             "import_csv_data",
-            "train_model",
+            "training_pipeline",
             "generate_predictions",
             "validate_model_artifacts",
             "cleanup_and_notify",
@@ -48,7 +48,7 @@ class TestDAGStructure:
 
         # Get tasks
         import_task = dag.get_task("import_csv_data")
-        train_task = dag.get_task("train_model")
+        train_task = dag.get_task("training_pipeline")
         predict_task = dag.get_task("generate_predictions")
         validate_task = dag.get_task("validate_model_artifacts")
         cleanup_task = dag.get_task("cleanup_and_notify")
@@ -63,6 +63,6 @@ class TestDAGStructure:
         """Test DAG scheduling and configuration"""
         dag = dag_bag.get_dag("training_pipeline")
 
-        assert dag.schedule == "@weekly"
+        assert dag.schedule_interval == "@weekly"
         assert dag.catchup is False
         assert dag.max_active_runs == 1

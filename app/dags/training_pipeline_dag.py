@@ -15,14 +15,14 @@ from services import MLFLOW_AUC_THRESHOLD, MLFLOW_EXPERIMENT_NAME, MLFLOW_TRACKI
 TRAINING_IMAGE = "novacancy-training:latest"
 
 # Mount the repo so the scripts are visible inside the task containers
-PROJECT_DIR = "/opt/ariflow/project"
+PROJECT_DIR = "/opt/airflow/project"
 
 
 dag = DAG(
     "training_pipeline",
     default_args=DAG_DEFAULT_ARGS,
     description="NoVacancy ML Training Pipeline",
-    schedule="@weekly",
+    schedule_interval="@weekly",
     start_date=datetime(2025, 1, 1),
     catchup=False,
     max_active_runs=1,
@@ -41,7 +41,7 @@ common = dict(
     ],
     environment={
         # Gives tasks the variables that are required
-        "MFLOW_TRACKING_URI": MLFLOW_TRACKING_URI,
+        "MLFLOW_TRACKING_URI": MLFLOW_TRACKING_URI,
     },
 )
 
@@ -118,8 +118,8 @@ import_data_task = DockerOperator(
 
 # Task #2: Traing the model (data processing + model training + MLflow saving)
 training_task = DockerOperator(
-    task_id="train_model",
-    command=f"python {PROJECT_DIR}/services/predictor.py",
+    task_id="train_and_register_model",
+    command=f"python {PROJECT_DIR}/services/trainer.py",
     **common,
     dag=dag,
 )
