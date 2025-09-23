@@ -32,7 +32,7 @@ class TestDAGStructure:
 
         expected_tasks = [
             "import_csv_data",
-            "training_pipeline",
+            "train_and_register_model",
             "generate_predictions",
             "validate_model_artifacts",
             "cleanup_and_notify",
@@ -48,7 +48,7 @@ class TestDAGStructure:
 
         # Get tasks
         import_task = dag.get_task("import_csv_data")
-        train_task = dag.get_task("training_pipeline")
+        train_task = dag.get_task("train_and_register_model")
         predict_task = dag.get_task("generate_predictions")
         validate_task = dag.get_task("validate_model_artifacts")
         cleanup_task = dag.get_task("cleanup_and_notify")

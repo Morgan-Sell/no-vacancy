@@ -57,4 +57,4 @@ class TestTrainingPiplelineDAG:
         assert dag.schedule_interval == "@weekly"
         assert dag.catchup is False
         assert dag.max_active_runs == 1
-        assert dag.start_date == datetime(2025, 1, 1)
+        assert dag.start_date.date() == datetime(2025, 1, 1).date()
