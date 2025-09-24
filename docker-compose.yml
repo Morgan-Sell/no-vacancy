@@ -111,7 +111,7 @@ services:
 # Orchestration Platform
 # -----------------------------------------------
   airflow-db:
-    image: postgres:14
+    image: postgres:17
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
@@ -136,17 +136,7 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    command: >
-      bash -c "
-        airflow db init &&
-        airflow users create \
-          --username homer \
-          --firstname Homer \
-          --lastname Simpson \
-          --role Admin \
-          --email homer@duff.com \
-          --password waffles
-      "
+    command: ["bash", "-c", "airflow db migrate && airflow users create --username homer --firstname Homer --lastname Simpson --role Admin --email homer@duff.com --password waffles"]
     profiles:
       - airflow
 

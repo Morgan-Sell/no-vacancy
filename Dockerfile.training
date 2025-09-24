@@ -14,11 +14,11 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy dependencies
-COPY requirements.txt .
+COPY requirements/base.txt .
 
 # Install Python dependencies and clean stale cache
 RUN pip install --upgrade pip && \
-    pip install -r requirements.txt && \
+    pip install -r base.txt && \
     find /app -name "__pycache__" -exec rm -rf {} + || true
 
 # Copy the application code
