@@ -100,6 +100,12 @@ services:
       - .env
     volumes:
       - ./mlruns:/mlflow/mlruns
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000\")' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     command: [
       "mlflow", "server",
       "--backend-store-uri", "postgresql://${DB_USER}:${DB_PASSWORD}@mlflow-db:5432/${MLFLOW_DB}",
@@ -136,7 +142,12 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    command: ["bash", "-c", "airflow db migrate && airflow users create --username homer --firstname Homer --lastname Simpson --role Admin --email homer@duff.com --password waffles"]
+    command: ["bash", "-c", "airflow db migrate && airflow users create --username homer --firstname Homer --lastname Simpson --role Admin --email homer@duff.com --password waffles && touch /tmp/init-complete"]
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/init-complete"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     profiles:
       - airflow
 
@@ -146,11 +157,16 @@ services:
       dockerfile: Dockerfile.airflow
     container_name: airflow-webserver
     depends_on:
-      - airflow-init
-      - bronze-db
-      - silver-db
-      - gold-db
-      - mlflow
+      airflow-init:
+        condition: service_healthy
+      bronze-db:
+        condition: service_healthy
+      silver-db:
+        condition: service_healthy
+      gold-db:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
