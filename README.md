@@ -12,7 +12,7 @@ NoVacancy is built on a modular, containerized architecture featuring:
 - **CI/CD**: GitHub Actions for automated linting, testing and deployment
 - **Database Migrations**: Alembic for schema version control
 - **Orchestration**: Airflow for workflow management and scheduling
-- **Data Validation**: Great Expecations for pipeline-level data quality checks (planned)
+- **Data Validation**: Great Expectations for pipeline-level data quality checks (planned)
 - **Model Monitoring**: Evidently AI for drift detection and performance monitoring (planned)
 
 
