@@ -1,4 +1,4 @@
-# Container setup for Airflow (orchestration)
+# Container setup for Airflow (orchestration) with ML capabilities
 FROM apache/airflow:2.9.3-python3.11
 
 # Install Airflow providers with constraints

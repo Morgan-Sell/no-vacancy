@@ -1,22 +1,27 @@
+"""
+NoVacancy ML Training Pipeline - Airflow DAG
+
+Uses PythonOperator with wrapper functions instead of DockerOperator for:
+- Better error handling and logging integration with Airflow
+- Tasks can share data with each other (model versions, metrics)
+- Access to Airflow context (run dates, trigger types)
+- Shared memory space without subprocess overhead
+- Production-standard MLOps patterns
+
+Trade-off: More complex than direct script execution, but enables
+advanced workflow features and better observability.
+"""
+
 import sys
 from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
-from airflow.providers.docker.operators.docker import DockerOperator
-from docker.types import Mount
 
 sys.path.insert(0, "/opt/airflow/project/app")
 from config import DAG_DEFAULT_ARGS
 from services import MLFLOW_AUC_THRESHOLD, MLFLOW_EXPERIMENT_NAME, MLFLOW_TRACKING_URI
-
-# Image contains trainingn runtime (python & deps)
-TRAINING_IMAGE = "novacancy-training:latest"
-
-# Mount the repo so the scripts are visible inside the task containers
-PROJECT_DIR = "/opt/airflow/project"
-
 
 dag = DAG(
     "training_pipeline",
@@ -30,20 +35,40 @@ dag = DAG(
 )
 
 
-common = dict(
-    image=TRAINING_IMAGE,
-    docker_url="unix://var/run/docker.sock",
-    network_mode="novacancy_default",
-    auto_remove=True,
-    mounts=[
-        # Read-only of repo so scripts can be executed
-        Mount(source=PROJECT_DIR, target=PROJECT_DIR, type="bind", read_only=True),
-    ],
-    environment={
-        # Gives tasks the variables that are required
-        "MLFLOW_TRACKING_URI": MLFLOW_TRACKING_URI,
-    },
-)
+def import_csv_data(**context):
+    """Import CSV data to Bronze database"""
+    import asyncio
+
+    from scripts.import_csv_to_postgres import main as import_main
+
+    asyncio.run(import_main())
+
+
+def train_and_register_model(**context):
+    """Train model, process data, and register in MLflow"""
+    import asyncio
+
+    from services.trainer import train_pipeline
+
+    asyncio.run(train_pipeline())
+
+
+def generate_predictions(**context):
+    """Generate predictions on test data and save to Gold DB"""
+    import asyncio
+
+    from db.db_init import silver_db
+    from schemas.silver import TestData
+    from services.predictor import load_test_data, make_prediction
+
+    async def run_predictions():
+        # Load test data from Silver DB
+        data = await load_test_data(silver_db.create_session()(), TestData)
+
+        # Generate predictions and save to Gold DB
+        await make_prediction(data, already_processed=True)
+
+    asyncio.run(run_predictions())
 
 
 def validate_model_artifacts(**context):
@@ -109,26 +134,21 @@ def validate_model_artifacts(**context):
 
 
 # Task #1: Import CSV data to Bronze database
-import_data_task = DockerOperator(
-    task_id="import_csv_data",
-    command=f"python {PROJECT_DIR}/scripts/import_csv_to_postgres.py",
-    **common,
-    dag=dag,
+import_data_task = PythonOperator(
+    task_id="import_csv_data", python_callable=import_csv_data, dag=dag
 )
 
 # Task #2: Traing the model (data processing + model training + MLflow saving)
-training_task = DockerOperator(
+training_task = PythonOperator(
     task_id="train_and_register_model",
-    command=f"python {PROJECT_DIR}/services/trainer.py",
-    **common,
+    python_callable=train_and_register_model,
     dag=dag,
 )
 
 # Task 3: Generate predictions on test data and save to Gold DB
-predict_task = DockerOperator(
+predict_task = PythonOperator(
     task_id="generate_predictions",
-    command=f"python {PROJECT_DIR}/services/predictor.py",
-    **common,
+    python_callable=generate_predictions,
     dag=dag,
 )
 
@@ -139,9 +159,9 @@ validation_task = PythonOperator(
     dag=dag,
 )
 
-# Task 5: Cleanup and final status
-cleanup_task = BashOperator(
-    task_id="cleanup_and_notify",
+# Task 5: Notify team that training has successfully completed
+notify_task = BashOperator(
+    task_id="notify_completion",
     bash_command="""
     echo "🎉 Training pipeline completed successfully!"
     echo "📊 Model artifacts saved to MLflow"
@@ -152,4 +172,4 @@ cleanup_task = BashOperator(
 )
 
 # Defin task dependencies - Linear pipeline as requested
-import_data_task >> training_task >> predict_task >> validation_task >> cleanup_task
+import_data_task >> training_task >> predict_task >> validation_task >> notify_task

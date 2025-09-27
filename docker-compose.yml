@@ -173,13 +173,23 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
+      DB_PORT: ${DB_PORT}
+      MLFLOW_DB_HOST: ${MLFLOW_DB_HOST}
       MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
       # Database hosts for DAGs
       BRONZE_DB_HOST: bronze-db
       SILVER_DB_HOST: silver-db
       GOLD_DB_HOST: gold-db
+      # Databases
+      BRONZE_DB: ${BRONZE_DB}
+      SILVER_DB: ${SILVER_DB}
+      GOLD_DB: ${GOLD_DB}
+      MLFLOW_DB: ${MLFLOW_DB}
+      # Data directory
+      DATA_DIR: /opt/airflow/project/data
     volumes:
       - ./app/dags:/opt/airflow/dags:ro
+      - ./data:/opt/airflow/project/data:ro
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "8080:8080"
@@ -201,13 +211,23 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
+      DB_PORT: ${DB_PORT}
+      MLFLOW_DB_HOST: ${MLFLOW_DB_HOST}
       MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
       # Database hosts for DAGs
       BRONZE_DB_HOST: bronze-db
       SILVER_DB_HOST: silver-db
       GOLD_DB_HOST: gold-db
+      # Databases
+      BRONZE_DB: ${BRONZE_DB}
+      SILVER_DB: ${SILVER_DB}
+      GOLD_DB: ${GOLD_DB}
+      MLFLOW_DB: ${MLFLOW_DB}
+      # Data directory
+      DATA_DIR: /opt/airflow/project/data
     volumes:
       - ./app/dags:/opt/airflow/dags:ro
+      - ./data:/opt/airflow/project/data:ro
       - /var/run/docker.sock:/var/run/docker.sock
     command: scheduler
     profiles:
