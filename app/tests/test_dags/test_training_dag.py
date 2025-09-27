@@ -31,7 +31,7 @@ class TestTrainingPiplelineDAG:
             "train_and_register_model",
             "generate_predictions",
             "validate_model_artifacts",
-            "cleanup_and_notify",
+            "notify_completion",
         ]
 
         actual_tasks = list(dag.task_dict.keys())
@@ -42,13 +42,13 @@ class TestTrainingPiplelineDAG:
         train_task = dag.get_task("train_and_register_model")
         predict_task = dag.get_task("generate_predictions")
         validate_task = dag.get_task("validate_model_artifacts")
-        cleanup_task = dag.get_task("cleanup_and_notify")
+        notify_task = dag.get_task("notify_completion")
 
         # Test downstream dependencies
         assert train_task in import_task.downstream_list
         assert predict_task in train_task.downstream_list
         assert validate_task in predict_task.downstream_list
-        assert cleanup_task in validate_task.downstream_list
+        assert notify_task in validate_task.downstream_list
 
     def test_dag_scheduling_and_catchup(self, dag_bag):
         """Test DAG scheduling configuration"""
