@@ -11,8 +11,10 @@ NoVacancy is built on a modular, containerized architecture featuring:
 - **Infrastructure**: Docker Compose for container orchestration
 - **CI/CD**: GitHub Actions for automated linting, testing and deployment
 - **Database Migrations**: Alembic for schema version control
-- **Orchestration**: Airflow for workflow management and scheduling (in progress)
-- **Monitoring**: Great Expectations for data quality validation and Evidently AI for model performance monitoring (planned)
+- **Orchestration**: Airflow for workflow management and scheduling
+- **Data Validation**: Great Expectations for pipeline-level data quality checks (planned)
+- **Model Monitoring**: Evidently AI for drift detection and performance monitoring (planned)
+
 
 ### Data Science Foundation
 The machine learning pipeline and preprocessing strategies are based on comprehensive exploratory data analysis available in the [EDA notebook](https://github.com/Morgan-Sell/no-vacancy/blob/analysis/no_vacancy_eda.ipynb).
@@ -28,6 +30,42 @@ The system implements a [medallion architecture](https://www.databricks.com/glos
 
 
 ## Feature Branch History
+
+### `orchestration`
+Integrated Apache Airflow orchestration for the machine learning pipeline via Docker containers. The system executes a five-task workflow: data import, model training, prediction generation, artifact validation, and cleanup operations. This branch demonstrates production-ready ML pipeline orchestration with proper dependency management and error handling.
+
+1. Clone the repo.
+   ```
+    git clone https://github.com/Morgan-Sell/no-vacancy.git
+   ```
+
+2. Switch to `orchestration` feature branch.
+   ```
+   git checkout orchestration
+   ```
+
+3. Start the orchestration and training services.
+   ```
+   docker compose --profile airflow --profile training up -d
+   ```
+
+4.Access the Airflow web interface at `http://localhost:8080`. You'll see the login page.
+
+<p align="center">
+   <img src="./img/airflow_login.png" alt="Airflow Login" width="400"/>
+</p>
+
+5. Log in using:
+   - **Username**: `homer`
+   - **Password**: `waffles`
+
+6. After successful authentication, the Airflow dashboard displays the `training_pipeline` DAG with its linear task dependencies.
+
+<p align="center">
+   <img src="./img/airflow_dashboard.png" alt="Airflow Dashboard" width="400"/>
+</p>
+
+7. The DAG can be triggered manually or runs on its scheduled interval (weekly). Each task executes in isolated Docker containers with proper dependency management between data processing, training, and validation stages.
 
 
 ### `ci-pipe-v2`

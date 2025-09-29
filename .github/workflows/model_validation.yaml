@@ -68,9 +68,10 @@ jobs:
           ./app/scripts/setup_env.sh
 
       - name: Install dependencies
+        # Use app runtime deps only; Airflow is tested in CI and not needed to deploy/validate
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements/base.txt
 
       - name: Get model version to validate
         id: get-version
@@ -150,9 +151,10 @@ jobs:
           ./app/scripts/setup_env.sh
 
       - name: Install dependencies
+        # Use app runtime deps only; Airflow is tested in CI and not needed to deploy/validate
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements/base.txt
 
       - name: Promote model to staging
         run: |

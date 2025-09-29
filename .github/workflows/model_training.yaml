@@ -8,7 +8,7 @@ on:
     paths:
       - 'app/services/**'
       - 'app/schemas/**'
-      - 'requirements.txt'
+      - 'requirements/**.txt'
   # schedule:
   #   # Run every Sunday at 2 AM UTC (weekly retraining)
   #   - cron: '0 2 * * 0'

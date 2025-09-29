@@ -1,0 +1,20 @@
+# Container setup for Airflow (orchestration) with ML capabilities
+FROM apache/airflow:2.9.3-python3.11
+
+# Install Airflow providers with constraints
+COPY requirements/airflow.txt /opt/airflow/requirements/airflow.txt
+RUN pip install --no-cache-dir -r /opt/airflow/requirements/airflow.txt
+
+# Install base & test dependencies
+COPY requirements/base.txt /opt/airflow/requirements/base.txt
+RUN pip install --no-cache-dir -r /opt/airflow/requirements/base.txt
+
+# Install test dependencies for DAG validation
+RUN pip install --no-cache-dir pytest pytest-cov pytest-mock
+
+# Copy application code
+COPY app/ /opt/airflow/project/app/
+
+# Set Python path so DAGs can import modules
+ENV PYTHONPATH="/opt/airflow/project/app"
+ENV AIRFLOW__CORE__LOAD_EXAMPLES=false

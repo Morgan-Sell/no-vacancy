@@ -1,7 +1,9 @@
 # Docker Compose file for the NoVacancy application
 # docker-compose is used as an orchestrator. Dockerfile perform the behaviors.
 services:
-  # Database Services (Always Available)
+  # -----------------------------------------------
+  # Data Infrastructure (Medallion Architecture)
+  # -----------------------------------------------
   bronze-db:
     image: postgres:latest
     container_name: bronze-db
@@ -15,6 +17,12 @@ services:
       - "5433:5432"
     volumes:
       - bronze_data:/var/lib/postgresql/data
+    # Airflow needs DB initialization before starting
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${BRONZE_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   silver-db:
     image: postgres:latest
@@ -29,6 +37,11 @@ services:
       - "5434:5432"
     volumes:
       - silver_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${SILVER_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   gold-db:
     image: postgres:latest
@@ -43,7 +56,15 @@ services:
       - "5435:5432"
     volumes:
       - gold_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${GOLD_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # -----------------------------------------------
+  # ML Platform Infrastructure
+  # -----------------------------------------------
 
   mlflow-db:
     image: postgres:latest
@@ -58,7 +79,11 @@ services:
       - "5437:5432"
     volumes:
       - mlflow_data:/var/lib/postgresql/data
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${MLFLOW_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 # MLflow Service (Always Available)
   mlflow:
@@ -69,11 +94,18 @@ services:
     ports:
       - "5001:5000"
     depends_on:
-      - mlflow-db
+      mlflow-db:
+        condition: service_healthy
     env_file:
       - .env
     volumes:
       - ./mlruns:/mlflow/mlruns
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000\")' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     command: [
       "mlflow", "server",
       "--backend-store-uri", "postgresql://${DB_USER}:${DB_PASSWORD}@mlflow-db:5432/${MLFLOW_DB}",
@@ -81,25 +113,130 @@ services:
       "--host", "0.0.0.0"
     ]
 
-  # Test Database (Training Profile Only)
-  test-db:
-    image: postgres:latest
-    container_name: test-db
-    profiles:
-      - training
-      - testing
-    env_file:
-      - .env
+# -----------------------------------------------
+# Orchestration Platform
+# -----------------------------------------------
+  airflow-db:
+    image: postgres:17
     environment:
-      POSTGRES_USER: ${TEST_DB_USER}
-      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD}
-      POSTGRES_DB: ${TEST_DB}
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  airflow-init:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: airflow-init
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    command: ["bash", "-c", "airflow db migrate && airflow users create --username homer --firstname Homer --lastname Simpson --role Admin --email homer@duff.com --password waffles && touch /tmp/init-complete"]
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/init-complete"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    profiles:
+      - airflow
+
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: airflow-webserver
+    depends_on:
+      airflow-init:
+        condition: service_healthy
+      bronze-db:
+        condition: service_healthy
+      silver-db:
+        condition: service_healthy
+      gold-db:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PORT: ${DB_PORT}
+      MLFLOW_DB_HOST: ${MLFLOW_DB_HOST}
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
+      # Database hosts for DAGs
+      BRONZE_DB_HOST: bronze-db
+      SILVER_DB_HOST: silver-db
+      GOLD_DB_HOST: gold-db
+      # Databases
+      BRONZE_DB: ${BRONZE_DB}
+      SILVER_DB: ${SILVER_DB}
+      GOLD_DB: ${GOLD_DB}
+      MLFLOW_DB: ${MLFLOW_DB}
+      # Data directory
+      DATA_DIR: /opt/airflow/project/data
+    volumes:
+      - ./app/dags:/opt/airflow/dags:ro
+      - ./data:/opt/airflow/project/data:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
-      - "5436:5432"
-    # volumes as test data should not persist
+      - "8080:8080"
+    command: webserver
+    profiles:
+      - airflow
+    restart: unless-stopped
 
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: airflow-scheduler
+    depends_on:
+      - airflow-init
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PORT: ${DB_PORT}
+      MLFLOW_DB_HOST: ${MLFLOW_DB_HOST}
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
+      # Database hosts for DAGs
+      BRONZE_DB_HOST: bronze-db
+      SILVER_DB_HOST: silver-db
+      GOLD_DB_HOST: gold-db
+      # Databases
+      BRONZE_DB: ${BRONZE_DB}
+      SILVER_DB: ${SILVER_DB}
+      GOLD_DB: ${GOLD_DB}
+      MLFLOW_DB: ${MLFLOW_DB}
+      # Data directory
+      DATA_DIR: /opt/airflow/project/data
+    volumes:
+      - ./app/dags:/opt/airflow/dags:ro
+      - ./data:/opt/airflow/project/data:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: scheduler
+    profiles:
+      - airflow
+    restart: unless-stopped
 
-  # Training Container (Training Profile Only)
+# -------------------------------------
+# ML Workloads
+# -------------------------------------
   training-container:
     build:
       context: .
@@ -108,19 +245,23 @@ services:
     profiles:
       - training
     depends_on:
-      - bronze-db
-      - silver-db
-      - gold-db
-      - mlflow-db
-      - mlflow
-      - test-db
+      bronze-db:
+        condition: service_healthy
+      silver-db:
+        condition: service_healthy
+      gold-db:
+        condition: service_healthy
+      mlflow:
+        condition: service_started
+      test-db:
+        condition: service_started
     env_file:
       - .env
     volumes:
-      - ./data:/app/data # TODO: Confirm if needed given that script imports data into Bronze DB
+      - ./data:/app/data:ro # Read-only mount
     environment:
       CONTAINER_TYPE: training
-      DATA_DIR: ./data
+      DATA_DIR: /app/data
       # Database connection details
       DB_PORT: ${DB_PORT}
       DB_USER: ${DB_USER}
@@ -142,14 +283,6 @@ services:
       TEST_DB_PASSWORD: ${TEST_DB_PASSWORD}
       TEST_DB: ${TEST_DB}
 
-  training-test:
-    image: python:3.12-slim
-    container_name: training-test
-    command: echo "Training test works"
-    profiles:
-      - training
-
-
   inference-container:
     build:
       context: .
@@ -158,11 +291,10 @@ services:
     ports:
       - 8000:8000
     depends_on:
-      - bronze-db
-      - silver-db
-      - gold-db
-      - mlflow-db
-      - mlflow
+      gold-db:
+        condition: service_healthy
+      mlflow:
+        condition: service_started
     env_file:
       - .env
     environment:
@@ -173,8 +305,35 @@ services:
     # Always running
     restart: unless-stopped
 
+# -------------------------------------
+# Development & Testing
+# -------------------------------------
+
+  # Test Database (Training Profile Only)
+  test-db:
+    image: postgres:latest
+    container_name: test-db
+    profiles:
+      - training
+      - testing
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${TEST_DB_USER}
+      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD}
+      POSTGRES_DB: ${TEST_DB}
+    ports:
+      - "5436:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TEST_DB_USER} -d ${TEST_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
 volumes:
   bronze_data:
   silver_data:
   gold_data:
   mlflow_data:
+  airflow_db_data:

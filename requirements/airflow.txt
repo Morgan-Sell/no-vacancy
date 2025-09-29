@@ -1,0 +1,24 @@
+# ============================
+# airflow.txt (Airflow-only deps)
+# ----------------------------
+# Installs Apache Airflow using its official constraints file
+# to pin a known-good dependency set.
+#
+# WHY SEPARATED?
+# - Airflow manages ~100 dependencies with strict version pins
+#   (Flask, Jinja2, SQLAlchemy, Alembic, Pendulum, etc.)
+# - Mixing those into the app/dev requirements can easily cause
+#   resolver conflicts with your FastAPI/ML stack.
+# - By isolating Airflow here, we:
+#     * Keep app images smaller (they don’t carry Airflow unless needed)
+#     * Speed up CI jobs that don’t touch DAGs
+#     * Avoid dependency conflicts by letting Airflow’s constraints
+#       lock its own ecosystem cleanly
+#
+# Install this ONLY in jobs/containers that need Airflow or DAG parsing.
+# ============================
+
+apache-airflow[postgres]==2.9.3
+-c https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.11.txt
+apache-airflow-providers-docker
+apache-airflow-providers-postgres

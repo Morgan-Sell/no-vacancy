@@ -1,8 +1,7 @@
 import logging
 import os
 import sys
-from dataclasses import dataclass
-from enum import Enum
+from datetime import timedelta
 from logging.handlers import TimedRotatingFileHandler
 from os.path import abspath, dirname, join
 
@@ -128,66 +127,11 @@ DOCKER_COMPOSE_TRAINING_CMD = [
 ]
 
 
-# -- Continuous Deployment --
-
-
-class DeploymentMode(Enum):
-    """Deployment modes for different container strategies."""
-
-    INFERENCE_CONTAINER_RESTART = "inference_container_restart"
-    TRAINING_CONTAINER_RUN = "training_container_run"
-    MLFLOW_ONLY = "mlflow_only"
-    KUBERNETES = "kubernetes"  # Placeholder for future addtions
-
-
-@dataclass
-class CDConfig:
-    """
-    Configuration for Continuous Deployment (CD) settings.
-    """
-
-    target_environment: str
-    require_manual_validation: bool
-    deployment_mode: DeploymentMode
-    inference_container_name: str = "inference-container"
-    training_container_name: str = "training-container"
-    mlflow_container_name: str = "mlflow"
-
-    @classmethod
-    def for_production_inference(cls):
-        """Production configuration with container restart."""
-        return cls(
-            target_environment="production",
-            require_manual_validation=True,
-            deployment_mode=DeploymentMode.INFERENCE_CONTAINER_RESTART,
-            inference_container_name="inference-container",
-        )
-
-    @classmethod
-    def for_automated_training(cls):
-        """Configuration for automated training workflows."""
-        return cls(
-            target_environment="training",
-            require_manual_validation=False,
-            deployment_mode=DeploymentMode.TRAINING_CONTAINER_RUN,
-            training_container_name="training-container",
-        )
-
-    @classmethod
-    def for_staging_mlflow(cls):
-        """Staging configuration - MLflow only."""
-        return cls(
-            target_environment="staging",
-            require_manual_validation=False,
-            deployment_mode=DeploymentMode.MLFLOW_ONLY,
-        )
-
-    @classmethod
-    def for_development_training(cls):
-        """Development configuration for training experiments."""
-        return cls(
-            target_environment="development",
-            require_manual_validation=False,
-            deployment_mode=DeploymentMode.TRAINING_CONTAINER_RUN,
-            training_container_name="training-container",
-        )
+# -- Orchestration --
+DAG_DEFAULT_ARGS = {
+    "owner": "mickey-mouse",
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
+    "email_on_failure": False,
+    "email_on_retry": False,
+}

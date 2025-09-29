@@ -1,0 +1,39 @@
+# ============================
+# dev.txt (Developer & test deps)
+# ----------------------------
+# For local dev and CI unit tests.
+# Includes -r base.txt so devs/CI also get core runtime deps.
+# Not used by production images.
+# ============================
+
+-r base.txt
+
+black==24.10.0
+coverage==7.6.10
+ipython==8.31.0
+isort==5.13.2
+matplotlib-inline==0.1.7
+mypy-extensions==1.0.0
+parso==0.8.4
+pathspec==0.12.1
+pexpect==4.9.0
+platformdirs==4.3.6
+pluggy==1.5.0
+prompt_toolkit==3.0.48
+ptyprocess==0.7.0
+pure_eval==0.2.3
+pytest==8.3.4
+pytest-asyncio==1.0.0
+pytest-cov==6.1.1
+pytest-env==1.1.5
+pytest-mock==3.14.0
+pytest-timeout==2.4.0
+stack-data==0.6.3
+traitlets==5.14.3
+wcwidth==0.2.13
+pre_commit==4.2.0
+types-requests==2.32.4.20250809
+executing==2.1.0
+asttokens==3.0.0
+jedi==0.19.2
+iniconfig==2.0.0
