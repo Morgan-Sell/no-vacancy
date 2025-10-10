@@ -179,3 +179,7 @@ models/
 
 # Metadata files
 .DS_Store
+
+# Great Expectations
+app/validations/gx/uncommitted/
+app/validations/gx/.ge_store_backend_id
