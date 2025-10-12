@@ -330,7 +330,7 @@ class NoVacancyDataValidator:
         data_asset = datasource.get_asset(asset_name)
 
         # Create batch from dataframe
-        batch_request = data_asset.build_batch_request(dataframe=df)
+        batch_request = data_asset.build_batch_request(options={"dataframe": df})
 
         # Get or create expectation suite
         try:
