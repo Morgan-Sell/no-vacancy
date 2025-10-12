@@ -154,7 +154,7 @@ class NoVacancyDataValidator:
         # Detect data corruption and entry errors
         for col, bounds in NUMERICAL_BOUNDS.items():
             validator.expect_column_values_to_be_between(
-                colum=col,
+                column=col,
                 min_value=bounds["min"],
                 max_value=bounds["max"],
                 mostly=bounds["mostly"],
