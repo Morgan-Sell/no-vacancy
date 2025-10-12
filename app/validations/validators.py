@@ -336,7 +336,7 @@ class NoVacancyDataValidator:
         try:
             suite = self.context.suites.get(suite_name)
         except Exception:
-            suite = self.context.suites.add(expectation_suite_name=suite_name)
+            suite = self.context.suites.add(name=suite_name)
 
         # Return validator
         return self.context.get_validator(
