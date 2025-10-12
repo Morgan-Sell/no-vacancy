@@ -18,6 +18,7 @@ from typing import Any, Dict
 import great_expectations as gx
 import pandas as pd
 from config import get_logger
+from great_expecations.core import ExpectationSuite
 from validations.schemas import (
     BRONZE_COLUMNS,
     BRONZE_NON_NULL_COLUMNS,
@@ -336,7 +337,8 @@ class NoVacancyDataValidator:
         try:
             suite = self.context.suites.get(suite_name)
         except Exception:
-            suite = self.context.suites.add(name=suite_name)
+            suite = ExpectationSuite(name=suite_name)
+            self.context.suites.add_or_update(suite)
 
         # Return validator
         return self.context.get_validator(
