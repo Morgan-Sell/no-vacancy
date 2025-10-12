@@ -18,7 +18,7 @@ from typing import Any, Dict
 import great_expectations as gx
 import pandas as pd
 from config import get_logger
-from great_expecations.core import ExpectationSuite
+from great_expectations.core import ExpectationSuite
 from validations.schemas import (
     BRONZE_COLUMNS,
     BRONZE_NON_NULL_COLUMNS,
