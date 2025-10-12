@@ -12,6 +12,7 @@ import pytest
 
 from validations.schemas import BRONZE_COLUMNS, EXPECTED_CATEGORIES
 from validations.validators import DataQualityError, NoVacancyDataValidator
+from scripts.import_csv_to_postgres import normalize_column_name
 
 
 # ============================================
@@ -29,25 +30,17 @@ def validator():
 def valid_bronze_data(booking_data):
     """
     Create valid Bronze layer data for testing.
-    Uses the booking_data fixture from conftest.py and renames columns
-    to match the expected Bronze schema.
+
+    Simulates ETL normalization by apply
+    scripts.import_csv_to_postgres.normalize_column_name
+    on booking_data fixture from conftest.py
     """
     # booking_data fixture from conftest has spaces in column names
     # Need to rename the names to match BRONZE_COLUMNS
     df = booking_data.copy()
 
     # Rename colums to match Bronze DB schema
-    df = df.rename(
-        columns={
-            "Booking_ID": "booking_id",
-            "type of meal": "type_of_meal",
-            "car parking space": "car_parking_space",
-            "room type": "room_type",
-            "repeated": "is_repeat_guest",
-            "P-C": "num_previous_cancellations",
-            "P-not-C": "num_previous_bookings_not_canceled",
-        }
-    )
+    df.columns = [normalize_column_name(col) for col in df.columns]
 
     return df
 

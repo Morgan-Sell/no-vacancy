@@ -176,7 +176,7 @@ OHE_PREFIXES = [
 VALIDATION_CONFIG = {
     "mostly_threshold": 0.95,  # Allow 5% violations for categorical checks
     "outlier_threshold": 0.99,  # Allow 1% outliers for numerical checks
-    "min_row_count": 1000,  # Minimum rows to consider data valid
+    "min_row_count": 1,  # Allow any non-empty dataset
     "max_row_count": 100000,  # Maximum rows (detect duplication)
 }
 

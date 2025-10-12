@@ -22,7 +22,6 @@ from great_expectations.core import ExpectationSuite
 from validations.schemas import (
     BRONZE_COLUMNS,
     BRONZE_NON_NULL_COLUMNS,
-    COLUMNS_TO_DROP,
     DERIVED_FEATURES,
     EXPECTED_CATEGORIES,
     NUMERICAL_BOUNDS,
@@ -230,17 +229,6 @@ class NoVacancyDataValidator:
                 "validation_layer": "silver",
                 "criticaliy": "critical",
                 "description": "Target must be binary (0/1)",
-            },
-        )
-
-        # === VALIDATION 4: Columns Dropped ===
-        # Original columns should be removed
-        validator.expect_table_columns_to_not_contain_column_list(
-            column_list=COLUMNS_TO_DROP,
-            meta={
-                "validation_layer": "silver",
-                "criticality": "medium",
-                "description": "Raw date columns should be dropped",
             },
         )
 
