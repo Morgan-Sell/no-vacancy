@@ -166,7 +166,7 @@ class NoVacancyDataValidator:
             )
 
         # Save suite and run validation
-        validator.save_expectation_suite()
+        self.context.suites.add_or_update(validator.expecation_suite)
         results = validator.validate()
 
         return self._format_results(results, "Bronze")
@@ -245,7 +245,7 @@ class NoVacancyDataValidator:
         )
 
         # Save and validate
-        validator.save_expectation_suite()
+        self.context.suites.add_or_update(validator.expecation_suite)
         results = validator.validate()
 
         return self._format_results(results, "Silver")
@@ -302,7 +302,7 @@ class NoVacancyDataValidator:
                 logger.warning(f"⚠️  No columns found with prefix '{prefix}'")
 
         # Save and validate
-        validator.save_expectation_suite()
+        self.context.suites.add_or_update(validator.expecation_suite)
         results = validator.validate()
 
         return self._format_results(results, "Model Input")
