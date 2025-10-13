@@ -174,7 +174,7 @@ OHE_PREFIXES = [
 # ============================================
 # How strict should validations be?
 VALIDATION_CONFIG = {
-    "mostly_threshold": 0.95,  # Allow 5% violations for categorical checks
+    "mostly_threshold": 1.0,  # Zero-error tolerance b/c one abnormal value will cause error in OHE
     "outlier_threshold": 0.99,  # Allow 1% outliers for numerical checks
     "min_row_count": 1,  # Allow any non-empty dataset
     "max_row_count": 100000,  # Maximum rows (detect duplication)
