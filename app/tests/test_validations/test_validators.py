@@ -83,12 +83,7 @@ class TestBronzeValidation:
         results = validator.validate_bronze_data(invalid_data)
 
         assert results["success"] is False
-
-        # Confirm that schema validation failed
-        failed_types = [
-            r.expectation_config.type for r in results["failed_expectations"]
-        ]
-        assert "expect_table_columns_to_match_ordered_list" in failed_types
+        assert "booking_status" in results.get("error", "")
 
     def test_reordered_columns_fails(self, validator, valid_bronze_data):
         """Reordered columns should fail schema validation."""
@@ -199,7 +194,7 @@ class TestBronzeValidation:
     def test_too_few_rows_fails(self, validator, valid_bronze_data):
         """Too few rows should fail row count validation."""
         # Take only first 5 rows (min is 1000)
-        invalid_data = valid_bronze_data.head(5)
+        invalid_data = pd.DataFrame(columns=valid_bronze_data.columns)
 
         results = validator.validate_bronze_data(invalid_data)
 

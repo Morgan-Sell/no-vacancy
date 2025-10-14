@@ -86,89 +86,98 @@ class NoVacancyDataValidator:
         """
         logger.info("Starting Bronze layer validation...")
 
-        # Get validator
-        validator = self._get_validator(df, "bronze_bookings", "bronze_suite")
+        try:
+            # Get validator
+            validator = self._get_validator(df, "bronze_bookings", "bronze_suite")
 
-        # === VALIDATION 1: Schema Structure ===
-        # Ensures CSV matches expected structure
-        validator.expect_table_columns_to_match_ordered_list(
-            column_list=BRONZE_COLUMNS,
-            meta={
-                "validation_layer": "bronze",
-                "criticality": "critical",
-                "description": "Column order much match training data",
-            },
-        )
-
-        # === VALIDATION 2: Row Count Sanity ===
-        # Detects truncated files or accidental duplication
-        validator.expect_table_row_count_to_be_between(
-            min_value=VALIDATION_CONFIG["min_row_count"],
-            max_value=VALIDATION_CONFIG["max_row_count"],
-            meta={
-                "validation_layer": "bronze",
-                "criticality": "high",
-                "description": "File size should be reasonable",
-            },
-        )
-
-        # === VALIDATION 3: Primary Key Uniqueness ===
-        # Duplicate IDs corrupt predictions in Gold DB
-        validator.expect_column_values_to_be_unique(
-            column="booking_id",
-            meta={
-                "validation_layer": "bronze",
-                "criticality": "critical",
-                "desrciption": "booking_id must be unique",
-            },
-        )
-
-        # === VALIDATION 4: Critical Nulls ===
-        # Primary key and target cannot be null
-        for col in BRONZE_NON_NULL_COLUMNS:
-            validator.expect_column_values_to_not_be_null(
-                column=col,
+            # === VALIDATION 1: Schema Structure ===
+            # Ensures CSV matches expected structure
+            validator.expect_table_columns_to_match_ordered_list(
+                column_list=BRONZE_COLUMNS,
                 meta={
                     "validation_layer": "bronze",
                     "criticality": "critical",
-                    "description": f"{col} required for processing",
+                    "description": "Column order much match training data",
                 },
             )
 
-        # === VALIDATION 5-8: Categorical Domain Validation ===
-        # Prevents OneHotEncoder from creating mismatched features
-        for col, expected_values in EXPECTED_CATEGORIES.items():
-            validator.expect_column_values_to_be_in_set(
-                column=col,
-                value_set=expected_values,
-                mostly=VALIDATION_CONFIG["mostly_threshold"],
+            # Confirm schema is correct before executing additional expectations
+            results = validator.validate()
+            if not results.success:
+                return self._format_results(results, "Bronze")
+
+            # === VALIDATION 2: Row Count Sanity ===
+            # Detects truncated files or accidental duplication
+            validator.expect_table_row_count_to_be_between(
+                min_value=VALIDATION_CONFIG["min_row_count"],
+                max_value=VALIDATION_CONFIG["max_row_count"],
+                meta={
+                    "validation_layer": "bronze",
+                    "criticality": "high",
+                    "description": "File size should be reasonable",
+                },
+            )
+
+            # === VALIDATION 3: Primary Key Uniqueness ===
+            # Duplicate IDs corrupt predictions in Gold DB
+            validator.expect_column_values_to_be_unique(
+                column="booking_id",
                 meta={
                     "validation_layer": "bronze",
                     "criticality": "critical",
-                    "description": f"Unexpected {col} values break OHE",
+                    "desrciption": "booking_id must be unique",
                 },
             )
 
-        # === VALIDATION 9-15: Numerical Bounds ====
-        # Detect data corruption and entry errors
-        for col, bounds in NUMERICAL_BOUNDS.items():
-            validator.expect_column_values_to_be_between(
-                column=col,
-                min_value=bounds["min"],
-                max_value=bounds["max"],
-                mostly=bounds["mostly"],
-                meta={
-                    "validation_layer": "bronze",
-                    "criticality": "medium",
-                    "description": f"{col} should be within business logic bounds",
-                },
-            )
+            # === VALIDATION 4: Critical Nulls ===
+            # Primary key and target cannot be null
+            for col in BRONZE_NON_NULL_COLUMNS:
+                validator.expect_column_values_to_not_be_null(
+                    column=col,
+                    meta={
+                        "validation_layer": "bronze",
+                        "criticality": "critical",
+                        "description": f"{col} required for processing",
+                    },
+                )
 
-        # Save suite and run validation
-        self.context.suites.add_or_update(validator.expectation_suite)
-        results = validator.validate()
+            # === VALIDATION 5-8: Categorical Domain Validation ===
+            # Prevents OneHotEncoder from creating mismatched features
+            for col, expected_values in EXPECTED_CATEGORIES.items():
+                validator.expect_column_values_to_be_in_set(
+                    column=col,
+                    value_set=expected_values,
+                    mostly=VALIDATION_CONFIG["mostly_threshold"],
+                    meta={
+                        "validation_layer": "bronze",
+                        "criticality": "critical",
+                        "description": f"Unexpected {col} values break OHE",
+                    },
+                )
 
-        return self._format_results(results, "Bronze")
+            # === VALIDATION 9-15: Numerical Bounds ====
+            # Detect data corruption and entry errors
+            for col, bounds in NUMERICAL_BOUNDS.items():
+                validator.expect_column_values_to_be_between(
+                    column=col,
+                    min_value=bounds["min"],
+                    max_value=bounds["max"],
+                    mostly=bounds["mostly"],
+                    meta={
+                        "validation_layer": "bronze",
+                        "criticality": "medium",
+                        "description": f"{col} should be within business logic bounds",
+                    },
+                )
+
+            # Save suite and run validation
+            self.context.suites.add_or_update(validator.expectation_suite)
+            results = validator.validate()
+
+            return self._format_results(results, "Bronze")
+
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     # ============================================
     # SILVER LAYER VALIDATION
