@@ -22,10 +22,10 @@ from great_expectations.core import ExpectationSuite
 from validations.schemas import (
     BRONZE_COLUMNS,
     BRONZE_NON_NULL_COLUMNS,
+    COLUMNS_TO_DROP,
     DERIVED_FEATURES,
     EXPECTED_CATEGORIES,
     NUMERICAL_BOUNDS,
-    OHE_PREFIXES,
     SILVER_TARGET_VALUES,
     VALIDATION_CONFIG,
 )
@@ -241,68 +241,24 @@ class NoVacancyDataValidator:
             },
         )
 
+        # ==== VALIDATION 4: Dropped Columns ====
+        # Certain Bronze variables should be dropped
+        present_bad_columns = [col for col in COLUMNS_TO_DROP if col in df.columns]
+
+        if present_bad_columns:
+            logger.error(f"Raw columns still present: {present_bad_columns}")
+            return {
+                "success": False,
+                "error": f"Columns should be dropped: {present_bad_columns}",
+                "statistics": [],
+                "failed_expectations": [],
+            }
+
         # Save and validate
         self.context.suites.add_or_update(validator.expectation_suite)
         results = validator.validate()
 
         return self._format_results(results, "Silver")
-
-    # ============================================
-    # MODEL INPUT VALIDATION
-    # ============================================
-
-    def validate_model_input(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """
-        Validate data before model inference (Model Input layer).
-
-        Checks performed:
-        1. All OneHotEncoded columns are binary (0/1)
-        2. Expected feature prefixes exist
-
-        Args:
-            df: Final feature matrix ready for model.predict()
-
-        Returns:
-            dict: Validation results
-
-        Raises:
-            DataQualityError: If schema drift detected
-        """
-        logger.info("Starting Model Input validation...")
-
-        validator = self._get_validator(df, "model_input", "model_input_suite")
-
-        # === VALIDATION 1: OHE Binary Check ===
-        # OneHotEncoder should only create 0/1 values
-        ohe_columns = [col for col in df.columns if col.startswith("is_")]
-
-        if not ohe_columns:
-            logger.warning("⚠️  No OneHotEncoded columns found - is this expected?")
-
-        for col in ohe_columns:
-            validator.expect_column_values_to_be_in_set(
-                column=col,
-                value_set=[0, 1],
-                meta={
-                    "validation_layer": "model_input",
-                    "criticality": "critical",
-                    "description": "OHE columns must be binary",
-                },
-            )
-
-        # === VALIDATION 2: Expected Prefixes Exist ===
-        # Validates all categorical features were encoded
-        for prefix in OHE_PREFIXES:
-            prefix_columns = [col for col in df.columns if col.startswith(prefix)]
-
-            if not prefix_columns:
-                logger.warning(f"⚠️  No columns found with prefix '{prefix}'")
-
-        # Save and validate
-        self.context.suites.add_or_update(validator.expectation_suite)
-        results = validator.validate()
-
-        return self._format_results(results, "Model Input")
 
     # ============================================
     # HELPER METHODS
@@ -402,8 +358,6 @@ class NoVacancyDataValidator:
             results = self.validate_bronze_data(df)
         elif layer == "silver":
             results = self.validate_silver_data(df)
-        elif layer == "model_input":
-            results = self.validate_model_input(df)
         else:
             raise ValueError(f"Unknown layer: {layer}")
 

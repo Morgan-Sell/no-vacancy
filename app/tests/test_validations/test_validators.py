@@ -7,12 +7,20 @@ These tests ensure data validation catches the most common production failures:
 3. Data corruption (nulls, out-of-bounds values)
 """
 
+import logging
+from pprint import pprint
 import pandas as pd
 import pytest
 
 from validations.schemas import BRONZE_COLUMNS, EXPECTED_CATEGORIES
 from validations.validators import DataQualityError, NoVacancyDataValidator
 from scripts.import_csv_to_postgres import normalize_column_name
+from services import (
+    VARIABLE_RENAME_MAP,
+    MONTH_ABBREVIATION_MAP,
+    BOOKING_MAP,
+    VARS_TO_DROP,
+)
 
 
 # ============================================
@@ -83,7 +91,10 @@ class TestBronzeValidation:
         results = validator.validate_bronze_data(invalid_data)
 
         assert results["success"] is False
-        assert "booking_status" in results.get("error", "")
+        mismatch = results["failed_expectations"][0]["result"]["details"]["mismatched"][
+            0
+        ]
+        assert "booking_status" == mismatch["Expected"]
 
     def test_reordered_columns_fails(self, validator, valid_bronze_data):
         """Reordered columns should fail schema validation."""
@@ -266,99 +277,26 @@ class TestSilverValidation:
     def test_raw_booking_status_still_present_fails(self, validator, valid_silver_data):
         """Presence of raw booking_status column should fail validation."""
         invalid_data = valid_silver_data.copy()
-        invalid_data["booking_status"] = "Canceled"  # Should be dropped!
+        invalid_data["booking_status"] = ["Canceled"] * invalid_data.shape[
+            0
+        ]  # Should be dropped!
 
         results = validator.validate_silver_data(invalid_data)
 
         assert results["success"] is False
-        failed_types = [
-            r.expectation_config.type for r in results["failed_expectations"]
-        ]
-        assert "expect_table_columns_to_not_contain_column_list" in failed_types
+        assert "booking_status" in results["error"]
 
     def test_raw_date_column_still_present_fails(self, validator, valid_silver_data):
         """Presence of raw date column should fail validation."""
         invalid_data = valid_silver_data.copy()
-        invalid_data["date_of_reservation"] = "10/2/2015"  # Should be dropped!
+        invalid_data["date_of_reservation"] = (
+            "10/2/2015" * invalid_data.shape[0]
+        )  # Should be dropped!
 
         results = validator.validate_silver_data(invalid_data)
 
         assert results["success"] is False
-
-
-# ============================================
-# MODEL INPUT TESTS
-# ============================================
-
-
-class TestModelInputValidation:
-    """Test Model Input validation catches feature mismatches."""
-
-    def test_valid_ohe_columns_pass(self, validator):
-        """Valid OneHotEncoded columns should pass."""
-        valid_data = pd.DataFrame(
-            {
-                "booking_id": ["BK001", "BK002", "BK003"],
-                "number_of_adults": [2, 1, 3],
-                "is_type_of_meal_meal_plan_1": [1, 0, 0],
-                "is_type_of_meal_meal_plan_2": [0, 1, 0],
-                "is_room_type_room_type_1": [1, 0, 1],
-            }
-        )
-
-        results = validator.validate_model_input(valid_data)
-
-        assert results["success"] is True
-
-    def test_non_binary_ohe_fails(self, validator):
-        """Non-binary OHE column should fail validation."""
-        invalid_data = pd.DataFrame(
-            {
-                "booking_id": ["BK001", "BK002", "BK003"],
-                "number_of_adults": [2, 1, 3],
-                "is_type_of_meal_meal_plan_1": [1, 2, 0],  # 2 is invalid!
-            }
-        )
-
-        results = validator.validate_model_input(invalid_data)
-
-        assert results["success"] is False
-        failed_types = [
-            r.expectation_config.type for r in results["failed_expectations"]
-        ]
-        assert "expect_column_values_to_be_in_set" in failed_types
-
-    def test_float_ohe_fails(self, validator):
-        """Float values in OHE column should fail validation."""
-        invalid_data = pd.DataFrame(
-            {
-                "booking_id": ["BK001", "BK002", "BK003"],
-                "number_of_adults": [2, 1, 3],
-                "is_type_of_meal_meal_plan_1": [1.5, 0, 0],  # Float is invalid!
-            }
-        )
-
-        results = validator.validate_model_input(invalid_data)
-
-        assert results["success"] is False
-
-    def test_no_ohe_columns_logs_warning(self, validator, caplog):
-        """No OHE columns should log a warning."""
-        data_without_ohe = pd.DataFrame(
-            {
-                "booking_id": ["BK001", "BK002", "BK003"],
-                "number_of_adults": [2, 1, 3],
-                "average_price": [100, 150, 120],
-            }
-        )
-
-        results = validator.validate_model_input(data_without_ohe)
-
-        # Should still pass (no OHE columns to validate)
-        assert results["success"] is True
-
-        # Check that warning was logged
-        assert "No OneHotEncoded columns found" in caplog.text
+        assert "date_of_reservation" in results["error"]
 
 
 # ============================================
@@ -405,46 +343,106 @@ class TestValidateAndRaise:
 
 
 class TestValidatorIntegration:
-    """Test validator works with real preprocessing pipeline."""
-
-    def test_bronze_to_silver_workflow(
-        self, validator, valid_bronze_data, sample_processor
-    ):
-        """Test validation works through Bronze -> Silver transformation"""
-        # Validate Bronze
-        bronze_results = validator.validate_bronze_data(valid_bronze_data)
-        assert bronze_results["success"] is True
-
-        # Transform to Silver
-        X = valid_bronze_data.drop(columns=["booking_status"])
-        y = valid_bronze_data["booking_status"]
-        X_silver, y_silver = sample_processor.fit_transform(X, y)
-
-        # Add target back
-        silver_data = X_silver.copy()
-        silver_data["is_cancellation"] = y_silver
-
-        # Validate Silver
-        silver_results = validator.validate_silver_data(silver_data)
-        assert silver_results["success"] is True
+    """Integration tests for multi-layer validation workflow."""
 
     def test_end_to_end_validation(
         self, validator, valid_bronze_data, preprocessed_booking_data
     ):
-        """Test end-to-end validation from Bronze to Model Input."""
-        # 1. Validate Bronze
+        """Test end-to-end validation from Bronze to Silver layers.
+
+        Note: Model input validation removed - OHE and scaling happen inside
+        the sklearn pipeline during training, which validates schema implicitly.
+        """
+        # 1. Validate Bronze layer
         bronze_results = validator.validate_bronze_data(valid_bronze_data)
         assert bronze_results["success"] is True
+        assert bronze_results["statistics"]["unsuccessful_expectations"] == 0
 
-        # 2. Get preprocessed data (Silver)
+        # 2. Get preprocessed data from fixture (Silver layer)
         X_processed, y_processed = preprocessed_booking_data
         silver_data = X_processed.copy()
         silver_data["is_cancellation"] = y_processed
 
-        # 3. Validate Silver
+        # 3. Validate Silver layer
+        silver_results = validator.validate_silver_data(silver_data)
+        assert silver_results["success"] is True
+        assert silver_results["statistics"]["unsuccessful_expectations"] == 0
+
+    def test_bronze_to_silver_workflow(
+        self, validator, valid_bronze_data, preprocessed_booking_data
+    ):
+        """Test that Bronze data transforms to valid Silver data."""
+
+        # 1. Validate Bronze
+        bronze_results = validator.validate_bronze_data(valid_bronze_data)
+        assert bronze_results["success"] is True
+
+        # 2. Use the existing preprocessed_booking_data fixture
+        # (which already transforms Bronze → Silver correctly)
+        X_silver, y_silver = preprocessed_booking_data
+
+        # 3. Reconstruct Silver DataFrame for validation
+        silver_data = X_silver.copy()
+        silver_data["is_cancellation"] = y_silver
+
+        # 4. Validate Silver
         silver_results = validator.validate_silver_data(silver_data)
         assert silver_results["success"] is True
 
-        # 4. Validate Model Input (just features, no target)
-        model_results = validator.validate_model_input(X_processed)
-        assert model_results["success"] is True
+    def test_validation_catches_issues_at_each_layer(
+        self, validator, valid_bronze_data
+    ):
+        """Verify each validation layer catches appropriate issues."""
+
+        # Bronze catches schema issues
+        invalid_bronze = valid_bronze_data.copy()
+        invalid_bronze = invalid_bronze.drop(columns=["booking_status"])
+
+        bronze_results = validator.validate_bronze_data(invalid_bronze)
+        assert bronze_results["success"] is False
+
+        # Silver catches transformation issues
+        from services.preprocessing import NoVacancyDataProcessing
+
+        # Initialize preprocessor with required parameters
+        variable_rename = {
+            "number_of_adults": "number_of_adults",
+            "number_of_children": "number_of_children",
+            "date_of_reservation": "date_of_reservation",
+            # ... rest of mappings
+        }
+
+        month_abbreviation = {
+            "Jan": 1,
+            "Feb": 2,
+            "Mar": 3,
+            "Apr": 4,
+            "May": 5,
+            "Jun": 6,
+            "Jul": 7,
+            "Aug": 8,
+            "Sep": 9,
+            "Oct": 10,
+            "Nov": 11,
+            "Dec": 12,
+        }
+
+        vars_to_drop = ["booking_status", "date_of_reservation"]
+        booking_map = {"Canceled": 1, "Not_Canceled": 0}
+
+        preprocessor = NoVacancyDataProcessing(
+            variable_rename=variable_rename,
+            month_abbreviation=month_abbreviation,
+            vars_to_drop=vars_to_drop,
+            booking_map=booking_map,
+        )
+
+        X_silver, y_silver = preprocessor.fit_transform(valid_bronze_data)
+
+        # Add back a column that should have been dropped
+        invalid_silver = X_silver.copy()
+        invalid_silver["booking_status"] = "Canceled"
+        invalid_silver["is_cancellation"] = y_silver
+
+        silver_results = validator.validate_silver_data(invalid_silver)
+        assert silver_results["success"] is False
