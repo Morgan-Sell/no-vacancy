@@ -8,6 +8,7 @@ These tests ensure data validation catches the most common production failures:
 """
 
 import logging
+from pathlib import Path
 from pprint import pprint
 import pandas as pd
 import pytest
@@ -91,10 +92,18 @@ class TestBronzeValidation:
         results = validator.validate_bronze_data(invalid_data)
 
         assert results["success"] is False
-        mismatch = results["failed_expectations"][0]["result"]["details"]["mismatched"][
-            0
-        ]
-        assert "booking_status" == mismatch["Expected"]
+
+        # Find the column order expectation (the one with details)
+        column_order_failure = next(
+            exp
+            for exp in results["failed_expectations"]
+            if exp["expectation_config"]["type"]
+            == "expect_table_columns_to_match_ordered_list"
+        )
+
+        mismatch = column_order_failure["result"]["details"]["mismatched"][0]
+        assert mismatch["Expected"] == "booking_status"
+        assert mismatch["Found"] is None
 
     def test_reordered_columns_fails(self, validator, valid_bronze_data):
         """Reordered columns should fail schema validation."""
