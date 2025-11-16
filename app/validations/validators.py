@@ -113,7 +113,7 @@ class NoVacancyDataValidator:
                 max_value=VALIDATION_CONFIG["max_row_count"],
                 meta={
                     "validation_layer": "bronze",
-                    "criticality": "high",
+                    "criticality": "medium",
                     "description": "File size should be reasonable",
                 },
             )
