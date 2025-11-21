@@ -7,7 +7,7 @@ set -e # Exit on any error
 
 echo "Starting training workflow..."
 
-# Check if docker-compose is available
+# Check docker availability
 if ! command -v docker &> /dev/null; then
     echo "❌ Docker is not installed"
     exit 1
@@ -18,21 +18,54 @@ if ! docker compose version &> /dev/null; then
     exit 1
 fi
 
-# Start infrastructure services (databases, mlflow, etc.)
+# Start infrastructure services
 echo "Starting infrastructure services..."
-docker compose up -d bronze-db silver-db gold-db mlflow-db mlflow test-db
+if ! docker compose up -d bronze-db silver-db gold-db mlflow-db mlflow test-db; then
+    echo "❌ Docker compose up failed"
+    echo "=== Container Status ==="
+    docker compose ps -a
+    echo "=== Container Logs ==="
+    docker compose logs --tail=100
+    exit 1
+fi
 
-# Wait for services to be ready
-echo "Waiting for services to be ready..."
+# Immediately check for crashed containers
+echo "Checking for crashed containers..."
+sleep 5  # Give containers a moment to crash if they're going to
+
+CRASHED=$(docker compose ps -a --format json | jq -r 'select(.State == "exited" or .State == "dead") | .Name')
+if [ ! -z "$CRASHED" ]; then
+    echo "❌ Crashed containers detected:"
+    echo "$CRASHED"
+    echo ""
+    echo "=== Full Status ==="
+    docker compose ps -a
+    echo ""
+    echo "=== Logs from crashed containers ==="
+    docker compose logs --tail=50
+    exit 1
+fi
+
+# Wait for healthy services
+echo "Waiting for services to be healthy..."
 for service in bronze-db silver-db gold-db mlflow-db mlflow test-db; do
     echo "Waiting for $service..."
     for i in {1..30}; do
-        if docker compose ps $service | grep -qE "(running|Up)"; then
-            echo "✅ $service is ready"
+        # Check if container exists and is running
+        STATUS=$(docker compose ps $service --format json 2>/dev/null | jq -r '.State' || echo "missing")
+
+        if [ "$STATUS" = "running" ]; then
+            echo "✅ $service is running"
             break
+        elif [ "$STATUS" = "exited" ]; then
+            echo "❌ $service exited unexpectedly"
+            docker compose logs --tail=50 $service
+            exit 1
         fi
+
         if [ $i -eq 30 ]; then
-            echo "❌ $service failed to start"
+            echo "❌ $service timeout"
+            docker compose ps -a
             docker compose logs $service
             exit 1
         fi
@@ -40,26 +73,17 @@ for service in bronze-db silver-db gold-db mlflow-db mlflow test-db; do
     done
 done
 
-# Execute training using TrainingOrchestrator class (to be replaced by Airflow in the future)
+# Execute training
 echo "Executing training via training orchestrator..."
 if docker compose --profile training run --rm training-container; then
     echo "✅ Training completed successfully"
-
-    # Cleanup training-specific resources
-    echo "Cleaning up training resources..."
     docker compose stop test-db
     docker compose rm -f test-db
-
-    echo "Training workflow completed. Check MLflow for new model artifacts."
+    echo "Training workflow completed."
     exit 0
 else
     echo "❌ Training failed"
-
-    # Show logs for debugging
-    echo "Container logs:"
     docker compose logs training-container || true
-
-    # Cleanup
     docker compose down -v --remove-orphans || true
     exit 1
 fi
