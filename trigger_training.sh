@@ -1,13 +1,9 @@
 #!/bin/bash
-# Shell script to trigger the training process using Docker Compose
-# Script is executed in scheduling_training.yaml as part of the CD pipeline (via GitHub Actions workflow)
-
-
-set -e # Exit on any error
+set -e
 
 echo "Starting training workflow..."
 
-# Check docker availability
+# Check if docker-compose is available
 if ! command -v docker &> /dev/null; then
     echo "❌ Docker is not installed"
     exit 1
@@ -18,72 +14,62 @@ if ! docker compose version &> /dev/null; then
     exit 1
 fi
 
-# Start infrastructure services
+# ========================================
+# REPLACE THIS ENTIRE SECTION:
+# ========================================
+# Old code (DELETE):
+# echo "Starting infrastructure services..."
+# docker compose up -d bronze-db silver-db gold-db mlflow-db mlflow test-db
+#
+# echo "Waiting for services to be ready..."
+# for service in bronze-db silver-db gold-db mlflow-db mlflow test-db; do
+#     ... wait loop ...
+# done
+
+# New code (USE THIS):
 echo "Starting infrastructure services..."
-if ! docker compose up -d bronze-db silver-db gold-db mlflow-db mlflow test-db; then
-    echo "❌ Docker compose up failed"
-    echo "=== Container Status ==="
-    docker compose ps -a
-    echo "=== Container Logs ==="
-    docker compose logs --tail=100
-    exit 1
-fi
+docker compose up -d bronze-db silver-db gold-db mlflow-db mlflow
 
-# Immediately check for crashed containers
-echo "Checking for crashed containers..."
-sleep 5  # Give containers a moment to crash if they're going to
-
-CRASHED=$(docker compose ps -a --format json | jq -r 'select(.State == "exited" or .State == "dead") | .Name')
-if [ ! -z "$CRASHED" ]; then
-    echo "❌ Crashed containers detected:"
-    echo "$CRASHED"
-    echo ""
-    echo "=== Full Status ==="
-    docker compose ps -a
-    echo ""
-    echo "=== Logs from crashed containers ==="
-    docker compose logs --tail=50
-    exit 1
-fi
-
-# Wait for healthy services
-echo "Waiting for services to be healthy..."
-for service in bronze-db silver-db gold-db mlflow-db mlflow test-db; do
+echo "Waiting for services to be ready..."
+for service in bronze-db silver-db gold-db mlflow-db mlflow; do
     echo "Waiting for $service..."
     for i in {1..30}; do
-        # Check if container exists and is running
-        STATUS=$(docker compose ps $service --format json 2>/dev/null | jq -r '.State' || echo "missing")
-
-        if [ "$STATUS" = "running" ]; then
-            echo "✅ $service is running"
+        if docker compose ps $service | grep -qE "(running|Up)"; then
+            echo "✅ $service is ready"
             break
-        elif [ "$STATUS" = "exited" ]; then
-            echo "❌ $service exited unexpectedly"
-            docker compose logs --tail=50 $service
-            exit 1
         fi
-
         if [ $i -eq 30 ]; then
-            echo "❌ $service timeout"
-            docker compose ps -a
+            echo "❌ $service failed to start"
             docker compose logs $service
             exit 1
         fi
         sleep 2
     done
 done
+# ========================================
+# END REPLACEMENT
+# ========================================
 
-# Execute training
+# Execute training using TrainingOrchestrator class
 echo "Executing training via training orchestrator..."
 if docker compose --profile training run --rm training-container; then
     echo "✅ Training completed successfully"
-    docker compose stop test-db
-    docker compose rm -f test-db
-    echo "Training workflow completed."
+
+    # Cleanup training-specific resources
+    echo "Cleaning up training resources..."
+    docker compose --profile training stop test-db
+    docker compose --profile training rm -f test-db
+
+    echo "Training workflow completed. Check MLflow for new model artifacts."
     exit 0
 else
     echo "❌ Training failed"
+
+    # Show logs for debugging
+    echo "Container logs:"
     docker compose logs training-container || true
+
+    # Cleanup
     docker compose down -v --remove-orphans || true
     exit 1
 fi
