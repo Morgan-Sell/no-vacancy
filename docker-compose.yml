@@ -7,8 +7,6 @@ services:
   bronze-db:
     image: postgres:latest
     container_name: bronze-db
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -27,8 +25,6 @@ services:
   silver-db:
     image: postgres:latest
     container_name: silver-db
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -46,8 +42,6 @@ services:
   gold-db:
     image: postgres:latest
     container_name: gold-db
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -69,8 +63,6 @@ services:
   mlflow-db:
     image: postgres:latest
     container_name: mlflow-db
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -96,8 +88,6 @@ services:
     depends_on:
       mlflow-db:
         condition: service_healthy
-    env_file:
-      - .env
     volumes:
       - ./mlruns:/mlflow/mlruns
     healthcheck:
@@ -255,8 +245,6 @@ services:
         condition: service_started
       test-db:
         condition: service_started
-    env_file:
-      - .env
     volumes:
       - ./data:/app/data:ro # Read-only mount
     environment:
@@ -295,8 +283,6 @@ services:
         condition: service_healthy
       mlflow:
         condition: service_started
-    env_file:
-      - .env
     environment:
       BRONZE_DB_HOST: bronze-db
       SILVER_DB_HOST: silver-db
@@ -316,8 +302,6 @@ services:
     profiles:
       - training
       - testing
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${TEST_DB_USER}
       POSTGRES_PASSWORD: ${TEST_DB_PASSWORD}
