@@ -1,0 +1,76 @@
+{
+  "expectations": [
+    {
+      "id": "ad49b7be-2323-47de-a050-bc3f3addd6bc",
+      "kwargs": {
+        "column": "month_of_reservation",
+        "value_set": [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec"
+        ]
+      },
+      "meta": {
+        "criticality": "high",
+        "description": "Month extraction from date much be valid",
+        "validation_layer": "silver"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_in_set"
+    },
+    {
+      "id": "120a063f-9787-4600-b124-4bfd1598c540",
+      "kwargs": {
+        "column": "day_of_week",
+        "value_set": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ]
+      },
+      "meta": {
+        "criticality": "high",
+        "description": "Day extraction from date must be valid",
+        "validation_layer": "silver"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_in_set"
+    },
+    {
+      "id": "3dbf81ac-1da5-4ca5-baa5-283a4bfa52c6",
+      "kwargs": {
+        "column": "is_cancellation",
+        "value_set": [
+          0,
+          1
+        ]
+      },
+      "meta": {
+        "criticaliy": "critical",
+        "description": "Target must be binary (0/1)",
+        "validation_layer": "silver"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_in_set"
+    }
+  ],
+  "id": "3b10aeca-7ea9-493c-a2eb-28fbb2f2a451",
+  "meta": {
+    "great_expectations_version": "1.7.1"
+  },
+  "name": "silver_suite",
+  "notes": null
+}

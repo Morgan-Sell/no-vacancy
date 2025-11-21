@@ -1,0 +1,284 @@
+{
+  "expectations": [
+    {
+      "id": "23656a05-52e0-45b4-984a-184fe365130d",
+      "kwargs": {
+        "column_list": [
+          "booking_id",
+          "number_of_adults",
+          "number_of_children",
+          "number_of_weekend_nights",
+          "number_of_week_nights",
+          "type_of_meal",
+          "car_parking_space",
+          "room_type",
+          "lead_time",
+          "market_segment_type",
+          "is_repeat_guest",
+          "num_previous_cancellations",
+          "num_previous_bookings_not_canceled",
+          "average_price",
+          "special_requests",
+          "date_of_reservation",
+          "booking_status"
+        ]
+      },
+      "meta": {
+        "criticality": "critical",
+        "description": "Column order much match training data",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_table_columns_to_match_ordered_list"
+    },
+    {
+      "id": "41cd4363-1d3c-4a6d-884f-e9ca25f4b801",
+      "kwargs": {
+        "max_value": 100000,
+        "min_value": 1
+      },
+      "meta": {
+        "criticality": "high",
+        "description": "File size should be reasonable",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_table_row_count_to_be_between"
+    },
+    {
+      "id": "108d2164-4aac-42df-838b-de65f064d06f",
+      "kwargs": {
+        "column": "booking_id"
+      },
+      "meta": {
+        "criticality": "critical",
+        "desrciption": "booking_id must be unique",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_unique"
+    },
+    {
+      "id": "4f17b765-1348-4393-92d3-32a277e03744",
+      "kwargs": {
+        "column": "booking_id"
+      },
+      "meta": {
+        "criticality": "critical",
+        "description": "booking_id required for processing",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_not_be_null"
+    },
+    {
+      "id": "f2e1edf2-3e01-4a7c-9708-e5122387440f",
+      "kwargs": {
+        "column": "booking_status"
+      },
+      "meta": {
+        "criticality": "critical",
+        "description": "booking_status required for processing",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_not_be_null"
+    },
+    {
+      "id": "ba1cf47f-9988-4bc4-9dcc-dc0885cea47c",
+      "kwargs": {
+        "column": "booking_status",
+        "value_set": [
+          "Canceled",
+          "Not_Canceled"
+        ]
+      },
+      "meta": {
+        "criticality": "critical",
+        "description": "Unexpected booking_status values break OHE",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_in_set"
+    },
+    {
+      "id": "f5eadd99-abe3-4e65-a610-aacc0c78efb1",
+      "kwargs": {
+        "column": "type_of_meal",
+        "value_set": [
+          "Meal Plan 1",
+          "Meal Plan 2",
+          "Meal Plan 3",
+          "Not Selected"
+        ]
+      },
+      "meta": {
+        "criticality": "critical",
+        "description": "Unexpected type_of_meal values break OHE",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_in_set"
+    },
+    {
+      "id": "738c18a5-9163-4d44-9424-5b924e87950d",
+      "kwargs": {
+        "column": "room_type",
+        "value_set": [
+          "Room_Type 1",
+          "Room_Type 2",
+          "Room_Type 3",
+          "Room_Type 4",
+          "Room_Type 5",
+          "Room_Type 6",
+          "Room_Type 7"
+        ]
+      },
+      "meta": {
+        "criticality": "critical",
+        "description": "Unexpected room_type values break OHE",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_in_set"
+    },
+    {
+      "id": "1671c7af-d39a-480e-8d41-5d0a6c0e1a3d",
+      "kwargs": {
+        "column": "market_segment_type",
+        "value_set": [
+          "Online",
+          "Offline",
+          "Corporate",
+          "Aviation",
+          "Complementary"
+        ]
+      },
+      "meta": {
+        "criticality": "critical",
+        "description": "Unexpected market_segment_type values break OHE",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_in_set"
+    },
+    {
+      "id": "018d48fb-a42c-486a-b9f1-e45a21a79824",
+      "kwargs": {
+        "column": "number_of_adults",
+        "max_value": 10.0,
+        "min_value": 0.0,
+        "mostly": 0.99
+      },
+      "meta": {
+        "criticality": "medium",
+        "description": "number_of_adults should be within business logic bounds",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_between"
+    },
+    {
+      "id": "9044f090-7f5f-4e3a-a6b2-054c1822a468",
+      "kwargs": {
+        "column": "number_of_children",
+        "max_value": 10.0,
+        "min_value": 0.0,
+        "mostly": 0.99
+      },
+      "meta": {
+        "criticality": "medium",
+        "description": "number_of_children should be within business logic bounds",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_between"
+    },
+    {
+      "id": "da3a93b4-8462-47e9-afaf-77c2d1d5a185",
+      "kwargs": {
+        "column": "number_of_weekend_nights",
+        "max_value": 20.0,
+        "min_value": 0.0,
+        "mostly": 0.99
+      },
+      "meta": {
+        "criticality": "medium",
+        "description": "number_of_weekend_nights should be within business logic bounds",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_between"
+    },
+    {
+      "id": "39b23156-4b6e-487d-a939-ea4b83a9505c",
+      "kwargs": {
+        "column": "number_of_week_nights",
+        "max_value": 30.0,
+        "min_value": 0.0,
+        "mostly": 0.99
+      },
+      "meta": {
+        "criticality": "medium",
+        "description": "number_of_week_nights should be within business logic bounds",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_between"
+    },
+    {
+      "id": "e5b4d288-2a70-4d17-966c-6b8d12f69a71",
+      "kwargs": {
+        "column": "lead_time",
+        "max_value": 730.0,
+        "min_value": 0.0,
+        "mostly": 0.99
+      },
+      "meta": {
+        "criticality": "medium",
+        "description": "lead_time should be within business logic bounds",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_between"
+    },
+    {
+      "id": "1cc3eeb2-af82-4ebf-842e-f75b5651a150",
+      "kwargs": {
+        "column": "average_price",
+        "max_value": 1000.0,
+        "min_value": 0.0,
+        "mostly": 0.99
+      },
+      "meta": {
+        "criticality": "medium",
+        "description": "average_price should be within business logic bounds",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_between"
+    },
+    {
+      "id": "5a763cbd-7ae1-46cf-8678-ee70cd450ed7",
+      "kwargs": {
+        "column": "special_requests",
+        "max_value": 10.0,
+        "min_value": 0.0,
+        "mostly": 0.99
+      },
+      "meta": {
+        "criticality": "medium",
+        "description": "special_requests should be within business logic bounds",
+        "validation_layer": "bronze"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_between"
+    }
+  ],
+  "id": "f5ff5633-d74d-4828-b5a1-43bb4bcc0bc7",
+  "meta": {
+    "great_expectations_version": "1.7.1"
+  },
+  "name": "bronze_suite",
+  "notes": null
+}

@@ -31,6 +31,9 @@ The system implements a [medallion architecture](https://www.databricks.com/glos
 
 ## Feature Branch History
 
+### `data-validation`
+Implemented Great Expectations to ensure data quality during ingestion and feature engineering. The validation tests focused on `critical` checks. There are a few validation tests with `medium` severity. `medium` severity is used to flag unexpected values that will **not** break the model pipeline.
+
 ### `orchestration`
 Integrated Apache Airflow orchestration for the machine learning pipeline via Docker containers. The system executes a five-task workflow: data import, model training, prediction generation, artifact validation, and cleanup operations. This branch demonstrates production-ready ML pipeline orchestration with proper dependency management and error handling.
 

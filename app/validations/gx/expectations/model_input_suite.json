@@ -1,0 +1,27 @@
+{
+  "expectations": [
+    {
+      "id": "1751ad77-1a62-41b0-a7fd-b570454eab9a",
+      "kwargs": {
+        "column": "is_repeat_guest",
+        "value_set": [
+          0,
+          1
+        ]
+      },
+      "meta": {
+        "criticality": "critical",
+        "description": "OHE columns must be binary",
+        "validation_layer": "model_input"
+      },
+      "severity": "critical",
+      "type": "expect_column_values_to_be_in_set"
+    }
+  ],
+  "id": "83c3400f-0630-4507-994e-82e45412332f",
+  "meta": {
+    "great_expectations_version": "1.7.1"
+  },
+  "name": "model_input_suite",
+  "notes": null
+}
