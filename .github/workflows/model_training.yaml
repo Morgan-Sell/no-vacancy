@@ -59,6 +59,15 @@ jobs:
           # Execute the training workflow
           ./trigger_training.sh
 
+      - name: Show container logs on failure
+        if: failure()
+        run: |
+          echo "🔍 Container startup failed. Showing logs..."
+          docker compose logs --tail=100
+          echo ""
+          echo "📊 Container status:"
+          docker compose ps -a
+
       - name: Verify model artifacts
         run: |
           echo "🔍 Verifying model artifacts in MLflow..."
