@@ -30,6 +30,38 @@ fi
 echo "Starting infrastructure services..."
 docker compose up -d bronze-db silver-db gold-db mlflow-db mlflow
 
+# NEW: Immediate diagnostic output
+echo "=== CONTAINER STATUS CHECK ==="
+sleep 5
+
+# Check each service explicitly by name
+for service_name in bronze-db silver-db gold-db mlflow-db mlflow; do
+    echo "Checking $service_name..."
+
+    # Get container ID first (before it gets masked)
+    CONTAINER_ID=$(docker compose ps -q $service_name 2>/dev/null || echo "none")
+
+    if [ "$CONTAINER_ID" = "none" ]; then
+        echo "  ⚠️  Container not found"
+        continue
+    fi
+
+    # Check if container is running
+    IS_RUNNING=$(docker inspect -f '{{.State.Running}}' $CONTAINER_ID 2>/dev/null || echo "error")
+    EXIT_CODE=$(docker inspect -f '{{.State.ExitCode}}' $CONTAINER_ID 2>/dev/null || echo "N/A")
+
+    echo "  Running: $IS_RUNNING | Exit Code: $EXIT_CODE"
+
+    if [ "$IS_RUNNING" = "false" ] && [ "$EXIT_CODE" != "0" ]; then
+        echo "  ❌ FAILED! Showing last 30 lines of logs:"
+        docker logs --tail=30 $CONTAINER_ID 2>&1
+        echo ""
+    fi
+done
+
+echo "=== END STATUS CHECK ==="
+echo ""
+
 echo "Waiting for services to be ready..."
 for service in bronze-db silver-db gold-db mlflow-db mlflow; do
     echo "Waiting for $service..."
