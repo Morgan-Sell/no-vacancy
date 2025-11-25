@@ -5,7 +5,7 @@ services:
   # Data Infrastructure (Medallion Architecture)
   # -----------------------------------------------
   bronze-db:
-    image: postgres:latest
+    image: postgres:17 # never use 'latest' for CI/CD; reproducibility is required.
     container_name: bronze-db
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -23,7 +23,7 @@ services:
       retries: 5
 
   silver-db:
-    image: postgres:latest
+    image: postgres:17
     container_name: silver-db
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -40,7 +40,7 @@ services:
       retries: 5
 
   gold-db:
-    image: postgres:latest
+    image: postgres:17
     container_name: gold-db
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -61,7 +61,7 @@ services:
   # -----------------------------------------------
 
   mlflow-db:
-    image: postgres:latest
+    image: postgres:17
     container_name: mlflow-db
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -297,7 +297,7 @@ services:
 
   # Test Database (Training Profile Only)
   test-db:
-    image: postgres:latest
+    image: postgres:17
     container_name: test-db
     profiles:
       - training
