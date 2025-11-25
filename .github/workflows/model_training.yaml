@@ -5,6 +5,7 @@ on:
     branches:
       - main
      # - deployment # temporary for testing
+    # Prevents triggering training when changes are made to infra
     paths:
       - 'app/services/**'
       - 'app/schemas/**'
