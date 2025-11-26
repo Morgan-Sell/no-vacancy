@@ -1,5 +1,6 @@
 # Container setup for MLflow
-FROM ghcr.io/mlflow/mlflow:latest
+# Set the version for reproducibility. Critical for CD pipeline.
+FROM ghcr.io/mlflow/mlflow:v2.14.3
 
 # MLflow requires the git binary to log the Git SHA
 RUN apt-get update && \
