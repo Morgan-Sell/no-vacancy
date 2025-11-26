@@ -101,10 +101,6 @@ services:
       "--backend-store-uri", "postgresql://${DB_USER}:${DB_PASSWORD}@mlflow-db:5432/${MLFLOW_DB}",
       "--default-artifact-root", "/mlflow/mlruns",
       "--host", "0.0.0.0",
-      # DNS rebinding is a brower-based attack.
-      # Not a risk for container-to-container communication.
-      # No need to perform a header check.
-      "--host-header-check", "skip"
     ]
 
 # -----------------------------------------------
