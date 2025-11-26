@@ -27,3 +27,7 @@ class Predictions(GoldBase):
             f"probability_canceled={self.probability_canceled}, "
             f"created_at={self.created_at})>"
         )
+
+
+# Alias for consistent interface across db_init.py
+Base = GoldBase

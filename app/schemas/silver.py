@@ -112,3 +112,7 @@ class TestData(SilverBase):
     # is_day_of_week_saturday = Column(Integer, nullable=False)
     # is_day_of_week_tuesday = Column(Integer, nullable=False)
     is_cancellation = Column(Integer, nullable=False)
+
+
+# Alias for consistent interface across db_init.py
+Base = SilverBase

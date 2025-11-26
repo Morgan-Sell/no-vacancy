@@ -30,3 +30,7 @@ class RawData(BronzeBase):
     special_requests = Column(Integer, nullable=True)
     date_of_reservation = Column(String, nullable=True)
     booking_status = Column(String, nullable=False)
+
+
+# Alias for consistent interface across db_init.py
+Base = BronzeBase
