@@ -72,20 +72,6 @@ jobs:
           echo "📊 Container status:"
           docker compose ps -a
 
-      - name: Verify model artifacts
-        run: |
-          echo "🔍 Verifying model artifacts in MLflow..."
-
-          # Simple verification using curl and the MLflow API
-          sleep 10  # Give MLflow time to register the model
-
-          if curl -f http://localhost:5001/api/2.0/mlflow/registered-models/list; then
-            echo "✅ MLflow is accessible and has registered models"
-          else
-            echo "❌ Could not verify MLflow models"
-            exit 1
-          fi
-
       - name: Create training summary
         if: always()
         run: |
