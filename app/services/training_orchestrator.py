@@ -19,6 +19,8 @@ from scripts.import_csv_to_postgres import main as import_data
 from services.mlflow_utils import MLflowArtifactLoader
 from services.trainer import train_pipeline
 
+from app.services import MLFLOW_EXPERIMENT_NAME
+
 logger = get_logger(logger_name=__name__)
 
 
@@ -82,41 +84,32 @@ class TrainingOrchestrator:
         try:
             loader = MLflowArtifactLoader()
 
-            # Check if latest model exists in Production stage
+            # Check for any registered model versions (not production alias)
             try:
-                metadata = loader.get_artifact_metadata("Production")
-                if metadata and metadata.get("version"):
-                    version = metadata["version"]
-                    stage = metadata["stage"]
-                    metrics = metadata.get("metrics", {})
+                all_aliases = loader.list_all_aliases()
 
-                    self.logger.info(
-                        f"✅ Found trained model version: {version} in stage: {stage}"
+                # If not alias exist yet, check if model was registered at all
+                if not all_aliases:
+                    # Check if the model exists in registry
+                    versions = loader.client.search_model_versions(
+                        f"name='{MLFLOW_EXPERIMENT_NAME}'"
                     )
-
-                    # Log key metrics if available
-                    if "test_auc" in metrics:
+                    if versions:
+                        latest = max(versions, key=lambda v: int(v.version))
                         self.logger.info(
-                            f"Model performance - Test AUC:  {metrics['test_auc']:.4f}"
+                            f"✅ Model version {latest.version} registered successfully"
                         )
-                    if "val_auc" in metrics:
-                        self.logger.info(
-                            f"Model performance - Validation Auc:{metrics['val_auc']:.4f}"
-                        )
+                        return True
+                    else:
+                        self.logger.error("❌ No model versions found in registry")
+                        return False
 
-                    return True
-
-                else:
-                    self.logger.error("❌ No model found in Production stage")
-                    return False
+                self.logger.info(f"✅ Model aliases found: {all_aliases}")
+                return True
 
             except Exception as e:
                 self.logger.error(f"❌ Could not validate MLflow artifacts: {e}")
                 return False
-
-        except ImportError as e:
-            self.logger.error(f"❌ MLflowArtifactLoader import failed: {e}")
-            return False
 
         except Exception as e:
             self.logger.error(f"❌ Training result validation failed: {e}")
