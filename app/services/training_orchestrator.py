@@ -16,10 +16,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config import get_logger
 from scripts.import_csv_to_postgres import main as import_data
+from services import MLFLOW_EXPERIMENT_NAME
 from services.mlflow_utils import MLflowArtifactLoader
 from services.trainer import train_pipeline
-
-from app.services import MLFLOW_EXPERIMENT_NAME
 
 logger = get_logger(logger_name=__name__)
 
