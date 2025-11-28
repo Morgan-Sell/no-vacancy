@@ -90,24 +90,6 @@ jobs:
           echo "🧹 Final cleanup..."
           docker compose down -v --remove-orphans || true
 
-  trigger-validation:
-    name: Trigger Model Validation
-    needs: execute-training
-    runs-on: ubuntu-latest
-    if: needs.execute-training.result == 'success'
-
-    steps:
-      - name: Trigger validation workflow
-        uses: actions/github-script@v6
-        with:
-          script: |
-            await github.rest.repos.createDispatchEvent({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              event_type: 'trigger-validation'
-            });
-            console.log('✅ Triggered model validation workflow');
-
   notify-completion:
     name: Notify Training Completion
     needs: execute-training

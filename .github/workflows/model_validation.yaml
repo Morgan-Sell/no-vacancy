@@ -23,10 +23,6 @@ on:
         default: true
         type: boolean
 
-  # Auto-trigger when called by training workflow, i.e., model_training.yaml
-  repository_dispatch:
-    types: [trigger-validation]
-
 env:
   DB_USER: ${{ secrets.DB_USER }}
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
