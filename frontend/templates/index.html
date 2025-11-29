@@ -249,50 +249,397 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Set default date to today
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date_of_reservation').value = today;
+(function() {
+    'use strict';
 
-    // Toggle button functionality
-    document.querySelectorAll('.toggle-group').forEach(function(group) {
-        const buttons = group.querySelectorAll('.toggle-btn');
+    // ---------------------------------------------------------------------------
+    // State
+    // ---------------------------------------------------------------------------
+    let currentDagRunId = null;
+    let pollInterval = null;
+    const POLL_DELAY = 3000;
 
-        buttons.forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                const field = this.dataset.field;
-                const value = this.dataset.value;
-                const hiddenInput = document.getElementById(field);
+    // ---------------------------------------------------------------------------
+    // DOM Elements
+    // ---------------------------------------------------------------------------
+    const form = document.getElementById('booking-form');
+    const predictBtn = document.getElementById('predict-btn');
+    const trainBtn = document.getElementById('train-btn');
+    const resultSection = document.getElementById('result-section');
+    const resultDisplay = document.getElementById('result-display');
+    const resultMeta = document.getElementById('result-meta');
+    const trainingSection = document.getElementById('training-section');
+    const trainingProgress = document.getElementById('training-progress');
 
-                // Update active state
-                buttons.forEach(function(b) {
-                    b.classList.remove('active');
+    // ---------------------------------------------------------------------------
+    // Initialization
+    // ---------------------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set default date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date_of_reservation').value = today;
+
+        // Toggle button functionality
+        initToggleButtons();
+
+        // Form validation feedback
+        initValidation();
+
+        // Event listeners
+        form.addEventListener('submit', handlePrediction);
+        trainBtn.addEventListener('click', handleTraining);
+    });
+
+    function initToggleButtons() {
+        document.querySelectorAll('.toggle-group').forEach(function(group) {
+            const buttons = group.querySelectorAll('.toggle-btn');
+            buttons.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const field = this.dataset.field;
+                    const value = this.dataset.value;
+                    const hiddenInput = document.getElementById(field);
+
+                    buttons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+
+                    if (hiddenInput) {
+                        hiddenInput.value = value;
+                    }
                 });
-                this.classList.add('active');
+            });
+        });
+    }
 
-                // Update hidden input value
-                if (hiddenInput) {
-                    hiddenInput.value = value;
+    function initValidation() {
+        const inputs = form.querySelectorAll('.form-input, .form-select');
+        inputs.forEach(function(input) {
+            input.addEventListener('invalid', function() {
+                this.classList.add('invalid');
+            });
+            input.addEventListener('input', function() {
+                if (this.validity.valid) {
+                    this.classList.remove('invalid');
                 }
             });
         });
-    });
+    }
 
-    // Form validation feedback
-    const form = document.getElementById('booking-form');
-    const inputs = form.querySelectorAll('.form-input, .form-select');
+    // ---------------------------------------------------------------------------
+    // Prediction
+    // ---------------------------------------------------------------------------
+    async function handlePrediction(event) {
+        event.preventDefault();
 
-    inputs.forEach(function(input) {
-        input.addEventListener('invalid', function() {
-            this.classList.add('invalid');
-        });
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
 
-        input.addEventListener('input', function() {
-            if (this.validity.valid) {
-                this.classList.remove('invalid');
+        setButtonLoading(predictBtn, true);
+        hideResult();
+
+        try {
+            const formData = collectFormData();
+            const response = await fetch('/api/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: [formData] })
+            });
+
+            const result = await response.json();
+
+            if (result.error) {
+                showError(result.error);
+            } else if (result.predictions && result.predictions.length > 0) {
+                displayPrediction(result.predictions[0], result.version);
+            } else {
+                showError('No prediction returned');
             }
+        } catch (error) {
+            showError('Failed to connect to prediction service');
+            console.error('Prediction error:', error);
+        } finally {
+            setButtonLoading(predictBtn, false);
+        }
+    }
+
+    function collectFormData() {
+        const formData = new FormData(form);
+        const data = {};
+
+        // Convert FormData to object with proper types
+        for (const [key, value] of formData.entries()) {
+            // Number fields
+            if (['number of adults', 'number of children', 'number of weekend nights',
+                 'number of week nights', 'lead time', 'car parking space', 'repeated',
+                 'P-C', 'P-not-C', 'special requests'].includes(key)) {
+                data[key] = parseInt(value, 10);
+            }
+            // Float field
+            else if (key === 'average price') {
+                data[key] = parseFloat(value);
+            }
+            // Date field - format as MM/DD/YYYY for the model
+            else if (key === 'date of reservation') {
+                const date = new Date(value);
+                data[key] = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+            }
+            // String fields
+            else {
+                data[key] = value;
+            }
+        }
+
+        return data;
+    }
+
+    function displayPrediction(probability, version) {
+        const percentage = (probability * 100).toFixed(1);
+        let riskLevel, riskClass;
+
+        if (probability > 0.7) {
+            riskLevel = 'HIGH';
+            riskClass = 'risk-high';
+        } else if (probability > 0.4) {
+            riskLevel = 'MODERATE';
+            riskClass = 'risk-moderate';
+        } else {
+            riskLevel = 'LOW';
+            riskClass = 'risk-low';
+        }
+
+        resultDisplay.innerHTML = `
+            <div class="result-card ${riskClass}">
+                <span class="percentage">${percentage}%</span>
+                <span class="risk-label">${riskLevel} RISK</span>
+            </div>
+        `;
+
+        resultMeta.textContent = `Model version: ${version}`;
+        resultSection.style.display = 'block';
+        resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ---------------------------------------------------------------------------
+    // Training
+    // ---------------------------------------------------------------------------
+    async function handleTraining() {
+        if (currentDagRunId && pollInterval) {
+            // Training already in progress
+            return;
+        }
+
+        setButtonLoading(trainBtn, true);
+        showTrainingSection();
+
+        try {
+            const response = await fetch('/api/train', { method: 'POST' });
+            const result = await response.json();
+
+            if (result.error) {
+                showTrainingError(result.error);
+                setButtonLoading(trainBtn, false);
+            } else {
+                currentDagRunId = result.dag_run_id;
+                renderTrainingProgress([], 'queued');
+                startPolling();
+            }
+        } catch (error) {
+            showTrainingError('Failed to connect to training service');
+            setButtonLoading(trainBtn, false);
+            console.error('Training trigger error:', error);
+        }
+    }
+
+    function startPolling() {
+        pollInterval = setInterval(pollTrainingStatus, POLL_DELAY);
+        // Also poll immediately
+        pollTrainingStatus();
+    }
+
+    function stopPolling() {
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+        currentDagRunId = null;
+        setButtonLoading(trainBtn, false);
+    }
+
+    async function pollTrainingStatus() {
+        if (!currentDagRunId) return;
+
+        try {
+            const [statusRes, tasksRes] = await Promise.all([
+                fetch(`/api/train/status/${encodeURIComponent(currentDagRunId)}`),
+                fetch(`/api/train/tasks/${encodeURIComponent(currentDagRunId)}`)
+            ]);
+
+            const status = await statusRes.json();
+            const tasks = await tasksRes.json();
+
+            if (status.error || tasks.error) {
+                showTrainingError(status.error || tasks.error);
+                stopPolling();
+                return;
+            }
+
+            renderTrainingProgress(tasks.tasks || [], status.state, status.start_date);
+
+            // Check terminal states
+            if (status.state === 'success') {
+                stopPolling();
+                showTrainingSuccess();
+            } else if (status.state === 'failed') {
+                stopPolling();
+                showTrainingFailed();
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+            // Don't stop polling on transient errors
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Training UI
+    // ---------------------------------------------------------------------------
+    const TASK_ORDER = [
+        'import_csv_data',
+        'validate_bronze_data',
+        'train_model',
+        'validate_model',
+        'register_model'
+    ];
+
+    const TASK_LABELS = {
+        'import_csv_data': 'Import CSV Data',
+        'validate_bronze_data': 'Validate Bronze Data',
+        'train_model': 'Train Model',
+        'validate_model': 'Validate Model',
+        'register_model': 'Register Model'
+    };
+
+    function renderTrainingProgress(tasks, dagState, startDate) {
+        // Create lookup by task_id
+        const taskMap = {};
+        tasks.forEach(t => taskMap[t.task_id] = t);
+
+        // Build HTML for each task in order
+        let html = '';
+        TASK_ORDER.forEach(taskId => {
+            const task = taskMap[taskId];
+            const state = task ? (task.state || 'pending') : 'pending';
+            const icon = getTaskIcon(state);
+            const label = TASK_LABELS[taskId] || taskId;
+
+            html += `
+                <div class="task-item">
+                    <div class="task-icon ${state}">${icon}</div>
+                    <span class="task-name ${state === 'pending' ? 'pending' : ''}">${label}</span>
+                    <span class="task-status ${state}">${formatState(state)}</span>
+                </div>
+            `;
         });
-    });
-});
+
+        // Status bar
+        const statusText = formatState(dagState);
+        const timeText = startDate ? `Started: ${formatTime(startDate)}` : '';
+
+        html += `
+            <div class="training-status-bar">
+                <span class="status-label">Status:</span>
+                <span class="status-value">${statusText}</span>
+                <span class="status-time">${timeText}</span>
+            </div>
+        `;
+
+        trainingProgress.innerHTML = html;
+    }
+
+    function getTaskIcon(state) {
+        switch (state) {
+            case 'success': return '✓';
+            case 'running': return '◐';
+            case 'failed': return '✗';
+            case 'upstream_failed': return '⊘';
+            default: return '○';
+        }
+    }
+
+    function formatState(state) {
+        if (!state) return 'Pending';
+        return state.charAt(0).toUpperCase() + state.slice(1).replace(/_/g, ' ');
+    }
+
+    function formatTime(isoString) {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        return date.toLocaleTimeString();
+    }
+
+    function showTrainingSection() {
+        trainingSection.style.display = 'block';
+        trainingProgress.innerHTML = '<p class="text-center">Initiating training pipeline...</p>';
+        trainingSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function showTrainingSuccess() {
+        const statusBar = trainingProgress.querySelector('.training-status-bar');
+        if (statusBar) {
+            statusBar.innerHTML = `
+                <span class="status-label">Status:</span>
+                <span class="status-value" style="color: var(--green-dark);">✓ Complete</span>
+                <span class="status-time">Model registered successfully</span>
+            `;
+        }
+    }
+
+    function showTrainingFailed() {
+        const statusBar = trainingProgress.querySelector('.training-status-bar');
+        if (statusBar) {
+            statusBar.innerHTML = `
+                <span class="status-label">Status:</span>
+                <span class="status-value" style="color: var(--terracotta);">✗ Failed</span>
+                <span class="status-time">Check Airflow logs for details</span>
+            `;
+        }
+    }
+
+    function showTrainingError(message) {
+        trainingProgress.innerHTML = `
+            <div class="training-error">
+                <p style="color: var(--terracotta); text-align: center;">⚠️ ${message}</p>
+            </div>
+        `;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Utilities
+    // ---------------------------------------------------------------------------
+    function setButtonLoading(button, loading) {
+        button.disabled = loading;
+        if (loading) {
+            button.dataset.originalText = button.innerHTML;
+            button.innerHTML = '⏳ Working...';
+        } else if (button.dataset.originalText) {
+            button.innerHTML = button.dataset.originalText;
+        }
+    }
+
+    function hideResult() {
+        resultSection.style.display = 'none';
+    }
+
+    function showError(message) {
+        resultDisplay.innerHTML = `
+            <div class="result-card" style="border-color: var(--terracotta); color: var(--terracotta);">
+                <span style="font-size: 1.2rem;">⚠️ ${message}</span>
+            </div>
+        `;
+        resultMeta.textContent = '';
+        resultSection.style.display = 'block';
+    }
+
+})();
 </script>
 {% endblock %}

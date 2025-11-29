@@ -284,6 +284,15 @@ services:
       mlflow:
         condition: service_started
     environment:
+      # Database connection details
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Database names
+      BRONZE_DB: ${BRONZE_DB}
+      SILVER_DB: ${SILVER_DB}
+      GOLD_DB: ${GOLD_DB}
+      # Host configurations
       BRONZE_DB_HOST: bronze-db
       SILVER_DB_HOST: silver-db
       GOLD_DB_HOST: gold-db
