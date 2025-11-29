@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NoVacancy{% endblock %}</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Background Decorative Elements -->
+    <div class="bg-decorations">
+        <!-- Palm Leaves -->
+        <svg class="palm-leaf palm-leaf-tl" viewBox="0 0 200 300">
+            <path d="M100 300 C100 300 95 200 60 150 C25 100 0 80 0 80 C0 80 50 90 80 120 C100 140 100 300 100 300Z" fill="#2d5a47"/>
+            <path d="M100 300 C100 300 105 200 140 150 C175 100 200 80 200 80 C200 80 150 90 120 120 C100 140 100 300 100 300Z" fill="#3a7359"/>
+            <path d="M100 300 C100 300 90 220 50 180 C10 140 -20 130 -20 130 C-20 130 30 140 70 170 C100 195 100 300 100 300Z" fill="#4a8d6a"/>
+        </svg>
+
+        <svg class="palm-leaf palm-leaf-tr" viewBox="0 0 200 300">
+            <path d="M100 300 C100 300 95 200 60 150 C25 100 0 80 0 80 C0 80 50 90 80 120 C100 140 100 300 100 300Z" fill="#2d5a47"/>
+            <path d="M100 300 C100 300 105 200 140 150 C175 100 200 80 200 80 C200 80 150 90 120 120 C100 140 100 300 100 300Z" fill="#3a7359"/>
+            <path d="M100 300 C100 300 110 220 150 180 C190 140 220 130 220 130 C220 130 170 140 130 170 C100 195 100 300 100 300Z" fill="#5a9d7a"/>
+        </svg>
+
+        <!-- Fan Palms -->
+        <svg class="fan-palm fan-palm-bl" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="80" fill="none" stroke="#3a7359" stroke-width="3" stroke-dasharray="8 12"/>
+            <path d="M100 180 Q100 100 100 20" stroke="#3a7359" stroke-width="6" fill="none"/>
+            <path d="M100 180 Q60 100 30 40" stroke="#3a7359" stroke-width="6" fill="none"/>
+            <path d="M100 180 Q140 100 170 40" stroke="#3a7359" stroke-width="6" fill="none"/>
+            <path d="M100 180 Q40 120 10 80" stroke="#4a8d6a" stroke-width="5" fill="none"/>
+            <path d="M100 180 Q160 120 190 80" stroke="#4a8d6a" stroke-width="5" fill="none"/>
+        </svg>
+
+        <svg class="fan-palm fan-palm-tr" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="80" fill="none" stroke="#3a7359" stroke-width="3" stroke-dasharray="8 12"/>
+            <path d="M100 180 Q100 100 100 20" stroke="#3a7359" stroke-width="6" fill="none"/>
+            <path d="M100 180 Q60 100 30 40" stroke="#3a7359" stroke-width="6" fill="none"/>
+            <path d="M100 180 Q140 100 170 40" stroke="#3a7359" stroke-width="6" fill="none"/>
+            <path d="M100 180 Q40 120 10 80" stroke="#4a8d6a" stroke-width="5" fill="none"/>
+            <path d="M100 180 Q160 120 190 80" stroke="#4a8d6a" stroke-width="5" fill="none"/>
+        </svg>
+
+        <!-- Decorative Monkeys -->
+        <svg class="monkey monkey-tr" viewBox="0 0 100 80">
+            <ellipse cx="50" cy="35" rx="25" ry="20" fill="#8b5a3c"/>
+            <circle cx="35" cy="25" r="12" fill="#a06b4a"/>
+            <circle cx="65" cy="25" r="12" fill="#a06b4a"/>
+            <ellipse cx="50" cy="40" rx="10" ry="8" fill="#c9956c"/>
+            <path d="M30 55 Q50 75 70 55" stroke="#8b5a3c" stroke-width="6" fill="none"/>
+        </svg>
+
+        <svg class="monkey monkey-bl" viewBox="0 0 100 80">
+            <ellipse cx="50" cy="35" rx="25" ry="20" fill="#8b5a3c"/>
+            <circle cx="35" cy="25" r="12" fill="#a06b4a"/>
+            <circle cx="65" cy="25" r="12" fill="#a06b4a"/>
+            <ellipse cx="50" cy="40" rx="10" ry="8" fill="#c9956c"/>
+            <path d="M30 55 Q50 75 70 55" stroke="#8b5a3c" stroke-width="6" fill="none"/>
+        </svg>
+    </div>
+
+    <!-- Texture Overlay -->
+    <div class="texture-overlay"></div>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-ornament">
+                <span class="ornament-line"></span>
+                <span class="ornament-star">✦</span>
+                <span class="ornament-line"></span>
+            </div>
+            <h1 class="logo">NoVacancy</h1>
+            <p class="tagline">We see your departure before you do</p>
+            <div class="header-underline"></div>
+        </header>
+
+        <main class="main">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="footer">
+            <div class="footer-brand">
+                <span>🌴</span>
+                <span class="footer-tagline">The Oracle of Occupancy</span>
+                <span>🌺</span>
+            </div>
+            <p class="footer-copyright">© 2025 NoVacancy</p>
+        </footer>
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
