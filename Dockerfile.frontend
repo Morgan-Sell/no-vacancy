@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies first (layer caching)
+COPY requirements/frontend.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY frontend/ .
+
+# Non-root user for security
+RUN useradd --create-home appuser && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 5050
+
+# Gunicorn with 2 workers (suitable for I/O proxy work)
+CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "2", "--access-logfile", "-", "app:app"]

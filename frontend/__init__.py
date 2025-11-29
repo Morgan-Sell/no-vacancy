@@ -1,0 +1,1 @@
+"""NoVacancy Frontend Package."""

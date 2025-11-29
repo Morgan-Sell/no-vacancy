@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}NoVacancy — Cancellation Prediction{% endblock %}
+
+{% block content %}
+<section class="card">
+    <div class="card-header">
+        <h2 class="card-title">Reservation Details</h2>
+        <p class="card-subtitle">Enter booking information to predict cancellation likelihood</p>
+    </div>
+
+    <!-- Form will be added in Branch 2 -->
+    <div class="placeholder">
+        <p>🌴 Booking form coming soon... 🌺</p>
+    </div>
+
+    <div class="card-actions">
+        <button type="button" class="btn btn-secondary" id="train-btn">
+            🔄 Train Model
+        </button>
+        <button type="button" class="btn btn-primary" id="predict-btn">
+            🔮 Predict Cancellation
+        </button>
+    </div>
+</section>
+
+<section class="card result-section" id="result-section" style="display: none;">
+    <h2 class="card-title text-center">Cancellation Risk Assessment</h2>
+    <p class="card-subtitle text-center">Based on historical patterns and guest profile</p>
+    <div class="result-display" id="result-display">
+        <!-- Prediction result will be injected here -->
+    </div>
+</section>
+
+<section class="card training-section" id="training-section" style="display: none;">
+    <h2 class="card-title text-center">Training Progress</h2>
+    <p class="card-subtitle text-center">Model retraining pipeline status</p>
+    <div class="training-progress" id="training-progress">
+        <!-- Training progress will be injected here -->
+    </div>
+</section>
+{% endblock %}
