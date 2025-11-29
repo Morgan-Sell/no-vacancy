@@ -294,23 +294,23 @@ services:
 # -------------------------------------
 # Frontend
 # -------------------------------------
-frontend:
-  build:
-    context: .
-    dockerfile: Dockerfile.frontend
-  container_name: novacancy-frontend
-  ports:
-    - "5050:5050"
-  environment:
-    FASTAPI_URL: http://inference-container:8000
-    AIRFLOW_URL: http://airflow-webserver:8080
-    AIRFLOW_USERNAME: homer
-    AIRFLOW_PASSWORD: waffles
-  depends_on:
-    - inference-container
-  profiles:
-    - airflow
-  restart: unless-stopped
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: novacancy-frontend
+    ports:
+      - "5050:5050"
+    environment:
+      FASTAPI_URL: http://inference-container:8000
+      AIRFLOW_URL: http://airflow-webserver:8080
+      AIRFLOW_USERNAME: homer
+      AIRFLOW_PASSWORD: waffles
+    depends_on:
+      - inference-container
+    profiles:
+      - airflow
+    restart: unless-stopped
 
 
 
