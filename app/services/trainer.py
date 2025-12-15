@@ -35,6 +35,7 @@ from services.preprocessing import NoVacancyDataProcessing
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -73,6 +74,9 @@ async def save_to_silver_db(X_train, y_train, X_test, y_test, session: AsyncSess
     """
     Save the preprocessed data to the Silver database.
     """
+    # Clear existing data for idempotent reruns
+    await session.execute(text("TRUNCATE TABLE train_validation_data, test_data"))
+
     # Need to rename so original dataframes are not modified throughout the module
     X_train_db = X_train.copy()
     X_test_db = X_test.copy()
