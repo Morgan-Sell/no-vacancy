@@ -37,6 +37,12 @@ def get_console_handler():
 
 
 def get_file_handler():
+    # Skip file logging in Airflow - stdout auto-captures it
+    # 12-factor principle: treat logs as event streams.
+    # App writes to stdout, environment decides where logs go.
+    if os.getenv("AIRFLOW_CTX_DAG_ID"):
+        return logging.NullHandler()
+
     file_handler = TimedRotatingFileHandler(LOG_FILE, when="midnight")
     file_handler.setFormatter(FORMATTER)
     file_handler.setLevel(logging.WARNING)

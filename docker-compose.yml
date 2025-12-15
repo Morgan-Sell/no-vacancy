@@ -148,7 +148,7 @@ services:
     container_name: airflow-webserver
     depends_on:
       airflow-init:
-        condition: service_healthy
+        condition: service_completed_successfully # Use for init containers b/c they exit after completion
       bronze-db:
         condition: service_healthy
       silver-db:
