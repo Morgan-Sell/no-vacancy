@@ -187,7 +187,7 @@ async def train_pipeline():
         client.transition_model_version_stage(
             name=MLFLOW_EXPERIMENT_NAME,
             version=latest_version,
-            stage="Production",
+            stage="Staging",
         )
 
         # Log metrics

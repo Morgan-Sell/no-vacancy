@@ -77,13 +77,12 @@ def validate_model_artifacts(**context):
     import requests
 
     try:
-        # Get the latest production model via MLflow REST API
+        # Get the latest staging model
         response = requests.get(
-            f"{MLFLOW_TRACKING_URI}/api/2.0/mlflow/model-versions/search",
+            f"{MLFLOW_TRACKING_URI}/api/2.0/mlflow/registered-models/get-latest-versions",
             params={
-                "filter": f"name={MLFLOW_EXPERIMENT_NAME}",
-                "max_results": 1,
-                "order_by": ["version_number DESC"],
+                "name": MLFLOW_EXPERIMENT_NAME,
+                "stages": ["Staging"],
             },
         )
 
@@ -93,22 +92,23 @@ def validate_model_artifacts(**context):
         data = response.json()
         model_versions = data.get("model_versions", [])
 
-        data = response.json()
-        model_versions = data.get("model_versions", [])
-
         if not model_versions:
-            raise Exception("No model versions found in MLflow")
+            raise Exception("No model in Staging to validate")
 
-        latest_version = model_versions[0]
-        run_id = latest_version["run_id"]
+        staging_version = model_versions[0]
+        run_id = staging_version["run_id"]
+        version = staging_version["version"]
 
         # Get run metrics
         metrics_response = requests.get(
-            f"{MLFLOW_TRACKING_URI}/api/2.0/mlflow/runs/get", params={"run_id": run_id}
+            f"{MLFLOW_TRACKING_URI}/api/2.0/mlflow/runs/get",
+            params={"run_id": run_id},
         )
 
         if metrics_response.status_code != 200:  # noqa: PLR2004
-            raise Exception(f"Failed to get run metrics: {metrics_response.status}")
+            raise Exception(
+                f"Failed to get run metrics: {metrics_response.status_code}"
+            )
 
         run_data = metrics_response.json()
         metrics = run_data["run"]["data"]["metrics"]
@@ -116,18 +116,32 @@ def validate_model_artifacts(**context):
         test_auc = float(metrics.get("test_auc", 0))
         val_auc = float(metrics.get("val_auc", 0))
 
-        print(f"Model Version: {latest_version['version']}")
+        print(f"Model Version: {version}")
         print(f"Test AUC: {test_auc}")
         print(f"Validation AUC: {val_auc}")
         print(f"Required threshold: {MLFLOW_AUC_THRESHOLD}")
 
         if test_auc < MLFLOW_AUC_THRESHOLD:
             raise Exception(
-                f"Model Test AUC ({test_auc}) below threshold ({MLFLOW_AUC_THRESHOLD})"
+                f"Model AUC ({test_auc}) below threshold ({MLFLOW_AUC_THRESHOLD}). "
+                f"Model remains in Staging for DS review."
             )
 
-        print(f"✅ Validation passed - Version: {latest_version['version']}")
-        return "Validation passed"
+        # Promote to Production
+        promote_response = requests.post(
+            f"{MLFLOW_TRACKING_URI}/api/2.0/mlflow/model-versions/transition-stage",
+            json={
+                "name": MLFLOW_EXPERIMENT_NAME,
+                "version": version,
+                "stage": "Production",
+            },
+        )
+
+        if promote_response.status_code != 200:  # noqa: PLR2004
+            raise Exception(f"Failed to promote model: {promote_response.status_code}")
+
+        print(f"✅ Model v{version} promoted to Production")
+        return "Validation passed, model promoted"
 
     except requests.RequestException as e:
         raise Exception(f"Failed to connect to MLflow: {e}") from e

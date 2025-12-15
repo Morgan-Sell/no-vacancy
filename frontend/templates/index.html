@@ -505,18 +505,18 @@
     // ---------------------------------------------------------------------------
     const TASK_ORDER = [
         'import_csv_data',
-        'validate_bronze_data',
-        'train_model',
-        'validate_model',
-        'register_model'
+        'train_and_register_model',
+        'generate_predictions',
+        'validate_model_artifacts',
+        'notify_completion'
     ];
 
     const TASK_LABELS = {
         'import_csv_data': 'Import CSV Data',
-        'validate_bronze_data': 'Validate Bronze Data',
-        'train_model': 'Train Model',
-        'validate_model': 'Validate Model',
-        'register_model': 'Register Model'
+        'train_and_register_model': 'Train & Register Model',
+        'generate_predictions': 'Generate Test Predictions',
+        'validate_model_artifacts': 'Validate Model',
+        'notify_completion': 'Complete'
     };
 
     function renderTrainingProgress(tasks, dagState, startDate) {
