@@ -84,7 +84,9 @@ def load_pipeline_and_processor_from_mlflow(stage: str = "Production"):
     return pipeline, processor
 
 
-async def make_prediction(test_data: pd.DataFrame, already_processed: bool = False):
+async def make_prediction(
+    test_data: pd.DataFrame, already_processed: bool = False, stage: str = "Production"
+):
     try:
         if not isinstance(test_data, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame.")
@@ -95,9 +97,7 @@ async def make_prediction(test_data: pd.DataFrame, already_processed: bool = Fal
             )
 
         # Load pipeline & processor artifacts
-        pipeline, processor = load_pipeline_and_processor_from_mlflow(
-            stage="Production"
-        )
+        pipeline, processor = load_pipeline_and_processor_from_mlflow(stage=stage)
 
         # If data is preprocessed, skip processor.transform()
         if already_processed:

@@ -66,7 +66,7 @@ def generate_predictions(**context):
         data = await load_test_data(silver_db.create_session()(), TestData)
 
         # Generate predictions and save to Gold DB
-        await make_prediction(data, already_processed=True)
+        await make_prediction(data, already_processed=True, stage="Staging")
 
     asyncio.run(run_predictions())
 
