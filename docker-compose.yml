@@ -181,6 +181,10 @@ services:
       - ./app/dags:/opt/airflow/dags:ro
       - ./data:/opt/airflow/project/data:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      # Grant Airflow write access to the Mlflow artifact directory.
+      # In production, a remote artifact store (S3, GCS) would be used.
+      # Containers wouldn't need shared filesystem access.
+      - ./mlruns:/mlflow/mlruns
     ports:
       - "8080:8080"
     command: webserver
@@ -219,6 +223,10 @@ services:
       - ./app/dags:/opt/airflow/dags:ro
       - ./data:/opt/airflow/project/data:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      # Grant Airflow write access to the Mlflow artifact directory.
+      # In production, a remote artifact store (S3, GCS) would be used.
+      # Containers wouldn't need shared filesystem access.
+      - ./mlruns:/mlflow/mlruns
     command: scheduler
     profiles:
       - airflow
