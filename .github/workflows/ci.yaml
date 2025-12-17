@@ -79,6 +79,18 @@ jobs:
           pytest --cov=app --cov-report=xml --cov-report=html -q \
                  --ignore=app/tests/test_dags
 
+      - name: Code Coverage Summary
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: coverage.xml
+          badge: true
+          format: markdown
+          output: both
+          thresholds: '60 80'
+
+      - name: Write Coverage to Job Summary
+        run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+
       - name: Build custom Airflow image for testing
         run: |
           docker build -f Dockerfile.airflow -t test-airflow:latest .
