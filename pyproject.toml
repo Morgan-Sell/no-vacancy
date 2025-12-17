@@ -33,7 +33,19 @@ addopts = [
 [tool.coverage.run]
 branch = true
 source = ["app"]
-omit = ["app/main.py"]
+omit = [
+    "app/main.py",
+    "app/tests/*",
+    "app/dags/*",
+    "*/__init__.py"
+]
+
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
 
 
 [tool.ruff]
