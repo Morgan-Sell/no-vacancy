@@ -148,7 +148,7 @@ services:
     container_name: airflow-webserver
     depends_on:
       airflow-init:
-        condition: service_healthy
+        condition: service_completed_successfully # Use for init containers b/c they exit after completion
       bronze-db:
         condition: service_healthy
       silver-db:
@@ -181,6 +181,10 @@ services:
       - ./app/dags:/opt/airflow/dags:ro
       - ./data:/opt/airflow/project/data:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      # Grant Airflow write access to the Mlflow artifact directory.
+      # In production, a remote artifact store (S3, GCS) would be used.
+      # Containers wouldn't need shared filesystem access.
+      - ./mlruns:/mlflow/mlruns
     ports:
       - "8080:8080"
     command: webserver
@@ -219,6 +223,10 @@ services:
       - ./app/dags:/opt/airflow/dags:ro
       - ./data:/opt/airflow/project/data:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      # Grant Airflow write access to the Mlflow artifact directory.
+      # In production, a remote artifact store (S3, GCS) would be used.
+      # Containers wouldn't need shared filesystem access.
+      - ./mlruns:/mlflow/mlruns
     command: scheduler
     profiles:
       - airflow
@@ -283,7 +291,18 @@ services:
         condition: service_healthy
       mlflow:
         condition: service_started
+    volumes:
+      - ./mlruns:/mlflow/mlruns
     environment:
+      # Database connection details
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Database names
+      BRONZE_DB: ${BRONZE_DB}
+      SILVER_DB: ${SILVER_DB}
+      GOLD_DB: ${GOLD_DB}
+      # Host configurations
       BRONZE_DB_HOST: bronze-db
       SILVER_DB_HOST: silver-db
       GOLD_DB_HOST: gold-db

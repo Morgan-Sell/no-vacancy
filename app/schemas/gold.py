@@ -1,13 +1,11 @@
 from config import __model_version__
 from sqlalchemy import Column, Date, Float, Integer, String
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import declarative_base
+
+GoldBase = declarative_base()
 
 
-class GoldBase(DeclarativeBase):
-    pass
-
-
-class Predictions(GoldBase):
+class Predictions(GoldBase):  # type: ignore[valid-type,misc]
     __tablename__ = "predictions"
 
     booking_id = Column(String, primary_key=True, nullable=False)

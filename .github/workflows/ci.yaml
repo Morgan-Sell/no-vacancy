@@ -76,8 +76,24 @@ jobs:
 
       - name: Run tests and code coverage
         run: |
-          pytest --cov=app --cov-report=xml --cov-report=html -q \
-                 --ignore=app/tests/test_dags
+          pytest --cov=app \
+          --cov-report=xml \
+          --cov-report=html \
+          --ignore=app/tests/test_dags \
+          --cov-fail-under=65 \
+          -q
+
+      - name: Code Coverage Summary
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: coverage.xml
+          badge: true
+          format: markdown
+          output: both
+          thresholds: '60 80'
+
+      - name: Write Coverage to Job Summary
+        run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
       - name: Build custom Airflow image for testing
         run: |

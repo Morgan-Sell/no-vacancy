@@ -1,12 +1,10 @@
 from sqlalchemy import Column, Float, Integer, String
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import declarative_base
+
+SilverBase = declarative_base()
 
 
-class SilverBase(DeclarativeBase):
-    pass
-
-
-class TrainValidationData(SilverBase):
+class TrainValidationData(SilverBase):  # type: ignore[valid-type,misc]
     __tablename__ = "train_validation_data"
 
     booking_id = Column(String, primary_key=True)
@@ -60,7 +58,7 @@ class TrainValidationData(SilverBase):
     is_cancellation = Column(Integer, nullable=False)
 
 
-class TestData(SilverBase):
+class TestData(SilverBase):  # type: ignore[valid-type,misc]
     __tablename__ = "test_data"
 
     booking_id = Column(String, primary_key=True)

@@ -1,12 +1,10 @@
 from sqlalchemy import Column, Float, Integer, String
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import declarative_base
+
+BronzeBase = declarative_base()
 
 
-class BronzeBase(DeclarativeBase):
-    pass
-
-
-class RawData(BronzeBase):
+class RawData(BronzeBase):  # type: ignore[valid-type,misc]
     """
     Bronze table for raw data storage.
     """

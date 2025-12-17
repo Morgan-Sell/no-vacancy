@@ -18,3 +18,4 @@ COPY app/ /opt/airflow/project/app/
 # Set Python path so DAGs can import modules
 ENV PYTHONPATH="/opt/airflow/project/app"
 ENV AIRFLOW__CORE__LOAD_EXAMPLES=false
+ENV AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth

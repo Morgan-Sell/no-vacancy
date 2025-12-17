@@ -333,6 +333,33 @@ def booking_data():
 
 
 @pytest.fixture(scope="function")
+def frontend_booking_payload():
+    """
+    Simulates exact payload from frontend form
+    (spaces in keys, original CSV names).
+    """
+    return {
+        "Booking_ID": "WEB12345678",
+        "number of adults": 2,
+        "number of children": 0,
+        "number of weekend nights": 1,
+        "number of week nights": 2,
+        "type of meal": "Meal Plan 1",
+        "car parking space": 0,
+        "room type": "Room_Type 2",
+        "lead time": 30,
+        "market segment type": "Online",
+        "repeated": 0,
+        "P-C": 0,
+        "P-not-C": 0,
+        "special requests": 1,
+        "average price": 100.0,
+        "date of reservation": "12/17/2025",
+        "booking status": "Not_Canceled",
+    }
+
+
+@pytest.fixture(scope="function")
 def preprocessed_booking_data(booking_data):
     """Returns preprocessed booking data ready for NoVacancyPipeline."""
     processor = NoVacancyDataProcessing(

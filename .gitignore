@@ -183,3 +183,4 @@ models/
 # Great Expectations
 app/validations/gx/uncommitted/
 app/validations/gx/expectations/.ge_store_backend_id
+mlruns/
