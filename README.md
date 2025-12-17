@@ -2,7 +2,97 @@
 NoVacancy is a machine learning application that predicts hotel reservation cancellations using historical booking data. The dataset is sourced from [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S2352340918315191) and contains approximately 36,000 reservations from two hotels (one resort, one urban) with arrival dates between July 1, 2015, and August 31, 2017. The dataset includes 17 features, with cancellation status serving as the binary target variable.
 
 
-### Technology Stack
+## Running the Application
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (v4.0+)
+- Git
+
+### Quick Start
+
+1. **Clone the repository**
+```bash
+   git clone https://github.com/Morgan-Sell/no-vacancy.git
+   cd no-vacancy
+```
+
+2. **Create environment file**
+```bash
+   cp .env.example .env
+```
+   Update `.env` with your preferred database credentials or use the defaults.
+
+3. **Start the application**
+```bash
+   docker compose --profile airflow up -d --build
+```
+   First build takes ~3-5 minutes. Subsequent starts are faster.
+
+4. **Verify all services are running**
+```bash
+   docker ps --format "table {{.Names}}\t{{.Status}}"
+```
+   You should see: `novacancy-frontend`, `novacancy-inference`, `mlflow`, `airflow-webserver`, `airflow-scheduler`, and the database containers all with "Up" status.
+
+### Accessing the Services
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| Frontend | http://localhost:5050 | Booking form & predictions |
+| Airflow | http://localhost:8080 | Training pipeline orchestration |
+| MLflow | http://localhost:5001 | Model registry & experiment tracking |
+| FastAPI | http://localhost:8000/docs | Inference API documentation |
+
+**Airflow credentials:** `homer` / `waffles`
+
+### Training a Model
+
+Before making predictions, you need to train a model:
+
+1. Navigate to http://localhost:5050
+2. Click **Train Model**
+3. Watch the training progress panel update in real-time
+
+<p align="center">
+   <img src="./img/model_train_progress.png" alt="Training Progress" width="300"/>
+</p>
+
+4. (Optional) Monitor detailed progress in Airflow at http://localhost:8080
+
+<p align="center">
+   <img src="./img/airflow_dashboard_success.png" alt="Airflow Dashboard Succes" width="300"/>
+</p>
+
+5. Verify model registration in MLflow at http://localhost:5001
+
+<p align="center">
+   <img src="./img/mlflow_dashboard.png" alt="MLflow Dashboard" width="300"/>
+</p>
+
+### Making Predictions
+
+1. Navigate to http://localhost:5050
+2. Fill out the reservation form with guest and booking details
+3. Click **Predict Cancellation**
+4. View the cancellation risk assessment
+
+<p align="center">
+   <img src="./img/cancellation_prediction.png" alt="Cancellation Prediction" width="300"/>
+</p>
+
+### Stopping the Application
+```bash
+docker compose --profile airflow down
+```
+
+To also remove volumes (database data):
+```bash
+docker compose --profile airflow down -v
+```
+
+
+## Technology Stack
 NoVacancy is built on a modular, containerized architecture featuring:
 
 - **API Framework**: FastAPI for RESTful prediction services
@@ -16,7 +106,7 @@ NoVacancy is built on a modular, containerized architecture featuring:
 - **Model Monitoring**: Evidently AI for drift detection and performance monitoring (planned)
 
 
-### Data Science Foundation
+## Data Science Foundation
 The machine learning pipeline and preprocessing strategies are based on comprehensive exploratory data analysis available in the [EDA notebook](https://github.com/Morgan-Sell/no-vacancy/blob/analysis/no_vacancy_eda.ipynb).
 
 ## System Architecture
