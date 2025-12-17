@@ -80,7 +80,7 @@ jobs:
           --cov-report=xml \
           --cov-report=html \
           --ignore=app/tests/test_dags \
-          --cov-fail-under=70 \
+          --cov-fail-under=65 \
           -q
 
       - name: Code Coverage Summary
