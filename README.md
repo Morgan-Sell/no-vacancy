@@ -31,6 +31,25 @@ The system implements a [medallion architecture](https://www.databricks.com/glos
 
 ## Feature Branch History
 
+### `feat/api-integration`
+Implements end-to-end frontend integration connecting the Flask UI to FastAPI inference and Airflow training orchestration.
+
+**Frontend**
+- Flask proxy routes for predictions (`/api/predict`) and training (`/api/train`)
+- Real-time training progress polling with task-level status updates
+- Tropical "Oracle of Occupancy" UI with White Lotus-inspired design
+
+**MLOps Pipeline**
+- Gated model promotion workflow: models register to Staging, auto-promote to Production only after validation passes AUC threshold
+- Idempotent Silver DB writes (TRUNCATE before insert) for reliable pipeline reruns
+- MLflow artifact volume mounts shared across Airflow and inference containers
+
+**Infrastructure Fixes**
+- Airflow init container dependency (`service_completed_successfully` for one-shot containers)
+- 12-factor logging: stdout in Airflow context, file logging elsewhere
+- Prediction endpoint returns cancellation probability (not binary outcome)
+
+
 ### `data-validation`
 Implemented Great Expectations to ensure data quality during ingestion and feature engineering. The validation tests focused on `critical` checks. There are a few validation tests with `medium` severity. `medium` severity is used to flag unexpected values that will **not** break the model pipeline.
 

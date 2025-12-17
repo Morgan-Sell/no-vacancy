@@ -291,6 +291,8 @@ services:
         condition: service_healthy
       mlflow:
         condition: service_started
+    volumes:
+      - ./mlruns:/mlflow/mlruns
     environment:
       # Database connection details
       DB_PORT: ${DB_PORT}

@@ -124,3 +124,42 @@ async def test_make_prediction_integration_mock(
         "probability_not_canceled",
         "probabilities_canceled",
     }  # >= operator checks if the set on the left is a superset of the set on the right
+
+
+@pytest.mark.asyncio
+@patch("services.predictor.load_pipeline_and_processor_from_mlflow")
+@patch.object(predictor.gold_db, "create_session")
+async def test_make_prediction_frontend_payload_column_mismatch(
+    mock_create_session, mock_load_pipeline, frontend_booking_payload, sample_processor
+):
+    """
+    Integration test: verifies frontend payload survives preprocessing
+    without column mismatch errors. Uses REAL processor to catch bugs.
+    """
+    # Arrange
+    df = pd.DataFrame([frontend_booking_payload])
+
+    mock_pipeline = MagicMock()
+    mock_pipeline.predict.return_value = np.array([0])
+    mock_pipeline.predict_proba.return_value = np.array([[0.7, 0.3]])
+
+    # Use real processor, and mock pipeline
+    mock_load_pipeline.return_value = (mock_pipeline, sample_processor)
+
+    # Mock DB session
+    mock_session = AsyncMock()
+    mock_sessionmaker = MagicMock(return_value=mock_session)
+    mock_session.__aenter__.return_value = mock_session
+    mock_create_session.return_value = mock_sessionmaker
+
+    # Act
+    result = await make_prediction(df, already_processed=False)
+
+    # Assert
+    assert result is not None
+    assert len(result) == 1
+
+    # Verify pipeline received data WITHOUT booking_id and booking_status
+    call_args = mock_pipeline.predict_proba.call_args[0][0]
+    assert "booking_id" not in call_args.columns
+    assert "booking_status" not in call_args.columns

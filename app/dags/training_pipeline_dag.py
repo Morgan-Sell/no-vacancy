@@ -110,8 +110,8 @@ def validate_model_artifacts(**context):
                 f"Failed to get run metrics: {metrics_response.status_code}"
             )
 
-        run_data = metrics_response.json()
-        metrics = run_data["run"]["data"]["metrics"]
+        metrics_list = metrics_response.json()["run"]["data"]["metrics"]
+        metrics = {m["key"]: m["value"] for m in metrics_list}
 
         test_auc = float(metrics.get("test_auc", 0))
         val_auc = float(metrics.get("val_auc", 0))

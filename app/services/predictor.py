@@ -110,11 +110,11 @@ async def make_prediction(
             X_test = test_data.copy()
             y_test = None
 
-            X_test.drop(
+            X_test_prcsd, _ = processor.transform(X_test, y_test)
+
+            X_test_prcsd.drop(
                 columns=[DEPENDENT_VAR_NAME, PRIMARY_KEY], inplace=True, errors="ignore"
             )
-
-            X_test_prcsd, _ = processor.transform(X_test, y_test)
 
         # Generate the predictions using the pipeline
         probabilities = pipeline.predict_proba(X_test_prcsd)
